@@ -1,6 +1,7 @@
 from core.move import Move
 from core.types import BOARD_SIZE, Player, Position
 from gui.app import create_default_state, format_move_label
+from gui.timer_panel import format_seconds
 
 
 def test_default_state_has_full_non_overlapping_layout():
@@ -53,3 +54,10 @@ def test_format_move_label_describes_capture_move():
     )
 
     assert format_move_label(move) == "蓝方 4: (3,3) -> (2,2) 吃子"
+
+
+def test_format_seconds_uses_minute_second_display():
+    assert format_seconds(240) == "04:00"
+    assert format_seconds(239.4) == "03:59"
+    assert format_seconds(0) == "00:00"
+    assert format_seconds(-3) == "00:00"

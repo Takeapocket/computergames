@@ -14,6 +14,8 @@ class ControlPanel(tk.Frame):
         on_apply: Callable[[], None],
         on_undo: Callable[[], None],
         on_reset: Callable[[], None],
+        on_save: Callable[[], None],
+        on_load: Callable[[], None],
     ) -> None:
         super().__init__(master, padx=16, pady=12)
         self._on_dice_change = on_dice_change
@@ -56,6 +58,11 @@ class ControlPanel(tk.Frame):
         button_row.pack(fill=tk.X, pady=(0, 8))
         tk.Button(button_row, text="悔棋", command=on_undo).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
         tk.Button(button_row, text="重置", command=on_reset).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
+
+        record_row = tk.Frame(self)
+        record_row.pack(fill=tk.X, pady=(0, 8))
+        tk.Button(record_row, text="保存棋谱", command=on_save).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        tk.Button(record_row, text="加载棋谱", command=on_load).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
 
         tk.Label(self, textvariable=self.winner_var, anchor="w").pack(fill=tk.X, pady=(0, 8))
         tk.Label(self, textvariable=self.status_var, anchor="w", wraplength=300, justify=tk.LEFT).pack(fill=tk.X)
