@@ -167,3 +167,96 @@ def test_save_and_load_preserve_record_data(tmp_path):
 def test_from_dict_rejects_invalid_record_data():
     with pytest.raises(ValueError, match="record"):
         GameRecord.from_dict({"initial_state": {}, "steps": "invalid"})
+
+
+def test_append_records_source_self():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+
+    step = record.append(dice=1, move=move, state_after=state, source="self")
+
+    assert step.source == "self"
+
+
+def test_append_records_source_opponent():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+
+    step = record.append(dice=1, move=move, state_after=state, source="opponent")
+
+    assert step.source == "opponent"
+
+
+def test_append_default_source_is_unknown():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+
+    step = record.append(dice=1, move=move, state_after=state)
+
+    assert step.source == "unknown"
+
+
+def test_json_round_trip_preserves_source():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state, source="self")
+
+    restored = GameRecord.from_json(record.to_json())
+
+    assert restored.steps[-1].source == "self"
+
+
+def test_from_dict_legacy_record_without_source_defaults_to_unknown():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+
+    raw = record.to_dict()
+    for step in raw["steps"]:
+        step.pop("source", None)
+
+    restored = GameRecord.from_dict(raw)
+
+    assert restored.steps[-1].source == "unknown"
+
+
+def test_from_json_rejects_malformed_json():
+    with pytest.raises(ValueError, match="json"):
+        GameRecord.from_json("{not valid json")
+
+
+def test_from_dict_rejects_missing_initial_state():
+    with pytest.raises(ValueError, match="record"):
+        GameRecord.from_dict({"steps": []})
+
+
+def test_from_dict_rejects_corrupt_intermediate_step():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+    raw = record.to_dict()
+    raw["steps"][0]["dice"] = 99
+
+    with pytest.raises(ValueError, match="record"):
+        GameRecord.from_dict(raw)
+
+
+def test_from_dict_rejects_corrupt_intermediate_state_after():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move_one = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move_one, state_after=state)
+    move_two = state.apply_move(state.legal_moves(Player.BLUE, 1)[0], dice=1)
+    record.append(dice=1, move=move_two, state_after=state)
+    raw = record.to_dict()
+    # 损坏第一步（中间步）的 state_after，让最后一步看起来仍合法。
+    raw["steps"][0]["state_after"] = {"current_player": "red", "pieces": "garbage"}
+
+    with pytest.raises(ValueError, match="record"):
+        GameRecord.from_dict(raw)

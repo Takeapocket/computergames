@@ -4,11 +4,14 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player
+
+
+MoveSource = Literal["self", "opponent", "unknown"]
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,7 @@ class MoveRecord:
     state_after: dict[str, Any]
     step_seconds: float = 0.0
     remaining_seconds: dict[Player, float] = field(default_factory=dict)
+    source: MoveSource = "unknown"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "player", Player.from_value(self.player))
@@ -29,6 +33,8 @@ class MoveRecord:
             raise ValueError("turn must be positive")
         if not 1 <= self.dice <= 6:
             raise ValueError("dice must be between 1 and 6")
+        if self.source not in ("self", "opponent", "unknown"):
+            raise ValueError(f"invalid source: {self.source!r}")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -41,6 +47,7 @@ class MoveRecord:
             "remaining_seconds": {
                 player.value: seconds for player, seconds in self.remaining_seconds.items()
             },
+            "source": self.source,
         }
 
     @classmethod
@@ -54,6 +61,7 @@ class MoveRecord:
                 state_after=dict(data["state_after"]),
                 step_seconds=float(data.get("step_seconds", 0.0)),
                 remaining_seconds=_normalize_remaining_seconds(data.get("remaining_seconds", {})),
+                source=data.get("source", "unknown"),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("invalid move record data") from exc
@@ -76,6 +84,7 @@ class GameRecord:
         state_after: GameState,
         step_seconds: float = 0.0,
         remaining_seconds: Mapping[Player | str, float] | None = None,
+        source: MoveSource = "unknown",
     ) -> MoveRecord:
         step = MoveRecord(
             turn=len(self.steps) + 1,
@@ -85,6 +94,7 @@ class GameRecord:
             state_after=state_after.serialize(),
             step_seconds=step_seconds,
             remaining_seconds=_normalize_remaining_seconds(remaining_seconds or {}),
+            source=source,
         )
         self.steps.append(step)
         return step
@@ -116,9 +126,11 @@ class GameRecord:
                 initial_state=dict(data["initial_state"]),
                 steps=[MoveRecord.from_dict(step_data) for step_data in steps_data],
             )
+            for step in record.steps:
+                GameState.deserialize(step.state_after)
             record.restore_state()
             return record
-        except (KeyError, TypeError, ValueError) as exc:
+        except (AttributeError, KeyError, TypeError, ValueError) as exc:
             raise ValueError("invalid game record data") from exc
 
     def to_json(self, *, indent: int | None = None) -> str:

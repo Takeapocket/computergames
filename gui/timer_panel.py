@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 import tkinter as tk
 from collections.abc import Callable, Mapping
@@ -13,7 +14,7 @@ DEFAULT_TOTAL_SECONDS = 240.0
 
 
 def format_seconds(seconds: float) -> str:
-    total_seconds = int(max(0.0, seconds))
+    total_seconds = math.ceil(max(0.0, seconds))
     minutes, remainder = divmod(total_seconds, 60)
     return f"{minutes:02d}:{remainder:02d}"
 

@@ -56,8 +56,9 @@ def test_format_move_label_describes_capture_move():
     assert format_move_label(move) == "蓝方 4: (3,3) -> (2,2) 吃子"
 
 
-def test_format_seconds_uses_minute_second_display():
+def test_format_seconds_rounds_up_to_be_kind_to_player():
     assert format_seconds(240) == "04:00"
-    assert format_seconds(239.4) == "03:59"
+    assert format_seconds(239.4) == "04:00"
+    assert format_seconds(0.6) == "00:01"
     assert format_seconds(0) == "00:00"
     assert format_seconds(-3) == "00:00"

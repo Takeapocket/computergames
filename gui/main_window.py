@@ -3,13 +3,15 @@ from __future__ import annotations
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
+from typing import Literal
 
 from core.move import Move
 from core.types import Player, Position
 from gui.app import create_default_state, format_move_label, player_label
 from gui.board_widget import BoardWidget
 from gui.control_panel import ControlPanel
-from gui.timer_panel import MatchTimer, TimerPanel
+from gui.match_mode import MatchModePanel
+from gui.timer_panel import DEFAULT_TOTAL_SECONDS, MatchTimer, TimerPanel
 from record.game_record import GameRecord
 
 
@@ -17,16 +19,22 @@ DEFAULT_RECORD_DIR = Path(__file__).resolve().parents[1] / "records"
 
 
 class MainWindow(tk.Frame):
-    def __init__(self, master: tk.Misc) -> None:
+    def __init__(self, master: tk.Misc, *, total_seconds: float = DEFAULT_TOTAL_SECONDS) -> None:
         super().__init__(master, padx=16, pady=16)
+        self._build_menu(master)
+        self._total_seconds = float(total_seconds)
         self.state = create_default_state()
         self.record = GameRecord.from_state(self.state)
-        self.timer = MatchTimer(current_player=self.state.current_player)
+        self.timer = MatchTimer(total_seconds=self._total_seconds, current_player=self.state.current_player)
         self._timer_after_id: str | None = None
         self.current_dice = 6
         self.selected_move_index: int | None = None
         self.selected_position: Position | None = None
         self.status_message = "请输入骰子并选择合法走法。"
+        self._record_dirty = False
+        self._awaiting_dice = True
+        self._mode: Literal["debug", "match"] = "debug"
+        self._our_side: Player | None = None
 
         self.board = BoardWidget(self, self._handle_square_click)
         self.board.pack(side=tk.LEFT, padx=(0, 16), pady=0)
@@ -36,6 +44,9 @@ class MainWindow(tk.Frame):
 
         self.timer_panel = TimerPanel(side_panel, on_toggle_pause=self._toggle_timer_pause)
         self.timer_panel.pack(fill=tk.X, pady=(0, 8))
+
+        self.match_mode_panel = MatchModePanel(side_panel)
+        self.match_mode_panel.pack(fill=tk.X, pady=(0, 8))
 
         self.controls = ControlPanel(
             side_panel,
@@ -66,6 +77,7 @@ class MainWindow(tk.Frame):
             return
 
         self.current_dice = dice
+        self._awaiting_dice = False
         self._clear_selection()
         self.status_message = "骰子已更新，请选择合法走法。"
         self._refresh()
@@ -113,7 +125,10 @@ class MainWindow(tk.Frame):
             state_after=self.state,
             step_seconds=step_seconds,
             remaining_seconds=remaining_seconds,
+            source=self._move_source(move.player),
         )
+        self._record_dirty = True
+        self._awaiting_dice = True
         self._clear_selection()
 
         winner = self.state.get_winner()
@@ -132,6 +147,8 @@ class MainWindow(tk.Frame):
         else:
             self.record.undo_last()
             self.timer.set_active_player(self.state.current_player)
+            self._record_dirty = True
+            self._awaiting_dice = True
             self.status_message = f"已悔棋：{format_move_label(undone)}。计时不回退。"
         self._refresh()
 
@@ -141,6 +158,8 @@ class MainWindow(tk.Frame):
         self.timer.reset(current_player=self.state.current_player)
         self.current_dice = 6
         self._clear_selection()
+        self._record_dirty = False
+        self._awaiting_dice = True
         self.status_message = "棋局已重置为临时三角布局。"
         self._refresh()
 
@@ -162,6 +181,7 @@ class MainWindow(tk.Frame):
             messagebox.showerror("保存棋谱失败", str(exc), parent=self)
             return
 
+        self._record_dirty = False
         self.status_message = f"棋谱已保存：{path}"
         self._refresh()
 
@@ -191,6 +211,8 @@ class MainWindow(tk.Frame):
         )
         self.current_dice = 6
         self._clear_selection()
+        self._record_dirty = False
+        self._awaiting_dice = True
         self.status_message = "棋谱已加载，请录入下一轮骰子。"
         self._refresh()
 
@@ -240,13 +262,18 @@ class MainWindow(tk.Frame):
         legal_destinations = self._legal_destinations_for_selection(moves)
         winner = self.state.get_winner()
 
-        self.controls.set_current_player(player_label(self.state.current_player))
+        self.match_mode_panel.set_current_player(player_label(self.state.current_player))
+        self.match_mode_panel.set_phase(self._compute_phase_label(winner))
+        self.match_mode_panel.set_selected_pieces(selected_ids)
+        self.match_mode_panel.set_record_dirty(self._record_dirty)
+        self.match_mode_panel.set_can_undo(bool(self.state.history))
+
         self.controls.set_dice(self.current_dice)
-        self.controls.set_selected_pieces(selected_ids)
         self.controls.set_moves(move_labels, self.selected_move_index)
         self.controls.set_winner(player_label(winner) if winner is not None else "未结束")
         self.controls.set_status(self.status_message)
         self.controls.set_can_apply(winner is None and self.selected_move_index is not None)
+        self.controls.set_can_undo(bool(self.state.history))
         self.timer_panel.set_snapshot(self.timer.snapshot())
         self.board.set_state(
             self.state,
@@ -273,6 +300,69 @@ class MainWindow(tk.Frame):
         self.selected_move_index = None
         self.selected_position = None
 
+    def _compute_phase_label(self, winner: Player | None) -> str:
+        if winner is not None:
+            return "对局已结束"
+        if self._mode == "match" and self._our_side is not None and self.state.current_player is not self._our_side:
+            if self._awaiting_dice:
+                return "等待对方录入：请输入对方骰子"
+            return "等待对方录入：请点选对方走法"
+        if self._awaiting_dice:
+            return "请录入骰子"
+        return "请选择走法"
+
+    def _move_source(self, mover: Player) -> Literal["self", "opponent", "unknown"]:
+        if self._mode != "match" or self._our_side is None:
+            return "unknown"
+        return "self" if mover is self._our_side else "opponent"
+
+    def _set_mode(self, mode: Literal["debug", "match"], *, our_side: Player | None = None) -> None:
+        if mode == "match" and our_side is None:
+            raise ValueError("match mode requires our_side")
+        self._mode = mode
+        self._our_side = our_side if mode == "match" else None
+        self._refresh()
+
+    def _build_menu(self, master: tk.Misc) -> None:
+        if not isinstance(master, (tk.Tk, tk.Toplevel)):
+            return
+        menubar = tk.Menu(master)
+        master.config(menu=menubar)
+
+        mode_menu = tk.Menu(menubar, tearoff=0)
+        mode_menu.add_command(label="调试模式", command=lambda: self._set_mode("debug"))
+        mode_menu.add_command(label="比赛模式", command=self._enter_match_mode)
+        menubar.add_cascade(label="模式", menu=mode_menu)
+
+    def _enter_match_mode(self) -> None:
+        chosen = self._show_pick_side_dialog()
+        if chosen is None:
+            return
+        self._set_mode("match", our_side=chosen)
+
+    def _show_pick_side_dialog(self) -> Player | None:
+        dialog = tk.Toplevel(self)
+        dialog.title("选择我方颜色")
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+
+        result: dict[str, Player | None] = {"side": None}
+
+        tk.Label(dialog, text="你方使用：", padx=20, pady=10).pack()
+        button_row = tk.Frame(dialog)
+        button_row.pack(padx=20, pady=(0, 16))
+
+        def choose(player: Player) -> None:
+            result["side"] = player
+            dialog.destroy()
+
+        tk.Button(button_row, text="红方", width=10, command=lambda: choose(Player.RED)).pack(side=tk.LEFT, padx=4)
+        tk.Button(button_row, text="蓝方", width=10, command=lambda: choose(Player.BLUE)).pack(side=tk.LEFT, padx=4)
+
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        self.wait_window(dialog)
+        return result["side"]
+
     def _remaining_seconds_from_record(self, record: GameRecord) -> dict[Player, float] | None:
         if not record.steps:
             return None
@@ -286,5 +376,16 @@ class MainWindow(tk.Frame):
         self._timer_after_id = self.after(500, self._refresh_timer)
 
     def _refresh_timer(self) -> None:
+        if not self.winfo_exists():
+            return
         self.timer_panel.set_snapshot(self.timer.snapshot())
         self._schedule_timer_refresh()
+
+    def destroy(self) -> None:
+        if self._timer_after_id is not None:
+            try:
+                self.after_cancel(self._timer_after_id)
+            except tk.TclError:
+                pass
+            self._timer_after_id = None
+        super().destroy()

@@ -249,7 +249,7 @@ GUI 不直接改规则，只调用 core。
 
 ```text
 record/game_record.py
-record/exporter.py
+record/exporter.py        # 暂合并到 record/game_record.py：仅 JSON 一种导出格式时无需独立模块。待出现 PGN-like 等第二种格式再拆分（YAGNI）。
 gui/timer_panel.py
 gui/match_mode.py
 records/

@@ -87,3 +87,56 @@ def test_match_timer_timeout_warns_but_still_allows_finish_turn():
     assert step_seconds == pytest.approx(5)
     assert remaining_seconds[Player.RED] == pytest.approx(0)
     assert timer.snapshot().current_player is Player.BLUE
+
+
+def test_set_active_player_charges_current_elapsed_then_switches():
+    clock = FakeClock()
+    timer = MatchTimer(total_seconds=240, now=clock)
+
+    clock.advance(8)
+    timer.set_active_player(Player.BLUE)
+    snapshot = timer.snapshot()
+
+    assert snapshot.current_player is Player.BLUE
+    assert snapshot.remaining_seconds[Player.RED] == pytest.approx(232)
+    assert snapshot.remaining_seconds[Player.BLUE] == pytest.approx(240)
+    assert snapshot.current_step_seconds == pytest.approx(0)
+
+
+def test_set_active_player_preserves_paused_state():
+    clock = FakeClock()
+    timer = MatchTimer(total_seconds=240, now=clock)
+    clock.advance(4)
+    timer.pause()
+
+    timer.set_active_player(Player.BLUE)
+
+    assert timer.is_paused is True
+    snapshot = timer.snapshot()
+    assert snapshot.remaining_seconds[Player.RED] == pytest.approx(236)
+
+
+def test_reset_clears_remaining_to_total():
+    clock = FakeClock()
+    timer = MatchTimer(total_seconds=240, now=clock)
+    clock.advance(50)
+    timer.finish_turn(Player.BLUE)
+
+    timer.reset()
+
+    snapshot = timer.snapshot()
+    assert snapshot.current_player is Player.RED
+    assert snapshot.remaining_seconds[Player.RED] == pytest.approx(240)
+    assert snapshot.remaining_seconds[Player.BLUE] == pytest.approx(240)
+
+
+def test_reset_with_remaining_seconds_overrides_default():
+    clock = FakeClock()
+    timer = MatchTimer(total_seconds=240, now=clock)
+
+    timer.reset(current_player=Player.BLUE, remaining_seconds={Player.RED: 100, Player.BLUE: 80})
+
+    snapshot = timer.snapshot()
+    assert snapshot.current_player is Player.BLUE
+    assert snapshot.remaining_seconds[Player.RED] == pytest.approx(100)
+    assert snapshot.remaining_seconds[Player.BLUE] == pytest.approx(80)

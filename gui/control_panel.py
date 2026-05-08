@@ -21,13 +21,9 @@ class ControlPanel(tk.Frame):
         self._on_dice_change = on_dice_change
         self._on_move_select = on_move_select
 
-        self.current_player_var = tk.StringVar(value="当前行动方：-")
         self.dice_var = tk.StringVar(value="6")
-        self.selected_pieces_var = tk.StringVar(value="可走棋子：-")
         self.winner_var = tk.StringVar(value="胜负：未结束")
         self.status_var = tk.StringVar(value="请输入骰子并选择合法走法。")
-
-        tk.Label(self, textvariable=self.current_player_var, anchor="w").pack(fill=tk.X, pady=(0, 8))
 
         dice_row = tk.Frame(self)
         dice_row.pack(fill=tk.X, pady=(0, 8))
@@ -44,7 +40,6 @@ class ControlPanel(tk.Frame):
         self.dice_spinbox.bind("<Return>", self._emit_dice_change)
         self.dice_spinbox.bind("<FocusOut>", self._emit_dice_change)
 
-        tk.Label(self, textvariable=self.selected_pieces_var, anchor="w").pack(fill=tk.X, pady=(0, 8))
         tk.Label(self, text="合法走法：", anchor="w").pack(fill=tk.X)
 
         self.move_listbox = tk.Listbox(self, height=12, exportselection=False)
@@ -56,7 +51,8 @@ class ControlPanel(tk.Frame):
 
         button_row = tk.Frame(self)
         button_row.pack(fill=tk.X, pady=(0, 8))
-        tk.Button(button_row, text="悔棋", command=on_undo).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        self.undo_button = tk.Button(button_row, text="悔棋", command=on_undo, state=tk.DISABLED)
+        self.undo_button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
         tk.Button(button_row, text="重置", command=on_reset).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
 
         record_row = tk.Frame(self)
@@ -67,15 +63,8 @@ class ControlPanel(tk.Frame):
         tk.Label(self, textvariable=self.winner_var, anchor="w").pack(fill=tk.X, pady=(0, 8))
         tk.Label(self, textvariable=self.status_var, anchor="w", wraplength=300, justify=tk.LEFT).pack(fill=tk.X)
 
-    def set_current_player(self, value: str) -> None:
-        self.current_player_var.set(f"当前行动方：{value}")
-
     def set_dice(self, dice: int) -> None:
         self.dice_var.set(str(dice))
-
-    def set_selected_pieces(self, piece_ids: Sequence[int]) -> None:
-        value = "、".join(str(piece_id) for piece_id in piece_ids) if piece_ids else "-"
-        self.selected_pieces_var.set(f"可走棋子：{value}")
 
     def set_moves(self, labels: Sequence[str], selected_index: int | None) -> None:
         self.move_listbox.delete(0, tk.END)
@@ -93,6 +82,9 @@ class ControlPanel(tk.Frame):
 
     def set_can_apply(self, enabled: bool) -> None:
         self.apply_button.configure(state=tk.NORMAL if enabled else tk.DISABLED)
+
+    def set_can_undo(self, enabled: bool) -> None:
+        self.undo_button.configure(state=tk.NORMAL if enabled else tk.DISABLED)
 
     def _emit_dice_change(self, event: tk.Event | None = None) -> None:
         self._on_dice_change(self.dice_var.get())

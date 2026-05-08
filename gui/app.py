@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import argparse
 import tkinter as tk
+from collections.abc import Sequence
 
 from core.game_state import GameState
 from core.move import Move
@@ -53,14 +55,26 @@ def format_move_label(move: Move) -> str:
 def main() -> None:
     from gui.main_window import MainWindow
 
+    args = parse_args()
     root = tk.Tk()
     root.title("爱恩斯坦棋 - 最小 GUI")
     root.minsize(800, 520)
 
-    window = MainWindow(root)
+    window = MainWindow(root, total_seconds=args.total_seconds)
     window.pack(fill=tk.BOTH, expand=True)
 
     root.mainloop()
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="爱恩斯坦棋离线 GUI")
+    parser.add_argument(
+        "--total-seconds",
+        type=float,
+        default=240.0,
+        help="单方比赛总时长（秒），默认 240。需与 gui.timer_panel.DEFAULT_TOTAL_SECONDS 保持一致。",
+    )
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
