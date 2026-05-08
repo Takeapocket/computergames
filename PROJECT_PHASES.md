@@ -337,18 +337,64 @@ tests/test_evaluator.py
 
 ## 必须实现
 
+> ⚠️ **强制顺序：先做 4.0 最小 harness，再做 4.1-4.4 任何 AI 改进。**
+> 否则违反"Harness-first"原则——每加一个 AI 特性必须有数据证明它确实变强了，而不是"看上去像在赢"。
+
+0. **最小对战 harness**（见下文 4.0）——必须最先完成。
 1. RandomAI：随机选择一个合法走法。
 2. GreedyAI：根据评估函数选择当前骰子下的最优走法。
 3. 基础评估函数。
 4. 概率风险评估。
 5. 威胁地图 threat map。
-6. GUI 中支持“建议走法”。
+6. GUI 中支持"建议走法"。
 7. 显示 AI 推荐：
    - 移动棋子；
    - 起点；
    - 终点；
    - 是否吃子；
    - 推荐理由简述。
+
+---
+
+## 4.0 最小对战 harness（**先于一切 AI 改进**）
+
+**目标：** 提供"两个 AI 自动对战 N 局并输出胜率/平均步数/非法步数/崩溃数"的最小能力，让后续每个 AI 改进都能立即用数据验证。
+
+阶段 5 是 harness 的**工程化扩展**（多 AI tournament、replay 管理、参数对比报告）；阶段 4.0 只要"能跑能出数"。
+
+**输出物：**
+
+```text
+scripts/run_match.py    # AI vs AI 单次对战，输出 winner/turns/illegal/crash
+scripts/quick_bench.py  # 批量对战 100 局，输出胜率/平均步数等汇总
+ai/__init__.py          # AI 协议：play(state, dice) -> Move
+```
+
+**验收标准：**
+
+```text
+python scripts/quick_bench.py --black random --white random --games 100 --seed 2026
+能在 30 秒内跑完 100 局，输出：
+  black_win_rate / white_win_rate / draw_rate
+  avg_turns / illegal_moves / crashes
+非法走法 = 0，崩溃 = 0。
+```
+
+完成 4.0 之后，4.1-4.4 每个里程碑都按以下"评测门槛"模式执行：
+1. 改进一个 AI 特性
+2. quick_bench 跑 200 局：candidate vs baseline
+3. 胜率门槛达标且无非法/崩溃 → 进入下一里程碑；否则回退或调试
+
+**里程碑评测门槛（建议值，不是绝对值）：**
+
+| 里程碑 | candidate | baseline | 胜率门槛 |
+|---|---|---|---|
+| 4.1 完成 | GreedyAI（基础评估） | RandomAI | ≥ 95% |
+| 4.2 完成 | Greedy + Expected Risk | GreedyAI | ≥ 55% |
+| 4.3 完成 | Greedy + Risk + Edge Safety | Greedy + Risk | ≥ 53% |
+| 4.4 完成 | Greedy + Risk + Edge + Piece Importance | Greedy + Risk + Edge | ≥ 53% |
+
+胜率达不到说明：(a) 新特性实现有 bug；(b) 新特性方向错误；(c) 调参未优化。无论哪种都不应进入下一里程碑。
 
 ---
 
@@ -451,24 +497,34 @@ edge_bonus =
 ## 阶段 4 验收标准
 
 ```text
-AI 永远只输出合法走法。
-AI 能识别一步获胜。
-AI 能识别对方一步获胜威胁。
-AI 能明显强于 RandomAI。
+4.0 最小 harness 跑通（100 局 random vs random，非法=0，崩溃=0）。
+4.1 GreedyAI vs RandomAI 胜率 ≥ 95%（200 局，固定 seed，reports/ 留档）。
+4.2 Greedy+Risk vs Greedy 胜率 ≥ 55%。
+4.3 Greedy+Risk+Edge vs Greedy+Risk 胜率 ≥ 53%。
+4.4 加 Piece Importance 后 vs 4.3 胜率 ≥ 53%。
+所有里程碑：AI 永远只输出合法走法；非法走法=0、崩溃=0、超时=0。
+AI 能识别一步获胜；能识别对方一步获胜威胁。
 评估函数有单元测试。
 概率风险评估复用 core 的骰子选择逻辑。
 GUI 能显示建议走法，但不强制自动执行。
 ```
 
+胜率门槛是建议值，第一次跑达不到不代表方向错——但需要在 reports/ 里写清楚"低于门槛的原因分析"，不能不达标就直接进下一里程碑。
+
 ---
 
-# 阶段 5：对战 Harness
+# 阶段 5：对战 Harness 工程化
 
 ## 目标
 
-建立本地自动对战评测系统，用数据判断 AI 改动到底变强还是变弱。
+将阶段 4.0 的最小 harness 扩展为正式评测系统：多 AI tournament、批量参数对比、replay 管理、reports 自动生成。
 
-这是后续优化的核心。
+阶段 4.0 已经有"两个 AI 跑 N 局出胜率"的基础能力；阶段 5 的工作是让它支持：
+
+- 任意多个 AI 之间的循环赛
+- baseline vs candidate 的标准化参数对比报告
+- 可视化的 replay 加载（便于调参时分析单局）
+- benchmark：固定 baseline 测当前 AI 的稳定基线性能
 
 ## 输出物
 
@@ -841,6 +897,59 @@ max_step_time_ms
 3. 每次参数变化必须跑 tournament。
 4. 胜率没有提升的参数不进入默认配置。
 5. 不要过拟合某一个固定对手。
+
+---
+
+## 7.4.1 自动化调参 workflow
+
+本项目不做强化学习、不做神经网络。"训练"的本质 = **自动化调参**。
+首选方法：(1+λ) **演化策略** —— 比 grid search 高效，比 Bayesian 优化好上手。
+
+**算法（伪代码）：**
+
+```text
+baseline = 当前默认参数集（reports/params_report.md 里的最新一组）
+for generation in 1..N:
+    # 1. 生成 λ 个候选（建议 λ=5-8）
+    candidates = []
+    for i in 1..λ:
+        c = baseline 的副本
+        随机选 1-2 个权重，按 ±20% 高斯扰动
+        candidates.append(c)
+
+    # 2. 每个候选 vs baseline 跑 200 局（固定 seed 池保证可重复）
+    results = []
+    for c in candidates:
+        win_rate, illegal, crash, timeouts = tournament(c, baseline, games=200, seed_pool=...)
+        results.append((c, win_rate, illegal, crash, timeouts))
+
+    # 3. 筛选：必须 illegal=0、crash=0、timeouts=0，且胜率 > 55%
+    survivors = [r for r in results if r.illegal==0 and r.crash==0 and r.timeouts==0 and r.win_rate > 0.55]
+
+    # 4. 采纳最强候选作为新 baseline；如果无人达标，baseline 不变
+    if survivors:
+        best = max(survivors, key=lambda r: r.win_rate)
+        baseline = best.params
+        记录到 reports/params_history.md
+
+    # 5. 早停：连续 3 代无候选达标 → 收敛或局部最优，停止
+    if 连续 3 代无 survivor:
+        break
+```
+
+**关键纪律：**
+
+- **种子池固定**：每代用同一组 seeds（比如 [2026, 2027, ..., 2225] 共 200 个），不同代之间换种子是噪声源
+- **样本量 200 局**：胜率差 5% 时统计置信区间约 ±7%，足够辨别真改进 vs 噪声
+- **每代只动 1-2 个参数**：动太多无法归因哪个参数有效
+- **每组参数 commit 到 git**：rollback 方便
+- **避免过拟合**：终选 baseline 必须再 vs RandomAI 和 GreedyAI 各跑 100 局确认没退化
+
+**预算估计：** 单局耗时 1-2 秒（Expectimax depth=2），200 局约 5-7 分钟。每代 5 个候选 × 200 局 ≈ 30 分钟。10 代 ≈ 5 小时。能在一晚跑完。
+
+如果时间允许，可以加 **简单 grid search** 作为补充：选 2-3 个最关键的参数（如 `expected_risk_weight`、`edge_safety_weight`），每个 3-5 个离散值，全组合跑一次（~30 分钟），找出局部最优起点，再用演化策略细调。
+
+**输出：** `scripts/tune_params.py` 实现上述算法，运行后产出 `reports/tune_log_YYYYMMDD.md`（每代候选 + 胜率），以及最终入库参数 `release/v*/default_params.json`。
 
 ---
 
