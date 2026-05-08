@@ -1,0 +1,18 @@
+# Local agent/workflow state
+.serena/
+.spec-workflow/
+
+# Saved WeChat article assets and source notification copy
+通知 _ 关于举办 2026 年辽宁省大学生计算机博弈大赛校内选拔赛的通知.html
+通知 _ 关于举办 2026 年辽宁省大学生计算机博弈大赛校内选拔赛的通知_files/
+
+# Common local artifacts
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.log
