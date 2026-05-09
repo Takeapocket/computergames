@@ -1,0 +1,20 @@
+{
+  "games": 100,
+  "red_wins": 58,
+  "blue_wins": 42,
+  "draws": 0,
+  "red_win_rate": 0.58,
+  "blue_win_rate": 0.42,
+  "draw_rate": 0.0,
+  "average_turns": 18.0,
+  "illegal_moves": 0,
+  "crashes": 0,
+  "timeouts": 0,
+  "average_step_time_ms": 0.16404077782580215,
+  "max_step_time_ms": 5.732499994337559,
+  "red_ai": "greedy",
+  "blue_ai": "greedy",
+  "seed": 2026,
+  "max_turns": 200,
+  "wall_seconds": 0.357
+}
