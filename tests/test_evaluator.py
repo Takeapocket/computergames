@@ -1,5 +1,7 @@
 from ai.evaluator import (
     DISTANCE_WEIGHT,
+    EXPECTED_RISK_WEIGHT,
+    EXPECTED_WIN_RISK_WEIGHT,
     MATERIAL_WEIGHT,
     WIN_SCORE,
     chebyshev_distance,
@@ -170,7 +172,70 @@ def test_evaluate_zero_sum_still_holds_with_stuck_penalty():
     assert evaluate(state, Player.RED) == -evaluate(state, Player.BLUE)
 
 
+def test_evaluate_with_risk_weights_is_not_zero_sum_by_design():
+    state = make_state(
+        red={3: Position(2, 2)},
+        blue={
+            1: Position(4, 4),
+            2: Position(4, 3),
+            3: Position(3, 4),
+            4: Position(3, 3),
+            5: Position(4, 0),
+            6: Position(0, 4),
+        },
+    )
+
+    red_score = evaluate(state, Player.RED, expected_risk_weight=EXPECTED_RISK_WEIGHT)
+    blue_score = evaluate(state, Player.BLUE, expected_risk_weight=EXPECTED_RISK_WEIGHT)
+
+    assert red_score != -blue_score
+
+
 def test_stuck_penalty_constant_is_finite_and_positive():
     assert STUCK_PIECE_PENALTY > 0
     # 应该比一个材料单位的代价大，否则 AI 不会优先解放角子
     assert STUCK_PIECE_PENALTY > 10
+
+
+def test_expected_risk_weight_constant_is_finite_and_positive():
+    assert EXPECTED_RISK_WEIGHT > 0
+    assert EXPECTED_RISK_WEIGHT < MATERIAL_WEIGHT
+
+
+def test_evaluate_penalizes_expected_capture_risk_when_enabled():
+    state = make_state(
+        red={3: Position(2, 2)},
+        blue={
+            1: Position(4, 4),
+            2: Position(4, 3),
+            3: Position(3, 4),
+            4: Position(3, 3),
+            5: Position(4, 0),
+            6: Position(0, 4),
+        },
+    )
+
+    without_risk = evaluate(state, Player.RED, expected_risk_weight=0.0)
+    with_risk = evaluate(state, Player.RED, expected_risk_weight=EXPECTED_RISK_WEIGHT)
+
+    assert with_risk < without_risk
+
+
+def test_evaluate_penalizes_expected_target_win_risk_when_enabled():
+    state = make_state(
+        red={1: Position(2, 2)},
+        blue={
+            1: Position(4, 4),
+            2: Position(4, 3),
+            3: Position(3, 4),
+            4: Position(1, 1),
+            5: Position(4, 0),
+            6: Position(0, 4),
+        },
+    )
+
+    without_risk = evaluate(state, Player.RED, expected_win_risk_weight=0.0)
+    with_risk = evaluate(state, Player.RED, expected_win_risk_weight=EXPECTED_WIN_RISK_WEIGHT)
+
+    assert EXPECTED_WIN_RISK_WEIGHT > EXPECTED_RISK_WEIGHT
+    assert with_risk < without_risk

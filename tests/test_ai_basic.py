@@ -134,6 +134,35 @@ def test_greedy_ai_is_deterministic_under_same_seed():
     assert a.choose_move(state, dice=2) == b.choose_move(state, dice=2)
 
 
+def test_greedy_ai_randomize_ties_false_returns_first_best_move():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    ai = GreedyAI(rng=random.Random(0), randomize_ties=False, distance_weight=0.0)
+
+    move = ai.choose_move(state, dice=1)
+
+    assert move == state.legal_moves(Player.RED, 1)[0]
+
+
+def test_greedy_ai_expected_risk_avoids_simple_capture_exposure():
+    state = make_state(
+        red={1: Position(1, 1)},
+        blue={
+            1: Position(4, 4),
+            2: Position(4, 3),
+            3: Position(3, 4),
+            4: Position(3, 3),
+            5: Position(4, 0),
+            6: Position(0, 4),
+        },
+    )
+
+    baseline = GreedyAI(rng=random.Random(0), randomize_ties=False, expected_risk_weight=0.0)
+    risk_aware = GreedyAI(rng=random.Random(0), randomize_ties=False, expected_risk_weight=60.0)
+
+    assert baseline.choose_move(state, dice=1).to_pos == Position(2, 2)
+    assert risk_aware.choose_move(state, dice=1).to_pos != Position(2, 2)
+
+
 def test_build_ai_supports_greedy():
     from ai.match import build_ai
 
@@ -141,3 +170,15 @@ def test_build_ai_supports_greedy():
 
     assert ai.name == "greedy"
     assert hasattr(ai, "choose_move")
+
+
+def test_build_ai_supports_greedy_risk():
+    from ai.match import ai_version_signature, build_ai
+
+    ai = build_ai("greedy_risk", seed=2026)
+
+    assert ai.name == "greedy_risk"
+    assert ai.expected_risk_weight > 0
+    assert ai.expected_win_risk_weight > ai.expected_risk_weight
+    assert ai_version_signature(ai)["expected_risk_weight"] == ai.expected_risk_weight
+    assert ai_version_signature(ai)["expected_win_risk_weight"] == ai.expected_win_risk_weight

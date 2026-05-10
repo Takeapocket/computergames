@@ -375,6 +375,26 @@ def test_match_mode_panel_displays_record_status(tk_root):
     assert "已保存" in window.match_mode_panel.record_status_var.get()
 
 
+def test_match_mode_panel_waits_for_dice_before_showing_recommendation(tk_root):
+    window = MainWindow(tk_root)
+    window.pack()
+
+    assert "等待骰子" in window.match_mode_panel.recommendation_var.get()
+
+
+def test_match_mode_panel_displays_greedy_recommendation_after_dice_input(tk_root):
+    window = MainWindow(tk_root)
+    window.pack()
+
+    window._handle_dice_change("6")
+
+    recommendation = window.match_mode_panel.recommendation_var.get()
+    assert "GreedyAI" in recommendation
+    assert "红方 6:" in recommendation
+    assert "->" in recommendation
+    assert "未启用" not in recommendation
+
+
 def test_match_mode_panel_record_status_changes_on_apply(tk_root):
     window = MainWindow(tk_root)
     window.pack()
