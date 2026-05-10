@@ -37,6 +37,11 @@ class Position:
         return cls(row=int(data["row"]), col=int(data["col"]))
 
 
+def chebyshev_distance(a: Position, b: Position) -> int:
+    """Chebyshev / Chess-king distance：因为本游戏走法包含对角线，单步等于 1。"""
+    return max(abs(a.row - b.row), abs(a.col - b.col))
+
+
 @dataclass
 class Piece:
     player: Player

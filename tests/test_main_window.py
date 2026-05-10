@@ -389,7 +389,7 @@ def test_match_mode_panel_displays_greedy_recommendation_after_dice_input(tk_roo
     window._handle_dice_change("6")
 
     recommendation = window.match_mode_panel.recommendation_var.get()
-    assert "GreedyAI" in recommendation
+    assert "greedy_risk" in recommendation
     assert "红方 6:" in recommendation
     assert "->" in recommendation
     assert "未启用" not in recommendation

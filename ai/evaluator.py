@@ -1,22 +1,17 @@
 from __future__ import annotations
 
-from ai.risk import expected_target_win_risk, total_expected_capture_risk
+from ai.risk import distance_weighted_capture_risk, expected_target_win_risk
 from core.game_state import GameState
 from core.rules import generate_legal_moves_for_piece, target_corner
-from core.types import Player, Position
+from core.types import Player, Position, chebyshev_distance
 
 
 WIN_SCORE: float = 1_000_000.0
 DISTANCE_WEIGHT: float = 1.0
 MATERIAL_WEIGHT: float = 10.0
 STUCK_PIECE_PENALTY: float = 100.0
-EXPECTED_RISK_WEIGHT: float = 1.0
+EXPECTED_RISK_WEIGHT: float = 3.0
 EXPECTED_WIN_RISK_WEIGHT: float = 500.0
-
-
-def chebyshev_distance(a: Position, b: Position) -> int:
-    """Chebyshev / Chess-king distance：因为本游戏走法包含对角线，单步等于 1。"""
-    return max(abs(a.row - b.row), abs(a.col - b.col))
 
 
 def count_stuck_pieces(state: GameState, player: Player) -> int:
@@ -80,7 +75,7 @@ def evaluate(
     opp_alive = sum(1 for p in opp_pieces.values() if p.alive)
     own_stuck = count_stuck_pieces(state, perspective)
     opp_stuck = count_stuck_pieces(state, perspective.opponent)
-    own_expected_risk = total_expected_capture_risk(state, perspective)
+    own_expected_risk = distance_weighted_capture_risk(state, perspective)
     own_expected_win_risk = expected_target_win_risk(state, perspective)
 
     return (

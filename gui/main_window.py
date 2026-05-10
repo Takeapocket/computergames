@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import random
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import Literal
 
-from ai.greedy_ai import GreedyAI
+from ai.match import build_ai
 from core.move import Move
 from core.types import Player, Position
 from gui.app import create_default_state, format_move_label, player_label
@@ -320,10 +319,11 @@ class MainWindow(tk.Frame):
         if self._awaiting_dice:
             return "等待骰子"
 
-        move = GreedyAI(rng=random.Random(0)).choose_move(self.state, self.current_dice)
+        ai = build_ai("greedy_risk", seed=0)
+        move = ai.choose_move(self.state, self.current_dice)
         if move is None:
             return "当前骰子无合法走法"
-        return f"GreedyAI：{format_move_label(move)}"
+        return f"greedy_risk：{format_move_label(move)}"
 
     def _move_source(self, mover: Player) -> Literal["self", "opponent", "unknown"]:
         if self._mode != "match" or self._our_side is None:

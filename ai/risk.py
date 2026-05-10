@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from core.game_state import GameState
 from core.rules import target_corner
-from core.types import Player
+from core.types import Player, chebyshev_distance
 
 
 DICE_PROBABILITY = 1.0 / 6.0
@@ -36,6 +36,23 @@ def expected_capture_risk(state: GameState, player: Player) -> dict[int, float]:
 
 def total_expected_capture_risk(state: GameState, player: Player) -> float:
     return sum(expected_capture_risk(state, player).values())
+
+
+def distance_weighted_capture_risk(state: GameState, player: Player) -> float:
+    """与 ``total_expected_capture_risk`` 相同，但每枚子的被吃概率按其到目标角的
+    chebyshev 距离加权——离目标越近的子暴露被吃时惩罚越重。远离目标角的棋子暴露
+    风险相对较轻，避免 AI 为保护无关棋子而过度保守。
+    """
+    player = Player.from_value(player)
+    own_target = target_corner(player)
+    risk_map = expected_capture_risk(state, player)
+    weighted = 0.0
+    for piece_id, risk_prob in risk_map.items():
+        piece = state.pieces[player][piece_id]
+        distance = chebyshev_distance(piece.position, own_target)
+        weight = 1.0 / (distance + 1)
+        weighted += risk_prob * weight
+    return weighted
 
 
 def expected_target_win_risk(state: GameState, player: Player) -> float:

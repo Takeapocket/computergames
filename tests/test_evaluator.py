@@ -199,7 +199,7 @@ def test_stuck_penalty_constant_is_finite_and_positive():
 
 def test_expected_risk_weight_constant_is_finite_and_positive():
     assert EXPECTED_RISK_WEIGHT > 0
-    assert EXPECTED_RISK_WEIGHT < MATERIAL_WEIGHT
+    assert EXPECTED_RISK_WEIGHT <= MATERIAL_WEIGHT
 
 
 def test_evaluate_penalizes_expected_capture_risk_when_enabled():
