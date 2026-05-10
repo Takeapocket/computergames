@@ -129,6 +129,16 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Override the report filename stem (without timestamp/extension).",
     )
+    parser.add_argument(
+        "--include-per-game",
+        action="store_true",
+        help=(
+            "Include per_game array (with seeds, winner, termination_reason, final_state) "
+            "in the JSON report. Default off — only summary aggregates are saved, keeping "
+            "report files small (<2KB instead of ~600KB). Per-game state is reproducible "
+            "from per_game_seed = master_seed * 100_000 + i."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.red != "greedy" and args.red_stuck_penalty is not None:
@@ -164,16 +174,17 @@ def main(argv: list[str] | None = None) -> int:
             starting_state=starting_state_for(args.starting_layout),
         )
         results.append(result)
-        per_game.append(
-            _per_game_payload(
-                index=i,
-                per_game_seed=per_game_seed,
-                red_seed=red_seed,
-                blue_seed=blue_seed,
-                dice_seed=dice_seed,
-                result=result,
+        if args.include_per_game:
+            per_game.append(
+                _per_game_payload(
+                    index=i,
+                    per_game_seed=per_game_seed,
+                    red_seed=red_seed,
+                    blue_seed=blue_seed,
+                    dice_seed=dice_seed,
+                    result=result,
+                )
             )
-        )
     elapsed = time.perf_counter() - start
 
     summary = _aggregate(results)
@@ -190,8 +201,9 @@ def main(argv: list[str] | None = None) -> int:
         "seed": args.seed,
         "max_turns": args.max_turns,
         "wall_seconds": round(elapsed, 3),
-        "per_game": per_game,
     })
+    if args.include_per_game:
+        summary["per_game"] = per_game
 
     report_path: str | None = None
     if not args.no_save_report:

@@ -1,0 +1,43 @@
+{
+  "games": 200,
+  "red_wins": 93,
+  "blue_wins": 107,
+  "draws": 0,
+  "red_win_rate": 0.465,
+  "blue_win_rate": 0.535,
+  "draw_rate": 0.0,
+  "average_turns": 19.195,
+  "illegal_moves": 0,
+  "crashes": 0,
+  "timeouts": 0,
+  "average_step_time_ms": 2.911925234428736,
+  "max_step_time_ms": 18.88180000241846,
+  "schema_version": 2,
+  "generated_at": "2026-05-10T15:56:22",
+  "git_revision": "c070dd0702a8d640ced41e57bff19d87c314d286",
+  "git_dirty": true,
+  "command": "python scripts/quick_bench.py --red expectimax --blue greedy_risk --games 200 --seed 2026 --max-turns 200 --report-name bench_phase_4_4_expectimax_vs_greedy_risk",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "red_ai": "expectimax",
+  "blue_ai": "greedy_risk",
+  "ai_versions": {
+    "red": {
+      "name": "expectimax",
+      "depth": 1,
+      "expected_risk_weight": 3.0,
+      "expected_win_risk_weight": 500.0
+    },
+    "blue": {
+      "name": "greedy_risk",
+      "stuck_penalty": 100.0,
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 3.0,
+      "expected_win_risk_weight": 500.0
+    }
+  },
+  "seed": 2026,
+  "max_turns": 200,
+  "wall_seconds": 11.299
+}
