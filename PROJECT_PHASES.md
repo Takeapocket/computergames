@@ -1,9 +1,153 @@
 # 爱恩斯坦棋参赛程序阶段目标文档
 
-更新时间：2026-05-09  
+更新时间：2026-05-10  
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：爱恩斯坦棋离线 GUI 参赛程序  
 建议文件位置：项目根目录 `PROJECT_PHASES.md`
+
+---
+
+## ⚠️ 赛事规则对齐补丁（2026-05-10 新增，优先级最高）
+
+2026-05-10 通过国赛官网原文（`全国计算机博弈竞赛总则.md` + `爱恩斯坦棋项目规则.md`）核对，发现项目当前实现与赛事规则有以下出入。**这些补丁的优先级高于阶段 6/7 的主线推进**，必须在继续 AI 强化之前完成。
+
+### 阶段 R-0：吃本方棋子合规修复（P0，必须首先做）
+
+**问题**：`core/rules.py:52-54` 不允许走到本方棋子位置；规则原文："如果在棋子走动的目标棋位上有棋子，则要将该棋子从棋盘上移出（吃掉）。**有时吃掉本方棋子也是一种策略**。"
+
+**输出物**：
+
+```text
+core/rules.py             # 移除"跳过本方棋子"分支，统一捕获 occupant
+tests/test_rules.py        # test_piece_cannot_move_to_own_piece_square → test_piece_can_capture_own_piece
+tests/test_game_state.py   # 验证 apply_move 在自残时正确把本方子标 alive=False
+ai/risk.py                 # 评估"被自家吃掉"是否计入 expected_capture_risk
+ai/evaluator.py            # 评估 stuck_penalty 是否还需要（自残后被围死场景应大幅减少）
+reports/4-1-rebench.md     # 重跑 4.1 GreedyAI vs RandomAI bench
+reports/4-2-rebench.md     # 重跑 4.2 greedy_risk vs greedy grid（基于合规规则）
+reports/4-4-rebench.md     # 重跑 4.4 ExpectimaxAI bench；可能结论翻盘
+```
+
+**验收标准**：
+
+```text
+test_piece_can_capture_own_piece 通过（自残后本方子 alive=False，move.is_capture=True）。
+全量 pytest 通过。
+4.1 GreedyAI vs RandomAI 在合规规则下合并胜率 ≥ 60%（沿用原门槛）。
+4.2 greedy_risk vs greedy 在合规规则下合并胜率与之前 53.8% 对比，差异 ≤ 5pp。
+4.4 ExpectimaxAI vs greedy_risk 重跑数据更新到 4-4-failure-analysis.md。
+```
+
+**预估工时**：core+tests 0.5h；bench 重跑 + 报告 1h。
+
+---
+
+### 阶段 R-1：开局录入 GUI（P1）
+
+**问题**：赛事规则第 1 条 "开局时双方棋子在出发区的棋位可以随意摆放"；项目当前 `STARTING_LAYOUT_ID` 只是 self-play 默认布局，比赛中两边可任意摆放。GUI 缺少"录入对方布局 + 选择我方布局"功能。
+
+**输出物**：
+
+```text
+ai/match.py                # LAYOUTS 字典扩展为 dict[id, callable]，支持多候选
+ai/opening_layouts.py      # 至少 3 套候选布局（均衡 / 速攻 / 防守），从阶段 7 提前到这里
+gui/opening_panel.py       # 新建：(a) 选择我方候选布局，(b) 拖放或网格点击录入对方布局
+gui/main_window.py         # 集成 opening_panel；开局阶段显示"录入对方布局"提示
+tests/test_opening_panel.py
+tests/test_opening_layouts.py
+```
+
+**验收标准**：
+
+```text
+GUI 启动后默认进入"开局录入"阶段。
+我方布局可从下拉框选择 ≥ 3 个候选布局之一。
+对方布局可通过点击 5×5 棋盘出发区录入（红方左上 / 蓝方右下三角形）。
+录入完成后可点击"开始对局"进入正常比赛流程。
+保存的棋谱包含双方实际开局布局。
+```
+
+**预估工时**：4-6h（GUI 改动较多）。
+
+---
+
+### 阶段 R-2：7 盘制比赛模式（P1）
+
+**问题**：赛事规则第 7 条 "每轮双方对阵最多 7 盘，轮流先手（甲方一四五盘先手，乙方二三六七盘先手），两盘中间不休息，先胜 4 盘为胜方"；项目 `gui/match_mode.py` 只支持单局。
+
+**输出物**：
+
+```text
+gui/match_mode.py          # 增加 round_state: pieces_won_us / pieces_won_them / current_game_index
+gui/main_window.py         # 显示当前盘数 / 比分 / 谁先手
+record/match_record.py     # 新建：聚合 7 盘 GameRecord 为一轮 MatchRecord
+tests/test_match_mode.py   # 验证盘数判定 / 先后手轮换 / 先胜 4 盘判胜
+```
+
+**验收标准**：
+
+```text
+GUI 显示 "本轮第 X 盘 / 比分 a:b / 我方/对方先手"。
+某一方累计胜 4 盘时弹出"本轮胜方"对话框。
+盘 1/4/5 我方先手；盘 2/3/6/7 对方先手（开始时由 GUI 询问哪方是甲方）。
+两盘之间不休息，自动重置棋盘并提示对方先后手。
+```
+
+**预估工时**：3-4h。
+
+---
+
+### 阶段 R-3：崩溃自救（P1）
+
+**输出物**：
+
+```text
+record/auto_save.py        # 每步保存到 replays/auto_save.json
+gui/main_window.py         # 启动时检测 auto_save.json，提示"上次未保存的对局，是否恢复？"
+```
+
+**验收标准**：
+
+```text
+每步走完自动写 replays/auto_save.json（含 GameRecord serialize）。
+程序异常退出后再启动，弹出"恢复上次对局" Yes/No 对话框。
+对方走法和我方走法都触发 auto_save。
+```
+
+**预估工时**：1-2h。
+
+---
+
+### 阶段 R-4：决赛快棋（P3，赛前一周做）
+
+10 分钟快棋包干，复用 `--total-seconds 600` 启动参数；如需 GUI 切换按钮，再加。
+
+---
+
+## 进度评估（2026-05-10）
+
+| 阶段 | 状态 | 备注 |
+|---|---|---|
+| 0 项目初始化 | ✓ 完成 | |
+| 1 规则引擎 | ⚠️ **基本完成但存在 P0 合规缺口** | 阶段 R-0 修复 |
+| 2 最小 GUI | ✓ 完成 | |
+| 3 棋谱/计时/比赛模式 | ⚠️ **部分完成** | 阶段 R-1 / R-2 / R-3 补完 |
+| 4.0 最小 harness | ✓ 完成 | bench 数据基于不合规规则，需重跑 |
+| 4.1 GreedyAI | ✓ 完成 | 同上 |
+| 4.2 Expected Risk | ✓ 完成 | 同上；n=2000 grid 验证显示 weight∈[1.0, 5.0] 不可区分，weight=3.0 保留为默认 |
+| 4.3 Edge Safety | ❌ **跳过** | 1-ply 下 count_edge_pieces 无效，已回退（详见 review history） |
+| 4.4 Piece Importance | ⚠️ **改实现成 ExpectimaxAI** | 与原规划不同，且 ExpectimaxAI 在 1-ply 下输给 greedy_risk（详见 reports/4-4-failure-analysis.md），保留为研究代码 |
+| 5 Harness 工程化 | 部分完成（quick_bench 已有） | tournament 多 AI 循环赛、reports/latest.md 自动生成尚未做 |
+| 6 Expectimax 主线 | ❌ 未开始（depth=1 已尝试但弱） | 等 R-0 修复后重新评估是否值得做 |
+| 7 开局库与参数 | 部分提前到 R-1 | |
+| 8 现场打磨 | ❌ 未开始 | 含 R-3 |
+| 9 封版 | ❌ 未开始 | |
+
+**主线调整建议**：
+- R-0 / R-1 / R-2 / R-3 是赛前必须，估时合计 8-13h
+- R-0 完成后重跑 bench，可能发现 ExpectimaxAI 在合规规则下并不弱（吃自己子的策略让多步 lookahead 价值上升）
+- 阶段 7 的开局库优先级被 R-1 提前消化了一部分，剩余的"开局库参数调优"可以推迟
+- 阶段 6 Expectimax 主线在 R-0 重跑后再决策
 
 ---
 
