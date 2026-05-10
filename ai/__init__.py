@@ -5,6 +5,7 @@ from typing import Protocol
 from core.game_state import GameState
 from core.move import Move
 
+from ai.expectimax_ai import ExpectimaxAI
 from ai.greedy_ai import GreedyAI
 from ai.random_ai import RandomAI, choose_random_move
 
@@ -20,6 +21,7 @@ class AIPlayer(Protocol):
 
 __all__ = [
     "AIPlayer",
+    "ExpectimaxAI",
     "GreedyAI",
     "RandomAI",
     "choose_random_move",

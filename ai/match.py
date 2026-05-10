@@ -280,6 +280,21 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
             expected_win_risk_weight=expected_win_risk_weight,
             **ai_kwargs,
         )
+    if kind == "expectimax":
+        from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
+        from ai.expectimax_ai import ExpectimaxAI
+
+        depth = int(ai_kwargs.pop("depth", 1))
+        expected_risk_weight = ai_kwargs.pop("expected_risk_weight", EXPECTED_RISK_WEIGHT)
+        expected_win_risk_weight = ai_kwargs.pop("expected_win_risk_weight", EXPECTED_WIN_RISK_WEIGHT)
+        return ExpectimaxAI(
+            rng=rng,
+            name="expectimax",
+            depth=depth,
+            expected_risk_weight=expected_risk_weight,
+            expected_win_risk_weight=expected_win_risk_weight,
+            **ai_kwargs,
+        )
     raise ValueError(f"unknown AI: {kind!r}")
 
 
@@ -291,6 +306,7 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     """
     sig: dict[str, Any] = {"name": ai.name}
     for attr in (
+        "depth",
         "stuck_penalty",
         "distance_weight",
         "material_weight",
