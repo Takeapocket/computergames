@@ -6,23 +6,27 @@
 
 ## TL;DR
 
-阶段 4.1 完成 GreedyAI（基础评估 + stuck_penalty）后，对 RandomAI 的胜率为：
+阶段 4.1 完成 GreedyAI（基础评估 + stuck_penalty）后：
 
-| 条件 | 红=Greedy | 蓝=Greedy |
+| 配置 | 局数 | 红 GreedyAI 胜率 |
 |---|---|---|
-| 200 局 vs RandomAI | **0.65** | **0.715** |
-| 100 局 Greedy 自对弈 | 红 0.58 / 蓝 0.42（先手优势）|
+| 红 Greedy vs 蓝 Random | 200 | **0.65** |
+| 红 Random vs 蓝 Greedy | 200 | 蓝 **0.715**（红 0.285） |
+
+Greedy 自对弈 100 局：红 0.58 / 蓝 0.42（先手优势）。
 
 `PROJECT_PHASES.md` 原门槛 ≥ 95% **不可达**。已下调到 ≥ 60%，本次实测达标。
 
 ## 数据沿革
 
-| 版本 | 红 GreedyAI vs 蓝 RandomAI（200 局，seed=2026） | forfeit 输 | 抢 (0,0) 输 |
-|---|---|---|---|
-| 4.1 baseline（仅距离 + 子力，标准三角开局） | 59% | 24%（48 局） | 17%（34 局） |
-| 4.1 + Task 8.5 + 9.5（stuck_penalty + 无 stuck 开局） | **65%** | <1%（1 局） | 35%（69 局） |
+| 版本 | 红 GreedyAI vs 蓝 RandomAI（200 局，seed=2026） | forfeit 输 | 抢 (0,0) 输 | per-game 明细 |
+|---|---|---|---|---|
+| 4.1 baseline（仅距离 + 子力，标准三角开局） | 59% | 24%（48 局） | 17%（34 局） | `reports/bench_phase_4_1_baseline_greedy_vs_random.json` |
+| 4.1 + Task 8.5 + 9.5（stuck_penalty + 无 stuck 开局） | **65%** | <1%（1 局） | 35%（69 局） | `reports/bench_phase_4_1_greedy_vs_random.json` |
 
 stuck 子 forfeit 几乎清零（48 → 1）；剩下的输全部是"被抢着到达 (0,0)"或"路上送子被吃"。
+
+数字按 `per_game[]` 数组中 `winner == "blue"` 且 `termination_reason ∈ {"no_move", "winner_target_corner"}` 聚合得出。复现命令：`python scripts/reproduce_phase_4_1.py`（baseline 用 `--starting-layout standard_triangle_v1`，production 用默认 `default_no_stuck_corner_v1`）。
 
 ## 为什么 1-ply greedy 摸不到 95%
 
@@ -55,14 +59,20 @@ GreedyAI 评估"自己走完之后的状态"，**不展开对方下一回合**�
 
 1. **先封 4.1**（commit + 报告留档），把已经过测试的 harness + GreedyAI + stuck_penalty + 无
    stuck 开局作为后续迭代的稳定 baseline。
-2. **进入 4.2 Expected Risk 规划**，把 threat awareness 作为头号目标。4.2 完成后回过来再次
-   bench 同样的红=greedy(+risk) vs 蓝=random，预计胜率会重新逼近 90%+。
+2. **进入 4.2 Expected Risk 规划**，把 threat awareness 作为头号目标。4.2 完成后需用同
+   seed=2026 重跑 `red=greedy(+risk) vs blue=random` 200 局，验证 stuck_penalty 已封堵的
+   forfeit 不会因 risk 评估再生，并以实测胜率为准（不预设具体阈值）。同时检查蓝胜局里
+   "winner_target_corner" 比例是否随 threat awareness 上线而下降。
 3. 如果时间紧（赛前），可以并行规划"GUI 建议走法"集成（PROJECT_PHASES.md 阶段 4 第 6/7 项），
    不必等 4.4。
 
 ## 验收记录指针
 
-- 4.0 验收报告：`reports/bench_20260509_080841_random_vs_random.json`
-- 4.1 验收报告（红 Greedy）：`reports/bench_20260509_084148_greedy_vs_random.json`
-- 4.1 反向 sanity（蓝 Greedy）：`reports/bench_20260509_084926_random_vs_greedy.json`
-- 4.1 自对弈稳定性：`reports/bench_20260509_084930_greedy_vs_greedy.json`
+所有 bench JSON 都是 schema v2，包含 `per_game[]` 明细、`git_revision`、`command`、`ai_versions`、`starting_layout_id` 等元数据。一次性重跑入口：`python scripts/reproduce_phase_4_1.py`。
+
+- 4.0 验收报告：`reports/bench_phase_4_0_random_vs_random.json`（standard_triangle_v1，100 局）
+- 4.1 baseline（红 Greedy，stuck_penalty=0）：`reports/bench_phase_4_1_baseline_greedy_vs_random.json`（standard_triangle_v1，200 局）
+- 4.1 验收（红 Greedy，stuck_penalty=100）：`reports/bench_phase_4_1_greedy_vs_random.json`（default_no_stuck_corner_v1，200 局）
+- 4.1 反向 sanity（蓝 Greedy）：`reports/bench_phase_4_1_random_vs_greedy.json`
+- 4.1 自对弈稳定性：`reports/bench_phase_4_1_greedy_vs_greedy.json`（100 局）
+- schema v2 replay 范例：`replays/match_phase_4_0_sample_random_vs_random_seed2026.json`

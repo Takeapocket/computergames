@@ -2,7 +2,8 @@
 
 更新时间：2026-05-09  
 对应任务：`docs/superpowers/plans/2026-05-09-phase-4-basic-ai.md` Task 10  
-对应报告：`reports/bench_20260509_081311_greedy_vs_random.json`（红=greedy 200 局）
+对应报告：`reports/bench_phase_4_1_baseline_greedy_vs_random.json`（schema v2，红=greedy(stuck_penalty=0)，200 局，starting_layout_id=`standard_triangle_v1`，复现旧 baseline 0.59）
+per-game 明细：见同名 bench JSON 的 `per_game[]` 数组（每局含 `winner` / `termination_reason` / `seeds` / `final_state`）。
 
 ## 数据
 
@@ -20,6 +21,14 @@
 | Red 无合法走法 → forfeit | 48 | 58.5% | **24.0%** |
 | Blue 到达 (0,0) | 34 | 41.5% | 17.0% |
 | Red 被吃光 | 0 | 0% | 0% |
+
+数字基于 baseline bench (`reports/bench_phase_4_1_baseline_greedy_vs_random.json`，`ai_versions.red.stuck_penalty=0`，`starting_layout_id=standard_triangle_v1`) 的 `per_game[]` 数组按 `termination_reason + winner` 聚合。复现命令：
+
+```bash
+python scripts/reproduce_phase_4_1.py --only baseline
+# 或聚合数字校验：
+python -c "import json,collections; pg=json.load(open('reports/bench_phase_4_1_baseline_greedy_vs_random.json',encoding='utf-8'))['per_game']; print(collections.Counter((g['winner'],g['termination_reason']) for g in pg))"
+```
 
 ## 根因
 

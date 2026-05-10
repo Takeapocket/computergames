@@ -30,13 +30,23 @@ def count_stuck_pieces(state: GameState, player: Player) -> int:
     )
 
 
-def evaluate(state: GameState, perspective: Player) -> float:
+def evaluate(
+    state: GameState,
+    perspective: Player,
+    *,
+    distance_weight: float = DISTANCE_WEIGHT,
+    material_weight: float = MATERIAL_WEIGHT,
+    stuck_penalty: float = STUCK_PIECE_PENALTY,
+) -> float:
     """从 ``perspective`` 视角对 ``state`` 打分。
 
     终局直接返回 ±WIN_SCORE。否则线性组合：
     - 距离差：对方距其目标角越远越好；自己距己方目标角越近越好。
     - 子力差：自己存活子越多越好。
     - stuck 差：自己被围死的子越少越好（避免 dice 强制选中触发 forfeit）。
+
+    权重通过 kwargs 注入（默认值 = 模块常量）。reproducer 可用 ``stuck_penalty=0``
+    复现 4.1 baseline (commit baea8bb 之前的行为)。
     """
     perspective = Player.from_value(perspective)
     winner = state.get_winner()
@@ -62,7 +72,7 @@ def evaluate(state: GameState, perspective: Player) -> float:
     opp_stuck = count_stuck_pieces(state, perspective.opponent)
 
     return (
-        DISTANCE_WEIGHT * (opp_distance_total - own_distance_total)
-        + MATERIAL_WEIGHT * (own_alive - opp_alive)
-        + STUCK_PIECE_PENALTY * (opp_stuck - own_stuck)
+        distance_weight * (opp_distance_total - own_distance_total)
+        + material_weight * (own_alive - opp_alive)
+        + stuck_penalty * (opp_stuck - own_stuck)
     )

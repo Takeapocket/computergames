@@ -71,6 +71,8 @@ class MoveRecord:
 class GameRecord:
     initial_state: dict[str, Any]
     steps: list[MoveRecord] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    result: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_state(cls, state: GameState) -> "GameRecord":
@@ -91,7 +93,7 @@ class GameRecord:
             player=move.player,
             dice=dice,
             move=move,
-            state_after=state_after.serialize(),
+            state_after=state_after.serialize(include_history=False),
             step_seconds=step_seconds,
             remaining_seconds=_normalize_remaining_seconds(remaining_seconds or {}),
             source=source,
@@ -105,14 +107,17 @@ class GameRecord:
         return self.steps.pop()
 
     def restore_state(self) -> GameState:
-        if self.steps:
-            return GameState.deserialize(self.steps[-1].state_after)
-        return GameState.deserialize(self.initial_state)
+        state = GameState.deserialize(self.initial_state)
+        for step in self.steps:
+            state.apply_move(step.move, dice=step.dice)
+        return state
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "initial_state": self.initial_state,
             "steps": [step.to_dict() for step in self.steps],
+            "metadata": self.metadata,
+            "result": self.result,
         }
 
     @classmethod
@@ -122,16 +127,29 @@ class GameRecord:
             if not isinstance(steps_data, list):
                 raise ValueError("record steps must be a list")
 
+            metadata = data.get("metadata", {})
+            result = data.get("result", {})
+            if metadata is None:
+                metadata = {}
+            if result is None:
+                result = {}
+            if not isinstance(metadata, dict):
+                raise ValueError("record metadata must be a dict")
+            if not isinstance(result, dict):
+                raise ValueError("record result must be a dict")
+
             record = cls(
                 initial_state=dict(data["initial_state"]),
                 steps=[MoveRecord.from_dict(step_data) for step_data in steps_data],
+                metadata=dict(metadata),
+                result=dict(result),
             )
             for step in record.steps:
                 GameState.deserialize(step.state_after)
             record.restore_state()
             return record
         except (AttributeError, KeyError, TypeError, ValueError) as exc:
-            raise ValueError("invalid game record data") from exc
+            raise ValueError(f"invalid game record data: {exc}") from exc
 
     def to_json(self, *, indent: int | None = None) -> str:
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)

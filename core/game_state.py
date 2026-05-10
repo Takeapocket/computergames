@@ -98,8 +98,8 @@ class GameState:
     def get_winner(self) -> Player | None:
         return get_winner(self.pieces)
 
-    def serialize(self) -> dict[str, Any]:
-        return {
+    def serialize(self, *, include_history: bool = True) -> dict[str, Any]:
+        payload: dict[str, Any] = {
             "current_player": self.current_player.value,
             "pieces": {
                 player.value: {
@@ -108,8 +108,10 @@ class GameState:
                 }
                 for player, player_pieces in ((Player.RED, self.pieces[Player.RED]), (Player.BLUE, self.pieces[Player.BLUE]))
             },
-            "history": [move.to_dict() for move in self.history],
         }
+        if include_history:
+            payload["history"] = [move.to_dict() for move in self.history]
+        return payload
 
     @classmethod
     def deserialize(cls, data: dict[str, Any]) -> "GameState":

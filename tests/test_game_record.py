@@ -36,7 +36,9 @@ def test_append_records_normal_move_with_state_after_snapshot():
     assert step.player is Player.RED
     assert step.dice == 1
     assert step.move == move
-    assert step.state_after == state.serialize()
+    # schema v2: state_after 不再嵌累计 history（步序列本身就是 history）
+    assert step.state_after == state.serialize(include_history=False)
+    assert "history" not in step.state_after
     assert step.step_seconds == 0.0
     assert step.remaining_seconds == {}
 
@@ -103,7 +105,23 @@ def test_restore_state_returns_last_state_after_when_record_has_steps():
 
     restored = record.restore_state()
 
-    assert restored.serialize() == state.serialize()
+    # schema v2: step.state_after 不带 history，但 restore_state 需要重建 history，供 GUI 加载后悔棋。
+    assert restored.serialize(include_history=False) == state.serialize(include_history=False)
+    assert restored.history == [move]
+
+
+def test_restore_state_rebuilds_history_so_loaded_records_can_undo():
+    initial = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+
+    restored = record.restore_state()
+    undone = restored.undo_move()
+
+    assert undone == move
+    assert restored.serialize() == initial.serialize()
 
 
 def test_json_round_trip_preserves_record_data():
