@@ -267,18 +267,36 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
     if kind == "greedy":
         from ai.greedy_ai import GreedyAI
         return GreedyAI(rng=rng, name="greedy", **ai_kwargs)
+    if kind == "greedy_risk":
+        from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
+        from ai.greedy_ai import GreedyAI
+
+        expected_risk_weight = ai_kwargs.pop("expected_risk_weight", EXPECTED_RISK_WEIGHT)
+        expected_win_risk_weight = ai_kwargs.pop("expected_win_risk_weight", EXPECTED_WIN_RISK_WEIGHT)
+        return GreedyAI(
+            rng=rng,
+            name="greedy_risk",
+            expected_risk_weight=expected_risk_weight,
+            expected_win_risk_weight=expected_win_risk_weight,
+            **ai_kwargs,
+        )
     raise ValueError(f"unknown AI: {kind!r}")
 
 
 def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     """提取 AI 的可复现性签名，用于 bench/replay metadata。
 
-    包含 ``name`` 以及任何 evaluator 类权重属性（``stuck_penalty`` /
-    ``distance_weight`` / ``material_weight``）若实例上存在。这样 baseline (stuck=0)
-    与 production (stuck=100) 在 metadata 里就有显式区分。
+    包含 ``name`` 以及 evaluator 类权重属性若实例上存在。这样 baseline、
+    production 与 4.2 risk candidate 在 metadata 里有显式区分。
     """
     sig: dict[str, Any] = {"name": ai.name}
-    for attr in ("stuck_penalty", "distance_weight", "material_weight"):
+    for attr in (
+        "stuck_penalty",
+        "distance_weight",
+        "material_weight",
+        "expected_risk_weight",
+        "expected_win_risk_weight",
+    ):
         if hasattr(ai, attr):
             sig[attr] = getattr(ai, attr)
     return sig

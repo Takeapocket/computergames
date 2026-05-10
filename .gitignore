@@ -1,4 +1,5 @@
 # Local agent/workflow state
+.claude/
 .serena/
 .spec-workflow/
 

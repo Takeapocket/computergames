@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import random
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from typing import Literal
 
+from ai.greedy_ai import GreedyAI
 from core.move import Move
 from core.types import Player, Position
 from gui.app import create_default_state, format_move_label, player_label
@@ -265,6 +267,7 @@ class MainWindow(tk.Frame):
         self.match_mode_panel.set_current_player(player_label(self.state.current_player))
         self.match_mode_panel.set_phase(self._compute_phase_label(winner))
         self.match_mode_panel.set_selected_pieces(selected_ids)
+        self.match_mode_panel.set_recommendation(self._recommendation_text(winner))
         self.match_mode_panel.set_record_dirty(self._record_dirty)
         self.match_mode_panel.set_can_undo(bool(self.state.history))
 
@@ -310,6 +313,17 @@ class MainWindow(tk.Frame):
         if self._awaiting_dice:
             return "请录入骰子"
         return "请选择走法"
+
+    def _recommendation_text(self, winner: Player | None) -> str:
+        if winner is not None:
+            return "对局已结束"
+        if self._awaiting_dice:
+            return "等待骰子"
+
+        move = GreedyAI(rng=random.Random(0)).choose_move(self.state, self.current_dice)
+        if move is None:
+            return "当前骰子无合法走法"
+        return f"GreedyAI：{format_move_label(move)}"
 
     def _move_source(self, mover: Player) -> Literal["self", "opponent", "unknown"]:
         if self._mode != "match" or self._our_side is None:

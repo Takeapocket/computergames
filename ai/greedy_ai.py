@@ -15,8 +15,8 @@ from core.move import Move
 class GreedyAI:
     """贪心 AI：对每个合法走法跑一步前瞻 + 评估，挑分数最高，多并列用 RNG 抽签。
 
-    evaluator 的三个权重 (distance_weight / material_weight / stuck_penalty)
-    可通过构造参数注入。reproducer 用 ``stuck_penalty=0`` 复现 4.1 baseline。
+    evaluator 权重可通过构造参数注入。reproducer 用 ``stuck_penalty=0`` 复现 4.1 baseline；
+    4.2 candidate 用 ``expected_risk_weight=EXPECTED_RISK_WEIGHT`` 开启风险惩罚。
     """
 
     def __init__(
@@ -27,12 +27,18 @@ class GreedyAI:
         distance_weight: float = DISTANCE_WEIGHT,
         material_weight: float = MATERIAL_WEIGHT,
         stuck_penalty: float = STUCK_PIECE_PENALTY,
+        expected_risk_weight: float = 0.0,
+        expected_win_risk_weight: float = 0.0,
+        randomize_ties: bool = True,
     ) -> None:
         self._rng = rng or random.Random()
         self.name = name
         self.distance_weight = distance_weight
         self.material_weight = material_weight
         self.stuck_penalty = stuck_penalty
+        self.expected_risk_weight = expected_risk_weight
+        self.expected_win_risk_weight = expected_win_risk_weight
+        self.randomize_ties = randomize_ties
 
     def choose_move(self, state: GameState, dice: int) -> Move | None:
         legal_moves = state.legal_moves(state.current_player, dice)
@@ -52,6 +58,8 @@ class GreedyAI:
                     distance_weight=self.distance_weight,
                     material_weight=self.material_weight,
                     stuck_penalty=self.stuck_penalty,
+                    expected_risk_weight=self.expected_risk_weight,
+                    expected_win_risk_weight=self.expected_win_risk_weight,
                 )
             finally:
                 state.undo_move()
@@ -62,4 +70,6 @@ class GreedyAI:
             elif score == best_score:
                 best_moves.append(applied)
 
-        return self._rng.choice(best_moves)
+        if self.randomize_ties:
+            return self._rng.choice(best_moves)
+        return best_moves[0]
