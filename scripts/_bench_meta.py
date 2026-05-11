@@ -26,13 +26,38 @@ def git_revision(repo_root: Path) -> str:
 
 
 def git_dirty(repo_root: Path) -> bool:
+    """工作树是否有源码层面的未提交改动。
+
+    会跳过 ``reports/*.json`` 与 ``replays/*.json``，因为它们是 bench/match 脚本的输出
+    产物，自身就会被脚本覆写——如果不跳过，串行重跑多份 bench 时 git_dirty 会永远是 True
+    （第一份 bench 写完后，下一份 bench 启动时就把前一份当成"脏"），无法反映源码状态。
+    """
     try:
         out = subprocess.check_output(
             ["git", "status", "--porcelain"], cwd=repo_root, stderr=subprocess.DEVNULL, timeout=5
         )
     except (subprocess.SubprocessError, FileNotFoundError, OSError):
         return False
-    return bool(out.strip())
+    for raw in out.decode("ascii", errors="replace").splitlines():
+        if len(raw) < 4:
+            continue
+        path = raw[3:].strip().strip('"')
+        # 处理 rename：旧路径 -> 新路径，新路径才是当前文件
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1].strip().strip('"')
+        if not path:
+            continue
+        if _is_generated_artifact(path):
+            continue
+        return True
+    return False
+
+
+def _is_generated_artifact(path: str) -> bool:
+    return (
+        (path.startswith("reports/") and path.endswith(".json"))
+        or (path.startswith("replays/") and path.endswith(".json"))
+    )
 
 
 def greedy_kwargs(stuck_penalty: float | None) -> dict[str, float]:
