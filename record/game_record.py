@@ -163,7 +163,7 @@ class GameRecord:
         return cls.from_dict(data)
 
     def save(self, path: str | Path) -> None:
-        Path(path).write_text(self.to_json(indent=2), encoding="utf-8")
+        Path(path).write_text(self.to_json(indent=2) + "\n", encoding="utf-8")
 
     @classmethod
     def load(cls, path: str | Path) -> "GameRecord":

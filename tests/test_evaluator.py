@@ -104,8 +104,10 @@ def test_count_stuck_pieces_zero_when_all_have_moves():
     assert count_stuck_pieces(state, Player.RED) == 0
 
 
-def test_count_stuck_pieces_detects_corner_piece_surrounded_by_own():
-    # Red 1 在 (0,0)，被自家 2/3/4 完全围死
+def test_count_stuck_pieces_zero_for_corner_surrounded_by_own_post_R0():
+    # R-0 后规则允许吃本方棋子：原"被自家围死的角子"不再 stuck，可通过自残脱困。
+    # count_stuck_pieces 在非终局状态下基本恒为 0；stuck_penalty 已成准死代码，
+    # 完整清理留待 R-0-followup。
     state = make_state(
         red={
             1: Position(0, 0),
@@ -116,7 +118,7 @@ def test_count_stuck_pieces_detects_corner_piece_surrounded_by_own():
         blue={1: Position(4, 4)},
     )
 
-    assert count_stuck_pieces(state, Player.RED) == 1
+    assert count_stuck_pieces(state, Player.RED) == 0
 
 
 def test_count_stuck_pieces_dead_pieces_not_counted():
@@ -135,7 +137,8 @@ def test_count_stuck_pieces_dead_pieces_not_counted():
 
 
 def test_evaluate_penalizes_state_with_own_stuck_piece():
-    # 同样的红方棋子数量与距离，唯一区别是 piece 1 是否被围死
+    # R-0 后两个状态的 count_stuck_pieces 都是 0；本测试现在仅由 distance 项区分：
+    # piece 4 在 (2,2) 比在 (1,1) 离 RED 目标 (4,4) 更近，所以 free 状态评分更高。
     stuck = make_state(
         red={
             1: Position(0, 0),
@@ -150,7 +153,7 @@ def test_evaluate_penalizes_state_with_own_stuck_piece():
             1: Position(0, 0),
             2: Position(0, 1),
             3: Position(1, 0),
-            4: Position(2, 2),  # 4 移到 (2,2)，松开 (1,1)，piece 1 不再被围
+            4: Position(2, 2),  # 4 移到 (2,2)，距目标更近
         },
         blue={1: Position(4, 4)},
     )

@@ -20,12 +20,14 @@ from core.types import Player, Position
 
 
 def _state_with_one_red_stuck() -> GameState:
+    # R-0 后规则允许吃本方棋子：该状态不再有 stuck piece（piece 1 可向 2/3/4 自残脱困）。
+    # 保留函数名以最小化改动；count_stuck_pieces 在该状态下应返回 0。
     return GameState.from_layout(
         red={
             1: Position(0, 0),
             2: Position(0, 1),
             3: Position(1, 0),
-            4: Position(1, 1),  # 把 piece 1 完全围死
+            4: Position(1, 1),
         },
         blue={1: Position(4, 4)},
         current_player=Player.RED,
@@ -37,13 +39,14 @@ def _state_with_one_red_stuck() -> GameState:
 
 def test_evaluate_accepts_stuck_penalty_kwarg_and_zero_disables_penalty() -> None:
     state = _state_with_one_red_stuck()
-    assert count_stuck_pieces(state, Player.RED) == 1
+    # R-0 后 count_stuck_pieces 在非终局状态下基本恒为 0；stuck_penalty kwarg 仍被接受，
+    # 但实际乘法结果恒为 0。本测试退化为契约测试：kwarg 不引发异常且 0 与默认值产生相同分数。
+    assert count_stuck_pieces(state, Player.RED) == 0
 
     default_score = evaluate(state, Player.RED)
     no_penalty_score = evaluate(state, Player.RED, stuck_penalty=0.0)
 
-    # default 把 stuck 视作罚分，no-penalty 不会，差值正好 = 1 * STUCK_PIECE_PENALTY
-    assert no_penalty_score - default_score == STUCK_PIECE_PENALTY
+    assert no_penalty_score == default_score
 
 
 def test_evaluate_accepts_distance_and_material_weight_kwargs() -> None:

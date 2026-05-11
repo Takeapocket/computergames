@@ -1,6 +1,6 @@
 # 爱恩斯坦棋规则记录（以国赛官方规则为准）
 
-更新时间：2026-05-10
+更新时间：2026-05-11
 
 **权威来源**：
 - `全国计算机博弈竞赛总则.md`（CAAI 中国人工智能学会 计算机博弈专委会，国赛总则）
@@ -20,7 +20,7 @@
 8. 如果目标格为空，则正常移动。
 9. **如果目标格有棋子（无论本方或对方），则吃掉该棋子**。
    规则原文："如果在棋子走动的目标棋位上有棋子，则要将该棋子从棋盘上移出（吃掉）。**有时吃掉本方棋子也是一种策略**，因为可以增加其它棋子走动的机会与灵活性。"
-   ⚠️ **当前 core/rules.py 与此规则不符**（详见下方 "已知合规缺口" 章节）。
+   ✅ **已合规**（R-0，2026-05-11）：`core/rules.py:generate_legal_moves_for_piece` 不再过滤本方占用的目标格，统一记为 capture。
 10. 掷出骰子点数 `d` 时，如果己方编号 `d` 的棋子存活，则必须移动该棋子；如果该棋子已被吃掉，则可选择编号距离 `d` 最近的存活棋子；如果两侧距离相同，则两个棋子都可选。
 11. 一方任意棋子到达自己的目标角，或吃掉对方全部棋子，立即获胜。
 12. **对弈结果只有胜负，没有和棋。** harness 中的 `max_turns` 平局机制只是 self-play 防死循环的工具，比赛现场用包干计时超时判负来避免死循环。
@@ -38,27 +38,21 @@
 - **联网禁止**：比赛过程中不允许接入有线/无线网络（桥牌项目例外）。
 - **山寨程序检查**：参赛队需提交程序设计文档、源代码，可被现场专家组质询。
 
-## 已知合规缺口（待 code 修复）
+## 历史合规缺口（R-0 已修复，2026-05-11）
 
-### P0-1 不允许吃本方棋子（违反规则第 9 条）
+### ~~P0-1~~ 不允许吃本方棋子（违反规则第 9 条）— 已修复
 
-- `core/rules.py:52-54` 中 `if occupant.player is piece.player: continue` 跳过本方棋子，等于禁止吃自己子。
-- `tests/test_rules.py:44-51` `test_piece_cannot_move_to_own_piece_square` 明确测试这个**错误**行为。
-- 规则要求：`occupant.player is piece.player` 时也视为吃子（自残），是合法走法。
+- 旧：`core/rules.py:52-54` 中 `if occupant.player is piece.player: continue` 跳过本方棋子。
+- 修复后：删除该分支，统一捕获 occupant。
+- 验收：`tests/test_rules.py::test_piece_can_capture_own_piece`、`tests/test_game_state.py::test_apply_self_capture_marks_own_piece_dead` 通过；pytest 207 passed；4.1 / 4.2 / 4.4 bench 重跑后所有验收门槛通过（详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`）。
 
-**影响范围**：
-- 规则引擎漏算一整类合法走法
-- 阶段 4.0 / 4.1 / 4.2 / 4.4 所有 bench 数据**基于不合规规则**，需要在 code 修复后重跑
-- `count_stuck_pieces()`（stuck penalty）的前提失真——允许吃自己后，被自家围死的角子可以通过吃掉一颗围死的子解开
-- ExpectimaxAI 失败分析（`reports/4-4-failure-analysis.md`）也基于不合规规则，结论需要重新评估
+### R-0 副作用 / R-0-followup
 
-**修复路径**（下一会话执行）：
-1. core/rules.py: 改 `generate_legal_moves_for_piece`，本方棋子也允许 capture
-2. tests/test_rules.py: `test_piece_cannot_move_to_own_piece_square` → 改为 `test_piece_can_capture_own_piece`
-3. 跑全量回归
-4. 重跑 4.1 / 4.2 grid bench
-5. 评估 stuck_penalty 是否还需要（吃自己子后理论上不存在永久 stuck）
-6. 评估 4.2 distance_weighted_capture_risk 是否需要把"被自家吃掉"也算入风险
+- `count_stuck_pieces()`（stuck penalty）在合规规则下基本恒为 0（任何"被本方围死"的棋子都能自残脱困）。`STUCK_PIECE_PENALTY = 100.0` 已成准死代码，但保留以最小化 R-0 改动；完整删除 / CLI flag 清理留待 R-0-followup。
+- `ai/risk.py:expected_capture_risk` 对**对手威胁我方**的评估保持正确（对手自残不影响我方），但 evaluator 缺乏对**我方主动自残的战略价值**建模，留待 R-0-followup。
+- `reports/4-x-failure-analysis.md` 全文重写留待 R-0-followup（rebench 报告已经覆盖关键结论）。
+
+## 未修复的合规/能力缺口
 
 ### P1-1 开局录入 GUI 缺失
 

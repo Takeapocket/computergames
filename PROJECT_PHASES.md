@@ -11,7 +11,16 @@
 
 2026-05-10 通过国赛官网原文（`全国计算机博弈竞赛总则.md` + `爱恩斯坦棋项目规则.md`）核对，发现项目当前实现与赛事规则有以下出入。**这些补丁的优先级高于阶段 6/7 的主线推进**，必须在继续 AI 强化之前完成。
 
-### 阶段 R-0：吃本方棋子合规修复（P0，必须首先做）
+### 阶段 R-0：吃本方棋子合规修复（P0，必须首先做）✅ 已完成 (2026-05-11)
+
+**修复 commit**：core/rules.py 删除 `if occupant.player is piece.player: continue` 分支；tests/test_rules.py 改 `test_piece_can_capture_own_piece`；tests/test_game_state.py 加 `test_apply_self_capture_marks_own_piece_dead`；tests/test_evaluator.py + test_evaluator_injection.py 修破测试。pytest 207 passed。
+
+**bench 重跑**：详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`，全部门槛通过。所有 bench JSON 已转为 slim 格式（无 `per_game[]`，~1.2KB / 份）。
+
+**R-0-followup（不在 R-0 范围）**：
+- 删除 `STUCK_PIECE_PENALTY` / `count_stuck_pieces` 死代码（含 evaluator/greedy_ai/CLI flag/_bench_meta 引用 + 7 个测试）
+- `ai/risk.py` 加入 `expected_self_capture_risk` 或在 evaluator 加 self-capture 战略价值项
+- 4-x-failure-analysis 全文重写（如果做时间预算允许）
 
 **问题**：`core/rules.py:52-54` 不允许走到本方棋子位置；规则原文："如果在棋子走动的目标棋位上有棋子，则要将该棋子从棋盘上移出（吃掉）。**有时吃掉本方棋子也是一种策略**。"
 
@@ -124,30 +133,31 @@ gui/main_window.py         # 启动时检测 auto_save.json，提示"上次未�
 
 ---
 
-## 进度评估（2026-05-10）
+## 进度评估（2026-05-11，R-0 完成后）
 
 | 阶段 | 状态 | 备注 |
 |---|---|---|
 | 0 项目初始化 | ✓ 完成 | |
-| 1 规则引擎 | ⚠️ **基本完成但存在 P0 合规缺口** | 阶段 R-0 修复 |
+| 1 规则引擎 | ✓ **完成（R-0 已合规修复）** | 详见 `reports/4-1-rebench.md` |
 | 2 最小 GUI | ✓ 完成 | |
 | 3 棋谱/计时/比赛模式 | ⚠️ **部分完成** | 阶段 R-1 / R-2 / R-3 补完 |
-| 4.0 最小 harness | ✓ 完成 | bench 数据基于不合规规则，需重跑 |
-| 4.1 GreedyAI | ✓ 完成 | 同上 |
-| 4.2 Expected Risk | ✓ 完成 | 同上；n=2000 grid 验证显示 weight∈[1.0, 5.0] 不可区分，weight=3.0 保留为默认 |
+| 4.0 最小 harness | ✓ 完成 | bench 已按 R-0 合规规则重跑（slim 格式） |
+| 4.1 GreedyAI | ✓ 完成 | R-0 合规重跑后合并 63.75% ≥ 60% 门槛 |
+| 4.2 Expected Risk | ✓ 完成 | R-0 合规重跑后合并 55.75%（旧 53.8% 差 +2pp，<5pp 门槛） |
 | 4.3 Edge Safety | ❌ **跳过** | 1-ply 下 count_edge_pieces 无效，已回退（详见 review history） |
-| 4.4 Piece Importance | ⚠️ **改实现成 ExpectimaxAI** | 与原规划不同，且 ExpectimaxAI 在 1-ply 下输给 greedy_risk（详见 reports/4-4-failure-analysis.md），保留为研究代码 |
+| 4.4 Piece Importance | ⚠️ **改实现成 ExpectimaxAI** | R-0 合规重跑后合并 45.0%（旧 46.5%），仍弱于 greedy_risk，保留为研究代码 |
 | 5 Harness 工程化 | 部分完成（quick_bench 已有） | tournament 多 AI 循环赛、reports/latest.md 自动生成尚未做 |
-| 6 Expectimax 主线 | ❌ 未开始（depth=1 已尝试但弱） | 等 R-0 修复后重新评估是否值得做 |
+| 6 Expectimax 主线 | ❌ 未开始（depth=1 已尝试但弱） | R-0 重跑数据未否定 4-4-rebench 的 4 个改进方向，但未执行 |
 | 7 开局库与参数 | 部分提前到 R-1 | |
 | 8 现场打磨 | ❌ 未开始 | 含 R-3 |
 | 9 封版 | ❌ 未开始 | |
 
 **主线调整建议**：
-- R-0 / R-1 / R-2 / R-3 是赛前必须，估时合计 8-13h
-- R-0 完成后重跑 bench，可能发现 ExpectimaxAI 在合规规则下并不弱（吃自己子的策略让多步 lookahead 价值上升）
+- ~~R-0~~ 已完成（2026-05-11），bench 已重跑并入库
+- R-1 / R-2 / R-3 是赛前必须，估时合计 8-11h
+- R-0-followup（stuck_penalty 死代码清理 + ai/risk.py self-capture 扩展）可以与 R-1/R-2/R-3 并行，不阻塞主线
 - 阶段 7 的开局库优先级被 R-1 提前消化了一部分，剩余的"开局库参数调优"可以推迟
-- 阶段 6 Expectimax 主线在 R-0 重跑后再决策
+- 阶段 6 Expectimax 主线：R-0 重跑后 depth=1 仍弱（45.0%），是否继续做需要先实验 reports/4-4-rebench.md 列出的 4 个方向
 
 ---
 

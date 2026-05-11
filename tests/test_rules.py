@@ -41,14 +41,23 @@ def test_blue_moves_toward_up_left_and_up_left_diagonal():
     assert destinations == {Position(1, 2), Position(2, 1), Position(1, 1)}
 
 
-def test_piece_cannot_move_to_own_piece_square():
+def test_piece_can_capture_own_piece():
+    """规则第 4 条：目标格上有棋子（含本方）则吃掉。吃本方棋子是合法策略。"""
     state = make_state(red={1: Position(2, 2), 2: Position(3, 2)})
 
     moves = state.legal_moves_for_piece(Player.RED, 1)
 
     destinations = {move.to_pos for move in moves}
-    assert Position(3, 2) not in destinations
-    assert destinations == {Position(2, 3), Position(3, 3)}
+    assert destinations == {Position(3, 2), Position(2, 3), Position(3, 3)}
+
+    self_capture = next(move for move in moves if move.to_pos == Position(3, 2))
+    assert self_capture.is_capture
+    assert self_capture.captured_piece == Piece(
+        player=Player.RED,
+        piece_id=2,
+        position=Position(3, 2),
+        alive=True,
+    )
 
 
 def test_piece_can_capture_opponent_piece():

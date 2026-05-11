@@ -34,8 +34,33 @@ def test_apply_capture_marks_opponent_piece_dead():
     assert state.current_player is Player.BLUE
 
 
+def test_apply_self_capture_marks_own_piece_dead():
+    """规则第 4 条：自残合法。移动后本方被吃子 alive=False，移动棋子占据该格。"""
+    state = make_state(red={1: Position(2, 2), 2: Position(3, 3)})
+    move = next(move for move in state.legal_moves_for_piece(Player.RED, 1) if move.to_pos == Position(3, 3))
+
+    state.apply_move(move, dice=1)
+
+    assert move.is_capture
+    assert state.pieces[Player.RED][2].alive is False
+    assert state.pieces[Player.RED][1].position == Position(3, 3)
+    assert state.current_player is Player.BLUE
+
+
 def test_undo_after_capture_restores_complete_serialized_state():
     state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
+    before = state.serialize()
+    move = next(move for move in state.legal_moves_for_piece(Player.RED, 1) if move.to_pos == Position(3, 3))
+
+    state.apply_move(move, dice=1)
+    state.undo_move()
+
+    assert state.serialize() == before
+
+
+def test_undo_after_self_capture_restores_complete_serialized_state():
+    """R-0 后自残合法；undo 必须把被吃的本方棋子恢复 alive 且原位、移动棋子回 from_pos。"""
+    state = make_state(red={1: Position(2, 2), 2: Position(3, 3)})
     before = state.serialize()
     move = next(move for move in state.legal_moves_for_piece(Player.RED, 1) if move.to_pos == Position(3, 3))
 

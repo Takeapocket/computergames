@@ -50,9 +50,6 @@ def generate_legal_moves_for_piece(
             continue
 
         occupant = piece_at(to_pos)
-        if occupant is not None and occupant.player is piece.player:
-            continue
-
         captured_piece = occupant.copy() if occupant is not None else None
         moves.append(
             Move(

@@ -17,8 +17,13 @@ EXPECTED_WIN_RISK_WEIGHT: float = 500.0
 def count_stuck_pieces(state: GameState, player: Player) -> int:
     """统计 ``player`` 一方"alive 但当前没有任何合法走法"的棋子数。
 
-    用于 evaluator 的 stuck_penalty：被自家围死的棋子在 dice 强制选中时会触发 forfeit，
-    属于潜在的"自杀风险"，需要在评估时折现。
+    历史用途：evaluator 的 stuck_penalty——被自家围死的棋子在 dice 强制选中时会触发
+    forfeit，属于潜在的"自杀风险"，需要在评估时折现。
+
+    R-0 后语义退化：合规规则允许吃本方棋子，任何"被自家围死"的棋子都能自残脱困，
+    因此本函数在非终局状态下基本恒为 0（唯一为非零的位置是己方目标角，但到达即胜，
+    不会进入 evaluator）。``STUCK_PIECE_PENALTY`` 因此成为准死代码，
+    完整删除及 CLI flag 清理留待 R-0-followup。
     """
     player = Player.from_value(player)
     return sum(

@@ -212,7 +212,7 @@ def main(argv: list[str] | None = None) -> int:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         stem = args.report_name or f"bench_{timestamp}_{args.red}_vs_{args.blue}"
         report_path = str(report_dir / f"{stem}.json")
-        Path(report_path).write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        Path(report_path).write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         summary["report_path"] = report_path
 
     # 打印到 stdout 时去掉 per_game（避免覆盖终端），保留聚合摘要
