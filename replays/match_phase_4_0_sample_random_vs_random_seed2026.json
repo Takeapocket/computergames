@@ -841,11 +841,19 @@
           "col": 3
         },
         "to_pos": {
-          "row": 3,
+          "row": 4,
           "col": 2
         },
-        "is_capture": false,
-        "captured_piece": null
+        "is_capture": true,
+        "captured_piece": {
+          "player": "blue",
+          "piece_id": 3,
+          "position": {
+            "row": 4,
+            "col": 2
+          },
+          "alive": true
+        }
       },
       "state_after": {
         "current_player": "red",
@@ -920,7 +928,7 @@
               "player": "blue",
               "piece_id": 2,
               "position": {
-                "row": 3,
+                "row": 4,
                 "col": 2
               },
               "alive": true
@@ -932,7 +940,7 @@
                 "row": 4,
                 "col": 2
               },
-              "alive": true
+              "alive": false
             },
             "4": {
               "player": "blue",
@@ -980,11 +988,19 @@
           "col": 0
         },
         "to_pos": {
-          "row": 1,
+          "row": 0,
           "col": 1
         },
-        "is_capture": false,
-        "captured_piece": null
+        "is_capture": true,
+        "captured_piece": {
+          "player": "blue",
+          "piece_id": 6,
+          "position": {
+            "row": 0,
+            "col": 1
+          },
+          "alive": true
+        }
       },
       "state_after": {
         "current_player": "blue",
@@ -994,7 +1010,7 @@
               "player": "red",
               "piece_id": 1,
               "position": {
-                "row": 1,
+                "row": 0,
                 "col": 1
               },
               "alive": true
@@ -1059,7 +1075,7 @@
               "player": "blue",
               "piece_id": 2,
               "position": {
-                "row": 3,
+                "row": 4,
                 "col": 2
               },
               "alive": true
@@ -1071,7 +1087,7 @@
                 "row": 4,
                 "col": 2
               },
-              "alive": true
+              "alive": false
             },
             "4": {
               "player": "blue",
@@ -1098,7 +1114,7 @@
                 "row": 0,
                 "col": 1
               },
-              "alive": true
+              "alive": false
             }
           }
         }
@@ -1113,14 +1129,14 @@
       "dice": 6,
       "move": {
         "player": "blue",
-        "piece_id": 6,
+        "piece_id": 4,
         "from_pos": {
-          "row": 0,
-          "col": 1
+          "row": 3,
+          "col": 4
         },
         "to_pos": {
-          "row": 0,
-          "col": 0
+          "row": 2,
+          "col": 3
         },
         "is_capture": false,
         "captured_piece": null
@@ -1133,7 +1149,7 @@
               "player": "red",
               "piece_id": 1,
               "position": {
-                "row": 1,
+                "row": 0,
                 "col": 1
               },
               "alive": true
@@ -1198,7 +1214,7 @@
               "player": "blue",
               "piece_id": 2,
               "position": {
-                "row": 3,
+                "row": 4,
                 "col": 2
               },
               "alive": true
@@ -1210,14 +1226,14 @@
                 "row": 4,
                 "col": 2
               },
-              "alive": true
+              "alive": false
             },
             "4": {
               "player": "blue",
               "piece_id": 4,
               "position": {
-                "row": 3,
-                "col": 4
+                "row": 2,
+                "col": 3
               },
               "alive": true
             },
@@ -1235,9 +1251,720 @@
               "piece_id": 6,
               "position": {
                 "row": 0,
+                "col": 1
+              },
+              "alive": false
+            }
+          }
+        }
+      },
+      "step_seconds": 0.0,
+      "remaining_seconds": {},
+      "source": "self"
+    },
+    {
+      "turn": 9,
+      "player": "red",
+      "dice": 3,
+      "move": {
+        "player": "red",
+        "piece_id": 3,
+        "from_pos": {
+          "row": 2,
+          "col": 4
+        },
+        "to_pos": {
+          "row": 3,
+          "col": 4
+        },
+        "is_capture": false,
+        "captured_piece": null
+      },
+      "state_after": {
+        "current_player": "blue",
+        "pieces": {
+          "red": {
+            "1": {
+              "player": "red",
+              "piece_id": 1,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "red",
+              "piece_id": 2,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            },
+            "3": {
+              "player": "red",
+              "piece_id": 3,
+              "position": {
+                "row": 3,
+                "col": 4
+              },
+              "alive": true
+            },
+            "4": {
+              "player": "red",
+              "piece_id": 4,
+              "position": {
+                "row": 1,
                 "col": 0
               },
               "alive": true
+            },
+            "5": {
+              "player": "red",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 1
+              },
+              "alive": true
+            },
+            "6": {
+              "player": "red",
+              "piece_id": 6,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": true
+            }
+          },
+          "blue": {
+            "1": {
+              "player": "blue",
+              "piece_id": 1,
+              "position": {
+                "row": 4,
+                "col": 4
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "blue",
+              "piece_id": 2,
+              "position": {
+                "row": 4,
+                "col": 2
+              },
+              "alive": true
+            },
+            "3": {
+              "player": "blue",
+              "piece_id": 3,
+              "position": {
+                "row": 4,
+                "col": 2
+              },
+              "alive": false
+            },
+            "4": {
+              "player": "blue",
+              "piece_id": 4,
+              "position": {
+                "row": 2,
+                "col": 3
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "blue",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 4
+              },
+              "alive": false
+            },
+            "6": {
+              "player": "blue",
+              "piece_id": 6,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            }
+          }
+        }
+      },
+      "step_seconds": 0.0,
+      "remaining_seconds": {},
+      "source": "self"
+    },
+    {
+      "turn": 10,
+      "player": "blue",
+      "dice": 3,
+      "move": {
+        "player": "blue",
+        "piece_id": 2,
+        "from_pos": {
+          "row": 4,
+          "col": 2
+        },
+        "to_pos": {
+          "row": 3,
+          "col": 1
+        },
+        "is_capture": true,
+        "captured_piece": {
+          "player": "red",
+          "piece_id": 6,
+          "position": {
+            "row": 3,
+            "col": 1
+          },
+          "alive": true
+        }
+      },
+      "state_after": {
+        "current_player": "red",
+        "pieces": {
+          "red": {
+            "1": {
+              "player": "red",
+              "piece_id": 1,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "red",
+              "piece_id": 2,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            },
+            "3": {
+              "player": "red",
+              "piece_id": 3,
+              "position": {
+                "row": 3,
+                "col": 4
+              },
+              "alive": true
+            },
+            "4": {
+              "player": "red",
+              "piece_id": 4,
+              "position": {
+                "row": 1,
+                "col": 0
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "red",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 1
+              },
+              "alive": true
+            },
+            "6": {
+              "player": "red",
+              "piece_id": 6,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": false
+            }
+          },
+          "blue": {
+            "1": {
+              "player": "blue",
+              "piece_id": 1,
+              "position": {
+                "row": 4,
+                "col": 4
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "blue",
+              "piece_id": 2,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": true
+            },
+            "3": {
+              "player": "blue",
+              "piece_id": 3,
+              "position": {
+                "row": 4,
+                "col": 2
+              },
+              "alive": false
+            },
+            "4": {
+              "player": "blue",
+              "piece_id": 4,
+              "position": {
+                "row": 2,
+                "col": 3
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "blue",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 4
+              },
+              "alive": false
+            },
+            "6": {
+              "player": "blue",
+              "piece_id": 6,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            }
+          }
+        }
+      },
+      "step_seconds": 0.0,
+      "remaining_seconds": {},
+      "source": "self"
+    },
+    {
+      "turn": 11,
+      "player": "red",
+      "dice": 6,
+      "move": {
+        "player": "red",
+        "piece_id": 5,
+        "from_pos": {
+          "row": 2,
+          "col": 1
+        },
+        "to_pos": {
+          "row": 2,
+          "col": 2
+        },
+        "is_capture": false,
+        "captured_piece": null
+      },
+      "state_after": {
+        "current_player": "blue",
+        "pieces": {
+          "red": {
+            "1": {
+              "player": "red",
+              "piece_id": 1,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "red",
+              "piece_id": 2,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            },
+            "3": {
+              "player": "red",
+              "piece_id": 3,
+              "position": {
+                "row": 3,
+                "col": 4
+              },
+              "alive": true
+            },
+            "4": {
+              "player": "red",
+              "piece_id": 4,
+              "position": {
+                "row": 1,
+                "col": 0
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "red",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 2
+              },
+              "alive": true
+            },
+            "6": {
+              "player": "red",
+              "piece_id": 6,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": false
+            }
+          },
+          "blue": {
+            "1": {
+              "player": "blue",
+              "piece_id": 1,
+              "position": {
+                "row": 4,
+                "col": 4
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "blue",
+              "piece_id": 2,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": true
+            },
+            "3": {
+              "player": "blue",
+              "piece_id": 3,
+              "position": {
+                "row": 4,
+                "col": 2
+              },
+              "alive": false
+            },
+            "4": {
+              "player": "blue",
+              "piece_id": 4,
+              "position": {
+                "row": 2,
+                "col": 3
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "blue",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 4
+              },
+              "alive": false
+            },
+            "6": {
+              "player": "blue",
+              "piece_id": 6,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            }
+          }
+        }
+      },
+      "step_seconds": 0.0,
+      "remaining_seconds": {},
+      "source": "self"
+    },
+    {
+      "turn": 12,
+      "player": "blue",
+      "dice": 4,
+      "move": {
+        "player": "blue",
+        "piece_id": 4,
+        "from_pos": {
+          "row": 2,
+          "col": 3
+        },
+        "to_pos": {
+          "row": 1,
+          "col": 3
+        },
+        "is_capture": false,
+        "captured_piece": null
+      },
+      "state_after": {
+        "current_player": "red",
+        "pieces": {
+          "red": {
+            "1": {
+              "player": "red",
+              "piece_id": 1,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "red",
+              "piece_id": 2,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            },
+            "3": {
+              "player": "red",
+              "piece_id": 3,
+              "position": {
+                "row": 3,
+                "col": 4
+              },
+              "alive": true
+            },
+            "4": {
+              "player": "red",
+              "piece_id": 4,
+              "position": {
+                "row": 1,
+                "col": 0
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "red",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 2
+              },
+              "alive": true
+            },
+            "6": {
+              "player": "red",
+              "piece_id": 6,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": false
+            }
+          },
+          "blue": {
+            "1": {
+              "player": "blue",
+              "piece_id": 1,
+              "position": {
+                "row": 4,
+                "col": 4
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "blue",
+              "piece_id": 2,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": true
+            },
+            "3": {
+              "player": "blue",
+              "piece_id": 3,
+              "position": {
+                "row": 4,
+                "col": 2
+              },
+              "alive": false
+            },
+            "4": {
+              "player": "blue",
+              "piece_id": 4,
+              "position": {
+                "row": 1,
+                "col": 3
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "blue",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 4
+              },
+              "alive": false
+            },
+            "6": {
+              "player": "blue",
+              "piece_id": 6,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            }
+          }
+        }
+      },
+      "step_seconds": 0.0,
+      "remaining_seconds": {},
+      "source": "self"
+    },
+    {
+      "turn": 13,
+      "player": "red",
+      "dice": 3,
+      "move": {
+        "player": "red",
+        "piece_id": 3,
+        "from_pos": {
+          "row": 3,
+          "col": 4
+        },
+        "to_pos": {
+          "row": 4,
+          "col": 4
+        },
+        "is_capture": true,
+        "captured_piece": {
+          "player": "blue",
+          "piece_id": 1,
+          "position": {
+            "row": 4,
+            "col": 4
+          },
+          "alive": true
+        }
+      },
+      "state_after": {
+        "current_player": "blue",
+        "pieces": {
+          "red": {
+            "1": {
+              "player": "red",
+              "piece_id": 1,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": true
+            },
+            "2": {
+              "player": "red",
+              "piece_id": 2,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
+            },
+            "3": {
+              "player": "red",
+              "piece_id": 3,
+              "position": {
+                "row": 4,
+                "col": 4
+              },
+              "alive": true
+            },
+            "4": {
+              "player": "red",
+              "piece_id": 4,
+              "position": {
+                "row": 1,
+                "col": 0
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "red",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 2
+              },
+              "alive": true
+            },
+            "6": {
+              "player": "red",
+              "piece_id": 6,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": false
+            }
+          },
+          "blue": {
+            "1": {
+              "player": "blue",
+              "piece_id": 1,
+              "position": {
+                "row": 4,
+                "col": 4
+              },
+              "alive": false
+            },
+            "2": {
+              "player": "blue",
+              "piece_id": 2,
+              "position": {
+                "row": 3,
+                "col": 1
+              },
+              "alive": true
+            },
+            "3": {
+              "player": "blue",
+              "piece_id": 3,
+              "position": {
+                "row": 4,
+                "col": 2
+              },
+              "alive": false
+            },
+            "4": {
+              "player": "blue",
+              "piece_id": 4,
+              "position": {
+                "row": 1,
+                "col": 3
+              },
+              "alive": true
+            },
+            "5": {
+              "player": "blue",
+              "piece_id": 5,
+              "position": {
+                "row": 2,
+                "col": 4
+              },
+              "alive": false
+            },
+            "6": {
+              "player": "blue",
+              "piece_id": 6,
+              "position": {
+                "row": 0,
+                "col": 1
+              },
+              "alive": false
             }
           }
         }
@@ -1249,9 +1976,9 @@
   ],
   "metadata": {
     "schema_version": 2,
-    "generated_at": "2026-05-10T08:27:13",
-    "git_revision": "9824a598e3b730979ee61a85744c822155d468ad",
-    "git_dirty": true,
+    "generated_at": "2026-05-11T13:32:48",
+    "git_revision": "7beaa91b374106c20428e7d7ad6422d993253093",
+    "git_dirty": false,
     "command": "python scripts/run_match.py --red random --blue random --seed 2026 --replay-name match_phase_4_0_sample_random_vs_random_seed2026",
     "python_version": "3.11.9",
     "starting_layout_id": "default_no_stuck_corner_v1",
@@ -1267,9 +1994,9 @@
     "max_turns": 200
   },
   "result": {
-    "winner": "blue",
+    "winner": "red",
     "termination_reason": "winner_target_corner",
-    "turns": 8,
+    "turns": 13,
     "illegal_moves": 0,
     "crashes": 0
   }
