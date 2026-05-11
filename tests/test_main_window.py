@@ -69,6 +69,56 @@ def test_main_window_destroy_cancels_pending_timer_callback(tk_root):
     )
 
 
+def test_main_window_starts_in_setup_phase(tk_root):
+    from gui.opening_panel import OpeningPanel
+
+    window = MainWindow(tk_root)
+    window.pack()
+
+    assert window._phase == "setup"
+    assert isinstance(window.opening_panel, OpeningPanel)
+
+
+def test_opening_confirm_switches_to_playing_and_writes_metadata(tk_root):
+    from ai.opening_layouts import BLUE_ZONE
+
+    window = MainWindow(tk_root)
+    window.pack()
+    panel = window.opening_panel
+    panel.set_our_side(Player.RED)
+    panel.set_edit_target("opponent")
+    for piece_id, position in enumerate(sorted(BLUE_ZONE, key=lambda pos: (pos.row, pos.col)), start=1):
+        panel.set_selected_piece(piece_id)
+        panel.handle_board_click(position)
+
+    panel.confirm()
+
+    assert window._phase == "playing"
+    assert window._mode == "match"
+    assert window._our_side is Player.RED
+    assert window.record.metadata["our_side"] == "red"
+    assert window.record.metadata["red_layout_source"] == "preset:balanced_v1"
+    assert window.record.metadata["blue_layout_source"] == "manual_entry"
+    assert set(window.state.pieces[Player.RED]) == set(range(1, 7))
+    assert set(window.state.pieces[Player.BLUE]) == set(range(1, 7))
+
+
+def test_reset_returns_to_setup_phase(tk_root):
+    from ai.opening_layouts import BLUE_ZONE
+
+    window = MainWindow(tk_root)
+    window.pack()
+    for piece_id, position in enumerate(sorted(BLUE_ZONE, key=lambda pos: (pos.row, pos.col)), start=1):
+        window.opening_panel.set_selected_piece(piece_id)
+        window.opening_panel.handle_board_click(position)
+    window.opening_panel.confirm()
+
+    window._reset_game()
+
+    assert window._phase == "setup"
+    assert window.record.steps == []
+
+
 def test_undo_button_disabled_when_history_empty(tk_root):
     window = MainWindow(tk_root)
     window.pack()
@@ -620,3 +670,29 @@ def test_save_then_load_round_trip_restores_timer_remaining(tk_root, tmp_path):
     snapshot = window.timer.snapshot()
     assert snapshot.remaining_seconds[Player.RED] == 225.0
     assert snapshot.remaining_seconds[Player.BLUE] == 240.0
+
+
+def test_load_record_restores_match_side_from_metadata(tk_root, tmp_path, monkeypatch):
+    from record.game_record import GameRecord
+    from gui.app import create_default_state
+
+    state = create_default_state()
+    record = GameRecord.from_state(state)
+    record.metadata["our_side"] = Player.BLUE.value
+    path = tmp_path / "match_record.json"
+    record.save(path)
+
+    monkeypatch.setattr("gui.main_window.DEFAULT_RECORD_DIR", tmp_path)
+    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kwargs: str(path))
+
+    window = MainWindow(tk_root)
+    window.pack()
+    window._load_record()
+
+    assert window._mode == "match"
+    assert window._our_side is Player.BLUE
+
+    window.selected_move_index = 0
+    window._apply_selected_move()
+
+    assert window.record.steps[-1].source == "opponent"

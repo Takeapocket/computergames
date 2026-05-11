@@ -17,3 +17,6 @@ venv/
 dist/
 build/
 *.log
+
+# Local opening layouts saved from the GUI
+layouts/*.json

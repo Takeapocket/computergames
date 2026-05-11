@@ -54,11 +54,12 @@
 
 ## 未修复的合规/能力缺口
 
-### P1-1 开局录入 GUI 缺失
+### ~~P1-1~~ 开局录入 GUI 缺失 — 已实现
 
-- 当前 GUI 只支持固定布局（`STARTING_LAYOUT_ID`）。
-- 比赛现场对方先摆好布局，需要操作员将对方布局录入到我方程序。
-- 我方布局也应允许选择多个候选（赛前自己定）。
+- GUI 默认进入开局录入阶段。
+- 我方可选择 ≥3 个候选布局，也可编辑自定义布局。
+- 对方布局可通过点击出发区录入。
+- 确认后使用 `GameState.from_layout()` 创建对局，并将双方实际开局写入 `GameRecord.metadata`。
 
 ### P1-2 7 盘制比赛模式 GUI 缺失
 
@@ -81,4 +82,3 @@
 ```bash
 .venv/Scripts/python.exe scripts/run_gui.py --total-seconds 180
 ```
-

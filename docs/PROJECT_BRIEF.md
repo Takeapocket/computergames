@@ -20,10 +20,9 @@
 - 阶段 4.4：ExpectimaxAI 在 R-0 合规重跑后仍弱（合并 45.0% vs 旧 46.5%），保留为研究/实验代码（详见 `reports/4-4-rebench.md`）。
 
 下一会话优先级：
-1. R-1（开局录入 GUI）
-2. R-2（7 盘制比赛模式）
-3. R-3（崩溃自救）
-4. R-0-followup（与 R-1/R-2/R-3 并行）：删 stuck_penalty 死代码 + ai/risk.py 加 self-capture 战略评估
+1. R-2（7 盘制比赛模式）
+2. R-0-followup：删 stuck_penalty 死代码 + ai/risk.py 加 self-capture 战略评估
+3. GUI 全流程演练与现场操作打磨
 
 ## 当前技术栈
 
@@ -41,7 +40,7 @@
 - 吃对方/本方子、胜负判断、走子和撤销。
 - 状态序列化和反序列化。
 - 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、ExpectimaxAI（实验性）。
-- 最小 Tkinter GUI（含骰子录入、推荐走法 by greedy_risk）。
+- Tkinter GUI（含开局录入、骰子录入、推荐走法 by greedy_risk）。
 - 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）。
 - 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
 - 单方计时（4 分钟包干）。
@@ -89,10 +88,8 @@
 
 详见 `PROJECT_PHASES.md` 顶部"赛事规则对齐补丁"章节。简版顺序：
 
-1. **R-1 开局录入 GUI**：支持比赛现场录入对方布局 + 自己布局多候选
-2. **R-2 7 盘制比赛模式**：盘数计数、自动先后手轮换、比分显示
-3. **R-3 崩溃自救**：每步保存到 `replays/auto_save.json`
-4. **R-0-followup**（可与上述并行）：删 stuck_penalty 死代码 + ai/risk.py self-capture 扩展
-5. 之后才回到原阶段 6（Expectimax 强化）/ 阶段 7（开局库与参数）的主线
-
+1. **R-2 7 盘制比赛模式**：盘数计数、自动先后手轮换、比分显示
+2. **R-0-followup**：删 stuck_penalty 死代码 + ai/risk.py self-capture 扩展
+3. **GUI 全流程演练**：开局录入 → 对局 → 自动保存/恢复 → 棋谱保存
+4. 之后才回到原阶段 6（Expectimax 强化）/ 阶段 7（开局库与参数）的主线
 

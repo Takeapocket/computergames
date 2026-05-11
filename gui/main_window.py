@@ -6,12 +6,14 @@ from tkinter import filedialog, messagebox
 from typing import Literal
 
 from ai.match import build_ai
+from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
 from gui.app import create_default_state, format_move_label, player_label
 from gui.board_widget import BoardWidget
 from gui.control_panel import ControlPanel
 from gui.match_mode import MatchModePanel
+from gui.opening_panel import OpeningPanel, OpeningSelection
 from gui.timer_panel import DEFAULT_TOTAL_SECONDS, MatchTimer, TimerPanel
 from record.auto_save import AUTO_SAVE_PATH, auto_save, clear_auto_save, has_auto_save, load_auto_save
 from record.game_record import GameRecord
@@ -42,6 +44,7 @@ class MainWindow(tk.Frame):
         self.status_message = "请输入骰子并选择合法走法。"
         self._record_dirty = False
         self._awaiting_dice = True
+        self._phase: Literal["setup", "playing"] = "setup"
         self._mode: Literal["debug", "match"] = "debug"
         self._our_side: Player | None = None
 
@@ -57,6 +60,13 @@ class MainWindow(tk.Frame):
         self.match_mode_panel = MatchModePanel(side_panel)
         self.match_mode_panel.pack(fill=tk.X, pady=(0, 8))
 
+        self.opening_panel = OpeningPanel(
+            side_panel,
+            on_confirm=self._start_game_from_opening,
+            on_layout_change=self._refresh_setup_board,
+        )
+        self.opening_panel.pack(fill=tk.BOTH, expand=True)
+
         self.controls = ControlPanel(
             side_panel,
             on_dice_change=self._handle_dice_change,
@@ -69,7 +79,13 @@ class MainWindow(tk.Frame):
         )
         self.controls.pack(fill=tk.BOTH, expand=True)
 
-        self._restore_auto_save_if_available()
+        restored = self._restore_auto_save_if_available()
+        if restored:
+            self._phase = "playing"
+            self._show_playing_phase()
+        else:
+            self._phase = "setup"
+            self._show_setup_phase()
         self._refresh()
         self._schedule_timer_refresh()
 
@@ -172,9 +188,50 @@ class MainWindow(tk.Frame):
         self._clear_selection()
         self._record_dirty = False
         self._awaiting_dice = True
-        self.status_message = "棋局已重置为临时三角布局。"
+        self._phase = "setup"
+        self._mode = "debug"
+        self._our_side = None
+        self.opening_panel.reset()
+        self.status_message = "棋局已重置，请重新录入开局。"
         self._clear_auto_save()
+        self._show_setup_phase()
         self._refresh()
+
+    def _start_game_from_opening(self, selection: OpeningSelection) -> None:
+        self.state = GameState.from_layout(
+            red=selection.red_layout,
+            blue=selection.blue_layout,
+            current_player=Player.RED,
+        )
+        self.record = GameRecord.from_state(self.state)
+        self.record.metadata.update(selection.metadata())
+        self.timer.reset(current_player=self.state.current_player)
+        self.current_dice = 6
+        self._clear_selection()
+        self._record_dirty = False
+        self._awaiting_dice = True
+        self._phase = "playing"
+        self._mode = "match"
+        self._our_side = selection.our_side
+        self.status_message = "开局已确认，请录入第一轮骰子。"
+        self._show_playing_phase()
+        self._refresh()
+
+    def _show_setup_phase(self) -> None:
+        self.timer_panel.pack_forget()
+        self.match_mode_panel.pack_forget()
+        self.controls.pack_forget()
+        if not self.opening_panel.winfo_manager():
+            self.opening_panel.pack(fill=tk.BOTH, expand=True)
+
+    def _show_playing_phase(self) -> None:
+        self.opening_panel.pack_forget()
+        if not self.timer_panel.winfo_manager():
+            self.timer_panel.pack(fill=tk.X, pady=(0, 8))
+        if not self.match_mode_panel.winfo_manager():
+            self.match_mode_panel.pack(fill=tk.X, pady=(0, 8))
+        if not self.controls.winfo_manager():
+            self.controls.pack(fill=tk.BOTH, expand=True)
 
     def _auto_save_current_game(self) -> None:
         try:
@@ -188,9 +245,9 @@ class MainWindow(tk.Frame):
         except OSError as exc:
             self.status_message = f"自动保存清理失败：{exc}"
 
-    def _restore_auto_save_if_available(self) -> None:
+    def _restore_auto_save_if_available(self) -> bool:
         if not has_auto_save(path=self._auto_save_path):
-            return
+            return False
 
         should_restore = messagebox.askyesno(
             "恢复未完成对局",
@@ -199,7 +256,7 @@ class MainWindow(tk.Frame):
         )
         if not should_restore:
             self._clear_auto_save()
-            return
+            return False
 
         try:
             loaded_record, timer_metadata = load_auto_save(path=self._auto_save_path)
@@ -209,7 +266,7 @@ class MainWindow(tk.Frame):
         except (OSError, ValueError, KeyError) as exc:
             messagebox.showerror("恢复自动保存失败", str(exc), parent=self)
             self._clear_auto_save()
-            return
+            return False
 
         self.record = loaded_record
         self.state = loaded_state
@@ -223,7 +280,10 @@ class MainWindow(tk.Frame):
         self._clear_selection()
         self._record_dirty = True
         self._awaiting_dice = True
+        self._phase = "playing"
+        self._restore_mode_from_record_metadata()
         self.status_message = "已恢复上次未完成对局，请录入下一轮骰子。"
+        return True
 
     def _remaining_seconds_from_auto_save_metadata(
         self,
@@ -287,6 +347,9 @@ class MainWindow(tk.Frame):
         self._clear_selection()
         self._record_dirty = False
         self._awaiting_dice = True
+        self._phase = "playing"
+        self._restore_mode_from_record_metadata()
+        self._show_playing_phase()
         self.status_message = "棋谱已加载，请录入下一轮骰子。"
         self._refresh()
 
@@ -329,6 +392,16 @@ class MainWindow(tk.Frame):
         self.status_message = "目标格不是当前棋子的合法走法。"
         return False
 
+    def _refresh_setup_board(self) -> None:
+        if not hasattr(self, "opening_panel"):
+            return
+        self.board.set_edit_mode(
+            True,
+            zone_cells=self.opening_panel.current_edit_zone(),
+            on_cell_click=self.opening_panel.handle_board_click,
+        )
+        self.board.set_state(self.opening_panel.preview_state())
+
     def _refresh(self) -> None:
         moves = self._current_moves()
         selected_ids = self._selected_piece_ids()
@@ -350,11 +423,15 @@ class MainWindow(tk.Frame):
         self.controls.set_can_apply(winner is None and self.selected_move_index is not None)
         self.controls.set_can_undo(bool(self.state.history))
         self.timer_panel.set_snapshot(self.timer.snapshot())
-        self.board.set_state(
-            self.state,
-            selected=self.selected_position,
-            legal_destinations=legal_destinations,
-        )
+        if self._phase == "setup":
+            self._refresh_setup_board()
+        else:
+            self.board.set_edit_mode(False)
+            self.board.set_state(
+                self.state,
+                selected=self.selected_position,
+                legal_destinations=legal_destinations,
+            )
 
     def _current_moves(self) -> list[Move]:
         if self.state.get_winner() is not None:
@@ -402,6 +479,18 @@ class MainWindow(tk.Frame):
         if self._mode != "match" or self._our_side is None:
             return "unknown"
         return "self" if mover is self._our_side else "opponent"
+
+    def _restore_mode_from_record_metadata(self) -> None:
+        our_side = self.record.metadata.get("our_side")
+        if isinstance(our_side, str):
+            try:
+                self._mode = "match"
+                self._our_side = Player.from_value(our_side)
+                return
+            except ValueError:
+                pass
+        self._mode = "debug"
+        self._our_side = None
 
     def _set_mode(self, mode: Literal["debug", "match"], *, our_side: Player | None = None) -> None:
         if mode == "match" and our_side is None:

@@ -66,6 +66,18 @@ def test_default_starting_state_is_independent_per_call():
     assert state_b.pieces[Player.RED][1].alive is True
 
 
+def test_starting_state_for_opening_preset_keeps_default_layout_unchanged():
+    from ai.match import STARTING_LAYOUT_ID, starting_state_for
+    from ai.opening_layouts import PRESETS
+
+    default_state = starting_state_for(STARTING_LAYOUT_ID)
+    preset_state = starting_state_for("balanced_v1")
+
+    assert default_state.pieces[Player.RED][6].position == Position(3, 1)
+    assert preset_state.pieces[Player.RED][6].position == PRESETS["balanced_v1"].red[6]
+    assert preset_state.pieces[Player.BLUE][6].position == PRESETS["balanced_v1"].blue[6]
+
+
 def test_match_result_step_time_aggregates():
     record_placeholder = None  # 暂用 None；play_one_game 测试会传真的 GameRecord
     result = MatchResult(

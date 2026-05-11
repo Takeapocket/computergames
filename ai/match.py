@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
+from ai.opening_layouts import PRESETS
 from core.game_state import GameState
 from core.move import Move
 from core.rules import target_corner
@@ -99,9 +100,22 @@ def standard_triangle_state() -> GameState:
     )
 
 
+def _opening_preset_state(layout_id: str) -> GameState:
+    preset = PRESETS[layout_id]
+    return GameState.from_layout(
+        red=preset.red,
+        blue=preset.blue,
+        current_player=Player.RED,
+    )
+
+
 LAYOUTS = {
     STARTING_LAYOUT_ID: default_starting_state,
     STANDARD_TRIANGLE_LAYOUT_ID: standard_triangle_state,
+    **{
+        layout_id: (lambda preset_id=layout_id: _opening_preset_state(preset_id))
+        for layout_id in PRESETS
+    },
 }
 
 

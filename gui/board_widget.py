@@ -20,6 +20,9 @@ class BoardWidget(tk.Canvas):
         self._state: GameState | None = None
         self._selected: Position | None = None
         self._legal_destinations: set[Position] = set()
+        self._edit_mode = False
+        self._edit_zone_cells: set[Position] = set()
+        self._on_edit_cell_click: Callable[[Position], None] | None = None
         board_px = BOARD_SIZE * cell_size
 
         super().__init__(
@@ -43,11 +46,27 @@ class BoardWidget(tk.Canvas):
         self._legal_destinations = set(legal_destinations)
         self._render()
 
+    def set_edit_mode(
+        self,
+        enabled: bool,
+        *,
+        zone_cells: Iterable[Position] = (),
+        on_cell_click: Callable[[Position], None] | None = None,
+    ) -> None:
+        self._edit_mode = bool(enabled)
+        self._edit_zone_cells = set(zone_cells)
+        self._on_edit_cell_click = on_cell_click if enabled else None
+        self._render()
+
     def _handle_click(self, event: tk.Event) -> None:
         row = int(event.y // self.cell_size)
         col = int(event.x // self.cell_size)
         if 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE:
-            self._on_square_click(Position(row, col))
+            position = Position(row, col)
+            if self._edit_mode and self._on_edit_cell_click is not None:
+                self._on_edit_cell_click(position)
+                return
+            self._on_square_click(position)
 
     def _render(self) -> None:
         self.delete("all")
@@ -65,6 +84,8 @@ class BoardWidget(tk.Canvas):
                 x1 = x0 + self.cell_size
                 y1 = y0 + self.cell_size
                 fill = "#fff8eb" if (row + col) % 2 == 0 else "#efe1c8"
+                if self._edit_mode and position in self._edit_zone_cells:
+                    fill = "#dbeafe"
                 if position == self._selected:
                     fill = "#ffe08a"
                 elif position in self._legal_destinations:
