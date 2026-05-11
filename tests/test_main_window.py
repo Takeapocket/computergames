@@ -31,6 +31,28 @@ def tk_root(_tk_root):
         top.destroy()
 
 
+@pytest.fixture(autouse=True)
+def _isolated_auto_save_path(monkeypatch, tmp_path):
+    monkeypatch.setattr("gui.main_window.AUTO_SAVE_PATH", tmp_path / "auto_save.json", raising=False)
+
+
+def _record_with_one_move_and_timer_data():
+    from gui.app import create_default_state
+    from record.game_record import GameRecord
+
+    state = create_default_state()
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 6)[0], dice=6)
+    record.append(
+        dice=6,
+        move=move,
+        state_after=state,
+        step_seconds=15.0,
+        remaining_seconds={Player.RED: 225.0, Player.BLUE: 240.0},
+    )
+    return record
+
+
 def test_main_window_destroy_cancels_pending_timer_callback(tk_root):
     window = MainWindow(tk_root)
     window.pack()
@@ -124,6 +146,134 @@ def test_record_dirty_false_after_reset(tk_root):
     window._reset_game()
 
     assert window._record_dirty is False
+
+
+def test_apply_move_writes_auto_save(tk_root, monkeypatch):
+    calls = []
+
+    def fake_auto_save(record, snapshot, *, path):
+        calls.append((record, snapshot, path))
+
+    monkeypatch.setattr("gui.main_window.auto_save", fake_auto_save)
+    window = MainWindow(tk_root)
+    window.pack()
+
+    moves = window._current_moves()
+    assert moves
+    window.selected_move_index = 0
+    window._apply_selected_move()
+
+    assert len(calls) == 1
+    assert calls[0][0] is window.record
+    assert calls[0][1].current_player is window.state.current_player
+
+
+def test_undo_move_writes_auto_save_after_successful_undo(tk_root, monkeypatch):
+    calls = []
+
+    def fake_auto_save(record, snapshot, *, path):
+        calls.append((record, snapshot, path))
+
+    monkeypatch.setattr("gui.main_window.auto_save", fake_auto_save)
+    window = MainWindow(tk_root)
+    window.pack()
+
+    moves = window._current_moves()
+    assert moves
+    window.selected_move_index = 0
+    window._apply_selected_move()
+    calls.clear()
+    window._undo_move()
+
+    assert len(calls) == 1
+    assert calls[0][0] is window.record
+
+
+def test_reset_game_clears_auto_save(tk_root, monkeypatch):
+    calls = []
+
+    def fake_clear_auto_save(*, path):
+        calls.append(path)
+
+    monkeypatch.setattr("gui.main_window.clear_auto_save", fake_clear_auto_save)
+    window = MainWindow(tk_root)
+    window.pack()
+
+    window._reset_game()
+
+    assert calls == [window._auto_save_path]
+
+
+def test_accepting_auto_save_restore_replaces_record_state_and_timer(tk_root, monkeypatch):
+    record = _record_with_one_move_and_timer_data()
+    timer_metadata = {
+        "timer_current_player": "blue",
+        "timer_remaining": {"red": 111.0, "blue": 222.0},
+        "timer_paused": True,
+    }
+    clear_calls = []
+
+    monkeypatch.setattr("gui.main_window.has_auto_save", lambda *, path: True, raising=False)
+    monkeypatch.setattr(
+        "gui.main_window.load_auto_save",
+        lambda *, path: (record, timer_metadata),
+        raising=False,
+    )
+    monkeypatch.setattr("gui.main_window.clear_auto_save", lambda *, path: clear_calls.append(path))
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *args, **kwargs: True)
+
+    window = MainWindow(tk_root)
+    window.pack()
+
+    assert window.record.to_dict() == record.to_dict()
+    assert window.state.serialize(include_history=False) == record.restore_state().serialize(include_history=False)
+    snapshot = window.timer.snapshot()
+    assert snapshot.current_player is Player.BLUE
+    assert snapshot.remaining_seconds[Player.RED] == pytest.approx(111.0)
+    assert snapshot.remaining_seconds[Player.BLUE] == pytest.approx(222.0)
+    assert snapshot.paused is True
+    assert clear_calls == []
+
+
+def test_rejecting_auto_save_restore_keeps_fresh_game_and_clears_file(tk_root, monkeypatch):
+    clear_calls = []
+
+    def fail_if_loaded(*, path):
+        raise AssertionError("load_auto_save should not be called when restore is rejected")
+
+    monkeypatch.setattr("gui.main_window.has_auto_save", lambda *, path: True, raising=False)
+    monkeypatch.setattr("gui.main_window.load_auto_save", fail_if_loaded, raising=False)
+    monkeypatch.setattr("gui.main_window.clear_auto_save", lambda *, path: clear_calls.append(path))
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *args, **kwargs: False)
+
+    window = MainWindow(tk_root)
+    window.pack()
+
+    assert window.record.steps == []
+    assert window.state.history == []
+    assert clear_calls == [window._auto_save_path]
+
+
+def test_failed_auto_save_restore_clears_corrupt_file_and_keeps_fresh_game(tk_root, monkeypatch):
+    clear_calls = []
+    errors = []
+
+    def raise_corrupt_record(*, path):
+        raise ValueError("invalid auto-save metadata")
+
+    monkeypatch.setattr("gui.main_window.has_auto_save", lambda *, path: True, raising=False)
+    monkeypatch.setattr("gui.main_window.load_auto_save", raise_corrupt_record, raising=False)
+    monkeypatch.setattr("gui.main_window.clear_auto_save", lambda *, path: clear_calls.append(path))
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *args, **kwargs: True)
+    monkeypatch.setattr("gui.main_window.messagebox.showerror", lambda *args, **kwargs: errors.append(args))
+
+    window = MainWindow(tk_root)
+    window.pack()
+
+    assert window.record.steps == []
+    assert window.state.history == []
+    assert clear_calls == [window._auto_save_path]
+    assert errors
 
 
 def test_phase_starts_in_awaiting_dice(tk_root):

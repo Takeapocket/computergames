@@ -13,6 +13,7 @@ from gui.board_widget import BoardWidget
 from gui.control_panel import ControlPanel
 from gui.match_mode import MatchModePanel
 from gui.timer_panel import DEFAULT_TOTAL_SECONDS, MatchTimer, TimerPanel
+from record.auto_save import AUTO_SAVE_PATH, auto_save, clear_auto_save, has_auto_save, load_auto_save
 from record.game_record import GameRecord
 
 
@@ -20,10 +21,17 @@ DEFAULT_RECORD_DIR = Path(__file__).resolve().parents[1] / "records"
 
 
 class MainWindow(tk.Frame):
-    def __init__(self, master: tk.Misc, *, total_seconds: float = DEFAULT_TOTAL_SECONDS) -> None:
+    def __init__(
+        self,
+        master: tk.Misc,
+        *,
+        total_seconds: float = DEFAULT_TOTAL_SECONDS,
+        auto_save_path: str | Path | None = None,
+    ) -> None:
         super().__init__(master, padx=16, pady=16)
         self._build_menu(master)
         self._total_seconds = float(total_seconds)
+        self._auto_save_path = Path(auto_save_path) if auto_save_path is not None else AUTO_SAVE_PATH
         self.state = create_default_state()
         self.record = GameRecord.from_state(self.state)
         self.timer = MatchTimer(total_seconds=self._total_seconds, current_player=self.state.current_player)
@@ -61,6 +69,7 @@ class MainWindow(tk.Frame):
         )
         self.controls.pack(fill=tk.BOTH, expand=True)
 
+        self._restore_auto_save_if_available()
         self._refresh()
         self._schedule_timer_refresh()
 
@@ -138,6 +147,7 @@ class MainWindow(tk.Frame):
             self.status_message = f"已执行：{format_move_label(move)}。{player_label(winner)}获胜。"
         else:
             self.status_message = f"已执行：{format_move_label(move)}。请录入下一轮骰子。"
+        self._auto_save_current_game()
         self._refresh()
 
     def _undo_move(self) -> None:
@@ -151,6 +161,7 @@ class MainWindow(tk.Frame):
             self._record_dirty = True
             self._awaiting_dice = True
             self.status_message = f"已悔棋：{format_move_label(undone)}。计时不回退。"
+            self._auto_save_current_game()
         self._refresh()
 
     def _reset_game(self) -> None:
@@ -162,7 +173,69 @@ class MainWindow(tk.Frame):
         self._record_dirty = False
         self._awaiting_dice = True
         self.status_message = "棋局已重置为临时三角布局。"
+        self._clear_auto_save()
         self._refresh()
+
+    def _auto_save_current_game(self) -> None:
+        try:
+            auto_save(self.record, self.timer.snapshot(), path=self._auto_save_path)
+        except OSError as exc:
+            self.status_message = f"自动保存失败：{exc}"
+
+    def _clear_auto_save(self) -> None:
+        try:
+            clear_auto_save(path=self._auto_save_path)
+        except OSError as exc:
+            self.status_message = f"自动保存清理失败：{exc}"
+
+    def _restore_auto_save_if_available(self) -> None:
+        if not has_auto_save(path=self._auto_save_path):
+            return
+
+        should_restore = messagebox.askyesno(
+            "恢复未完成对局",
+            "检测到上次未完成的自动保存对局，是否恢复？",
+            parent=self,
+        )
+        if not should_restore:
+            self._clear_auto_save()
+            return
+
+        try:
+            loaded_record, timer_metadata = load_auto_save(path=self._auto_save_path)
+            loaded_state = loaded_record.restore_state()
+            timer_current_player = Player.from_value(timer_metadata["timer_current_player"])
+            timer_remaining = self._remaining_seconds_from_auto_save_metadata(timer_metadata)
+        except (OSError, ValueError, KeyError) as exc:
+            messagebox.showerror("恢复自动保存失败", str(exc), parent=self)
+            self._clear_auto_save()
+            return
+
+        self.record = loaded_record
+        self.state = loaded_state
+        self.timer.reset(
+            current_player=timer_current_player,
+            remaining_seconds=timer_remaining,
+        )
+        if bool(timer_metadata["timer_paused"]):
+            self.timer.pause()
+        self.current_dice = 6
+        self._clear_selection()
+        self._record_dirty = True
+        self._awaiting_dice = True
+        self.status_message = "已恢复上次未完成对局，请录入下一轮骰子。"
+
+    def _remaining_seconds_from_auto_save_metadata(
+        self,
+        timer_metadata: dict[str, object],
+    ) -> dict[Player, float]:
+        remaining = timer_metadata["timer_remaining"]
+        if not isinstance(remaining, dict):
+            raise ValueError("invalid auto-save metadata")
+        return {
+            Player.RED: float(remaining[Player.RED.value]),
+            Player.BLUE: float(remaining[Player.BLUE.value]),
+        }
 
     def _save_record(self) -> None:
         DEFAULT_RECORD_DIR.mkdir(exist_ok=True)
