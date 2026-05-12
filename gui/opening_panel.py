@@ -225,26 +225,87 @@ class OpeningPanel(tk.Frame):
         if notify:
             self._notify_layout_change()
 
+    def reset_for_match_game(
+        self,
+        *,
+        our_side: Player,
+        keep_our_layout: bool,
+    ) -> None:
+        """R-2 比赛模式专用：每盘开始时调用，固定我方颜色并按 sticky 规则准备布局。
+
+        - keep_our_layout=True（上盘我方胜）：保留我方布局；清空对方布局
+        - keep_our_layout=False（第 1 盘或上盘我方负）：重置我方布局为当前下拉预设；清空对方布局
+        """
+        new_side = Player.from_value(our_side)
+        was_enabled = self._notifications_enabled
+        self._notifications_enabled = False
+        try:
+            self.our_side_var.set(new_side.value)
+            self.edit_target_var.set("opponent")
+            self.selected_piece_var.set(1)
+            if keep_our_layout and self._layout_for_side(new_side):
+                # 沿用我方布局，清空对方
+                opponent_layout = self._layout_for_side(new_side.opponent)
+                opponent_layout.clear()
+                if new_side is Player.RED:
+                    self._blue_layout_source = "manual_entry"
+                else:
+                    self._red_layout_source = "manual_entry"
+                self.status_var.set("已沿用我方上盘布局，请录入对方本盘开局。")
+            else:
+                # 重置我方布局为预设，清空对方
+                self._red_layout = {}
+                self._blue_layout = {}
+                self._red_layout_source = "manual_entry"
+                self._blue_layout_source = "manual_entry"
+                # select_layout 会按当前 our_side 加载预设到我方那一侧
+                self.select_layout(self.layout_var.get())
+                self.status_var.set("请确认我方布局，并录入对方本盘开局。")
+            self._update_piece_buttons()
+        finally:
+            self._notifications_enabled = was_enabled
+        self._notify_layout_change()
+
+    def set_side_controls_enabled(self, enabled: bool) -> None:
+        """R-2 比赛模式专用：禁用/启用红/蓝颜色 radio。
+
+        比赛模式下颜色一轮内固定，必须真正禁用 widget 防止误点。"""
+        state = tk.NORMAL if enabled else tk.DISABLED
+        try:
+            self._red_side_radio.configure(state=state)
+            self._blue_side_radio.configure(state=state)
+        except tk.TclError:
+            pass
+
+    @property
+    def side_controls_enabled(self) -> bool:
+        try:
+            return str(self._red_side_radio.cget("state")) == tk.NORMAL
+        except tk.TclError:
+            return True
+
     def _build_widgets(self) -> None:
         title = tk.Label(self, text="开局录入", font=("Segoe UI", 14, "bold"))
         title.pack(anchor=tk.W, pady=(0, 8))
 
         side_box = tk.LabelFrame(self, text="我方颜色", padx=8, pady=6)
         side_box.pack(fill=tk.X, pady=(0, 8))
-        tk.Radiobutton(
+        self._red_side_radio = tk.Radiobutton(
             side_box,
             text="红方",
             value=Player.RED.value,
             variable=self.our_side_var,
             command=lambda: self.set_our_side(Player.RED),
-        ).pack(side=tk.LEFT)
-        tk.Radiobutton(
+        )
+        self._red_side_radio.pack(side=tk.LEFT)
+        self._blue_side_radio = tk.Radiobutton(
             side_box,
             text="蓝方",
             value=Player.BLUE.value,
             variable=self.our_side_var,
             command=lambda: self.set_our_side(Player.BLUE),
-        ).pack(side=tk.LEFT)
+        )
+        self._blue_side_radio.pack(side=tk.LEFT)
 
         layout_box = tk.LabelFrame(self, text="我方布局", padx=8, pady=6)
         layout_box.pack(fill=tk.X, pady=(0, 8))

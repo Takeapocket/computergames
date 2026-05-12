@@ -34,6 +34,11 @@ def tk_root(_tk_root):
 @pytest.fixture(autouse=True)
 def _isolated_auto_save_path(monkeypatch, tmp_path):
     monkeypatch.setattr("gui.main_window.AUTO_SAVE_PATH", tmp_path / "auto_save.json", raising=False)
+    monkeypatch.setattr(
+        "gui.main_window.AUTO_SAVE_MATCH_PATH",
+        tmp_path / "auto_save_match.json",
+        raising=False,
+    )
 
 
 def _record_with_one_move_and_timer_data():
@@ -451,22 +456,25 @@ def test_pick_side_dialog_returns_red_when_red_chosen(tk_root, monkeypatch):
     window = MainWindow(tk_root)
     window.pack()
 
-    monkeypatch.setattr(window, "_show_pick_side_dialog", lambda: Player.RED)
+    monkeypatch.setattr(window, "_show_match_setup_dialog", lambda: (Player.RED, "甲"))
     window._enter_match_mode()
 
     assert window._mode == "match"
     assert window._our_side is Player.RED
+    assert window._match is not None
+    assert window._match.our_role == "甲"
 
 
 def test_pick_side_dialog_cancel_keeps_debug_mode(tk_root, monkeypatch):
     window = MainWindow(tk_root)
     window.pack()
 
-    monkeypatch.setattr(window, "_show_pick_side_dialog", lambda: None)
+    monkeypatch.setattr(window, "_show_match_setup_dialog", lambda: None)
     window._enter_match_mode()
 
     assert window._mode == "debug"
     assert window._our_side is None
+    assert window._match is None
 
 
 def test_phase_in_match_my_turn_awaiting_dice(tk_root):

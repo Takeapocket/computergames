@@ -20,3 +20,7 @@ build/
 
 # Local opening layouts saved from the GUI
 layouts/*.json
+
+# Auto-save runtime artifacts
+replays/auto_save.json
+replays/auto_save_match.json

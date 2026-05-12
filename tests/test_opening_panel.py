@@ -123,6 +123,89 @@ def test_opening_panel_confirm_emits_red_blue_selection(tk_root, tmp_path) -> No
     assert selection.blue_layout_source == "manual_entry"
 
 
+def test_reset_for_match_game_first_game_loads_preset(tk_root, tmp_path) -> None:
+    from ai.opening_layouts import PRESETS
+    from gui.opening_panel import OpeningPanel
+
+    panel = OpeningPanel(tk_root, on_confirm=lambda s: None, layout_directory=tmp_path)
+    panel.reset_for_match_game(our_side=Player.RED, keep_our_layout=False)
+
+    red, blue = panel.get_layouts()
+    assert red == dict(PRESETS["balanced_v1"].red)
+    assert blue == {}
+    assert panel.red_layout_source == "preset:balanced_v1"
+    assert panel.blue_layout_source == "manual_entry"
+    assert panel.edit_target_var.get() == "opponent"
+
+
+def test_reset_for_match_game_keep_layout_after_win(tk_root, tmp_path) -> None:
+    from gui.opening_panel import OpeningPanel
+
+    panel = OpeningPanel(tk_root, on_confirm=lambda s: None, layout_directory=tmp_path)
+    panel.set_our_side(Player.RED)
+    panel.select_layout("aggressive_v1")
+    # 录入一些对方布局
+    panel.set_edit_target("opponent")
+    panel.set_selected_piece(1)
+    panel.handle_board_click(Position(4, 4))
+
+    red_before, _ = panel.get_layouts()
+    panel.reset_for_match_game(our_side=Player.RED, keep_our_layout=True)
+
+    red_after, blue_after = panel.get_layouts()
+    assert red_after == red_before  # 我方布局保留
+    assert blue_after == {}  # 对方布局清空
+
+
+def test_reset_for_match_game_loss_resets_to_preset(tk_root, tmp_path) -> None:
+    from ai.opening_layouts import PRESETS
+    from gui.opening_panel import OpeningPanel
+
+    panel = OpeningPanel(tk_root, on_confirm=lambda s: None, layout_directory=tmp_path)
+    panel.set_our_side(Player.RED)
+    panel.select_layout("aggressive_v1")
+    # 手动改动我方布局
+    panel.set_edit_target("self")
+    panel.set_selected_piece(1)
+    panel.handle_board_click(Position(0, 0))  # 移除红 1（aggressive_v1 红 6 在 (0,0)，红 1 在 (1,1)）
+    # 重置回 balanced 预设（模拟"上盘负"）
+    panel.layout_var.set("balanced_v1")
+    panel.reset_for_match_game(our_side=Player.RED, keep_our_layout=False)
+
+    red, blue = panel.get_layouts()
+    assert red == dict(PRESETS["balanced_v1"].red)
+    assert blue == {}
+
+
+def test_reset_for_match_game_blue_loads_blue_preset(tk_root, tmp_path) -> None:
+    from ai.opening_layouts import PRESETS
+    from gui.opening_panel import OpeningPanel
+
+    panel = OpeningPanel(tk_root, on_confirm=lambda s: None, layout_directory=tmp_path)
+    panel.reset_for_match_game(our_side=Player.BLUE, keep_our_layout=False)
+
+    red, blue = panel.get_layouts()
+    assert blue == dict(PRESETS["balanced_v1"].blue)
+    assert red == {}
+    assert panel.blue_layout_source == "preset:balanced_v1"
+    assert panel.our_side is Player.BLUE
+
+
+def test_set_side_controls_enabled_disables_radios(tk_root, tmp_path) -> None:
+    from gui.opening_panel import OpeningPanel
+
+    panel = OpeningPanel(tk_root, on_confirm=lambda s: None, layout_directory=tmp_path)
+    assert panel.side_controls_enabled is True
+
+    panel.set_side_controls_enabled(False)
+    assert panel.side_controls_enabled is False
+    assert str(panel._red_side_radio.cget("state")) == "disabled"
+    assert str(panel._blue_side_radio.cget("state")) == "disabled"
+
+    panel.set_side_controls_enabled(True)
+    assert panel.side_controls_enabled is True
+
+
 def test_opening_panel_save_reports_os_error(tk_root, tmp_path, monkeypatch) -> None:
     from gui import opening_panel
     from gui.opening_panel import OpeningPanel
