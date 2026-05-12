@@ -39,6 +39,7 @@ def _tk_root():
 @pytest.fixture
 def tk_root(_tk_root):
     top = tk.Toplevel(_tk_root)
+    top.withdraw()
     yield top
     if top.winfo_exists():
         top.destroy()
@@ -438,7 +439,10 @@ def test_enter_match_mode_clears_stale_single_game_auto_save(tk_root, monkeypatc
         tmp_path / "auto_save_match.json",
         raising=False,
     )
-    # 预先放入一个旧的单盘 auto-save（模拟用户上次开过普通模式）
+    window = MainWindow(tk_root)
+    window.pack()
+
+    # 在已启动窗口中放入一个旧的单盘 auto-save，模拟进入新一轮前的残留文件。
     stub_record = _stub_game()
     snapshot = TimerSnapshot(
         current_player=Player.RED,
@@ -450,9 +454,7 @@ def test_enter_match_mode_clears_stale_single_game_auto_save(tk_root, monkeypatc
     _auto_save(stub_record, snapshot, path=tmp_path / "auto_save.json")
     assert has_auto_save(path=tmp_path / "auto_save.json") is True
 
-    # 进入比赛模式 → 旧的单盘 auto-save 必须被清掉，避免下次启动时混合恢复
-    window = MainWindow(tk_root)
-    window.pack()
+    # 进入比赛模式 → 旧的单盘 auto-save 必须被清掉，避免下次启动时混合恢复。
     _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
 
     assert has_auto_save(path=tmp_path / "auto_save.json") is False

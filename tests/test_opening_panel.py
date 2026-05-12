@@ -24,6 +24,7 @@ def _tk_root():
 @pytest.fixture
 def tk_root(_tk_root):
     top = tk.Toplevel(_tk_root)
+    top.withdraw()
     yield top
     if top.winfo_exists():
         top.destroy()

@@ -26,6 +26,7 @@ def _tk_root():
 @pytest.fixture
 def tk_root(_tk_root):
     top = tk.Toplevel(_tk_root)
+    top.withdraw()
     yield top
     if top.winfo_exists():
         top.destroy()
@@ -56,6 +57,10 @@ def _record_with_one_move_and_timer_data():
         remaining_seconds={Player.RED: 225.0, Player.BLUE: 240.0},
     )
     return record
+
+
+def test_tk_root_fixture_uses_hidden_toplevel(tk_root):
+    assert tk_root.state() == "withdrawn"
 
 
 def test_main_window_destroy_cancels_pending_timer_callback(tk_root):
