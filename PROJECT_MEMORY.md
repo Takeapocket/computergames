@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-11
+更新时间：2026-05-12
 
 ## 当前结论
 
@@ -9,7 +9,8 @@
 - 当前最稳假设：现场不依赖统一 API，不联网；双方各自运行自己的程序，由操作员录入骰子、对方走法，并根据程序输出执行本方走法。若后续 QQ 群发布统一平台/API，再新增适配层，不改核心规则引擎和 AI。
 - 爱恩斯坦棋有骰子随机性，但程序仍可通过开局布阵、局面评估、期望搜索、蒙特卡洛模拟等方法显著提升胜率。
 - **2026-05-11 R-0 已完成**：core 现已合规允许吃本方棋子；4.1 / 4.2 / 4.4 bench 已用合规规则重跑（slim 格式入库），全部门槛通过。详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`。
-- **2026-05-11 R-1 / R-2 / R-3 已完成**：开局录入 GUI（R-1）+ 七盘制比赛模式（R-2）+ 崩溃自救（R-3）均已实现并通过 324 条 pytest（含 80 条 R-2 新增）。R-2 详见 `reports/r2-rehearsal.md`；R-1 review followup 决策见 `reports/r1-review-followup.md`。下一阶段：S2 GUI 全流程演练。
+- **2026-05-11 R-1 / R-2 / R-3 已完成**：开局录入 GUI（R-1）+ 七盘制比赛模式（R-2）+ 崩溃自救（R-3）均已实现并通过 324 条 pytest（含 80 条 R-2 新增）。R-2 详见 `reports/r2-rehearsal.md`；R-1 review followup 决策见 `reports/r1-review-followup.md`。
+- **2026-05-12 S2 headless 自动演练已完成，真实 GUI 手动表待填**：`scripts/s2_rehearsal.py` 8 个 scenario 全 PASS（4:0 / 4:3 / 先手序列 / 超时判负 / 盘间恢复 / 盘中恢复 / 悔棋边界 / 整轮结束后行为）；落地 `docs/MATCH_CHECKLIST.md` 现场操作清单 + `docs/EMERGENCY_GUIDE.md` 应急手册；全量 pytest 已通过。详见 `reports/gui-rehearsal.md`。下一步先补真实 Tk GUI 手动演练记录，再进入 S3/S4。
 
 ## 已确认的比赛事实
 
@@ -53,7 +54,7 @@
 - 棋谱保存：JSON 格式（已实现）；后续如有组委会规范再适配。
 - 悔棋/恢复局面（已实现）。
 - 比赛模式：合法步校验、当前轮状态提示、当前推荐走法（已实现）。
-- ⚠️ **缺失**：7 盘制比赛流程（详见 `PROJECT_PHASES.md` 阶段 R-2）。开局录入 GUI（R-1）与崩溃自救（R-3）已实现。
+- 7 盘制比赛流程（R-2 已实现）。开局录入 GUI（R-1）与崩溃自救（R-3）已实现。S2 headless 自动演练已完成，真实 GUI 手动演练表仍需赛前填写。
 
 ## 工程约束
 
@@ -77,8 +78,8 @@
 ## 下一次对话建议第一步
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
-2. R-0 / R-1 / R-3 已完成。下一优先项是 R-2（7 盘制比赛模式）。
-3. R-0-followup 可与 R-1/R-2/R-3 并行：删除 stuck_penalty 死代码 + ai/risk.py 加入 self-capture 战略评估。
+2. R-0 / R-1 / R-2 / R-3 已完成；S2 headless 自动演练已完成，但真实 GUI 手动表待填。下一优先项是补齐 S2 手动记录，随后 S3（AI 低风险清理与 harness 工程化）可与 S4 封版准备并行。
+3. R-0-followup 可与 S3/S4 并行：删除 stuck_penalty 死代码 + ai/risk.py 加入 self-capture 战略评估。
 4. 阶段 6 Expectimax 主线决策：R-0 合规重跑后 ExpectimaxAI 仍弱（合并 45.0%），如果要做需先实验 `reports/4-4-rebench.md` 列出的 4 个方向之一。
 
 ## 待确认事项

@@ -61,14 +61,15 @@
 - 对方布局可通过点击出发区录入。
 - 确认后使用 `GameState.from_layout()` 创建对局，并将双方实际开局写入 `GameRecord.metadata`。
 
-### P1-2 7 盘制比赛模式 GUI 缺失
+### ~~P1-2~~ 7 盘制比赛模式 GUI 缺失 — 已实现
 
-- 当前 `gui/match_mode.py` 只支持单局。
-- 需要补：盘数计数、先胜 4 盘判定、自动按 1/4/5 红先 与 2/3/6/7 蓝先 切换、对方/我方比分显示。
+- `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已实现。
+- 支持盘数计数、先胜 4 盘判定、甲乙身份、先手序列、比分显示和盘间推进。
 
-### P1-3 崩溃自救
+### ~~P1-3~~ 崩溃自救 — 已实现
 
-- 每步保存当前局面到 `replays/auto_save.json`，崩溃后能从最近一步恢复。
+- 每步保存当前局面到 `replays/auto_save.json`，整轮保存到 `replays/auto_save_match.json`。
+- 崩溃后可恢复盘内局面、整轮比分和计时快照；真实 GUI 手动恢复演练仍需在 S2 表格中填写。
 
 ### P3 决赛加赛 10 分钟快棋
 

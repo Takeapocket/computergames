@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-05-12  
+更新时间：2026-05-12（S2 headless 演练完成）
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：离线 GUI 参赛程序
 
@@ -30,10 +30,11 @@
 | 开局录入 R-1 | 已完成 | 支持预设布局、自定义布局、录入对方布局，并写入棋谱 metadata。 |
 | 崩溃自救 R-3 | 已完成 | `record/auto_save.py`、启动恢复、走子/悔棋自动保存已实现并有测试。 |
 | 七盘制 R-2 | 已完成 | `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已落地；R-2 review Critical+Important 修复已合并；甲乙身份选择、先手序列、盘内/整轮 auto-save 全链路打通。 |
+| S2 GUI 全流程演练 | 部分完成 | `scripts/s2_rehearsal.py` 8/8 PASS；`docs/MATCH_CHECKLIST.md` + `docs/EMERGENCY_GUIDE.md` 落地；真实 Tk GUI 手动演练表仍需填写 `reports/gui-rehearsal.md` §4。 |
 | 默认 AI | 可用 | `greedy_risk` 作为当前默认参赛 AI；R-0 合规重跑后 4.1/4.2 门槛通过。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**S2 GUI 全流程演练与现场打磨；AI 增强不能阻塞赛场闭环。**
+下一步主线：**先补齐 S2 真实 Tk GUI 手动演练记录；随后 S3 AI 低风险清理与 harness 工程化（P2，不阻塞 S4 封版）。**
 
 ---
 
@@ -119,8 +120,13 @@ pytest 通过；GUI 手动演练至少跑通一轮 4:0 和一轮 4:3 的流程�
 
 ### S2：GUI 全流程演练与现场打磨
 
-状态：待做。  
+状态：部分完成（2026-05-12：headless 自动演练完成；真实 GUI 手动表待填）。
 优先级：P1，R-2 后立即做。
+
+完成记录：详见 `reports/gui-rehearsal.md`。`scripts/s2_rehearsal.py` 8/8 PASS；
+`docs/MATCH_CHECKLIST.md` 与 `docs/EMERGENCY_GUIDE.md` 已落地；现有 pytest
+已实质覆盖 R-2 后 GUI 回归。真实 Tk GUI 手动 4 胜流程尚未填表，不能把
+headless 自动化等同于完整现场手测。
 
 目标：验证完整比赛操作链路，而不是单个控件可用。
 
@@ -401,4 +407,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**S2：GUI 全流程演练与现场打磨。**
+当前最近任务：**补齐 S2 真实 Tk GUI 手动演练记录；随后 S3：AI 低风险清理与 harness 工程化（P2，可并行 S4 封版准备）。**
