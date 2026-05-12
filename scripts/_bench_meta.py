@@ -60,12 +60,6 @@ def _is_generated_artifact(path: str) -> bool:
     )
 
 
-def greedy_kwargs(stuck_penalty: float | None) -> dict[str, float]:
-    if stuck_penalty is None:
-        return {}
-    return {"stuck_penalty": stuck_penalty}
-
-
 def build_command(script_name: str, argv: list[str] | None) -> str:
     """Reconstruct the user-visible CLI for `python scripts/<script_name>`."""
     args = argv if argv is not None else sys.argv[1:]

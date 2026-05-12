@@ -48,7 +48,7 @@ def test_metadata_and_result_round_trip_through_to_from_dict() -> None:
     record.metadata = {
         "seed": 2026,
         "git_revision": "abc1234",
-        "ai_versions": {"red": {"name": "greedy", "stuck_penalty": 100.0}},
+        "ai_versions": {"red": {"name": "greedy", "distance_weight": 1.0}},
     }
     record.result = {
         "winner": "red",

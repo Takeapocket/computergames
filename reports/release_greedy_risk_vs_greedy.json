@@ -1,0 +1,53 @@
+{
+  "games": 200,
+  "red_wins": 116,
+  "blue_wins": 84,
+  "draws": 0,
+  "red_win_rate": 0.58,
+  "blue_win_rate": 0.42,
+  "draw_rate": 0.0,
+  "red_win_ci95": [
+    0.5107194625547862,
+    0.6462651764982825
+  ],
+  "blue_win_ci95": [
+    0.3537348235017175,
+    0.48928053744521394
+  ],
+  "average_turns": 18.01,
+  "illegal_moves": 0,
+  "crashes": 0,
+  "timeouts": 0,
+  "average_step_time_ms": 0.30882465294131134,
+  "max_step_time_ms": 1.331799998297356,
+  "schema_version": 2,
+  "generated_at": "2026-05-12T20:56:24",
+  "git_revision": "174f29ea3a661a9b91655aea1b3e39666715066b",
+  "git_dirty": true,
+  "command": "python scripts/quick_bench.py --red greedy_risk --blue greedy --games 200 --seed 2026 --report-name release_greedy_risk_vs_greedy",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "red_ai": "greedy_risk",
+  "blue_ai": "greedy",
+  "ai_versions": {
+    "red": {
+      "name": "greedy_risk",
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 3.0,
+      "expected_win_risk_weight": 500.0,
+      "self_capture_weight": 0.0
+    },
+    "blue": {
+      "name": "greedy",
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 0.0,
+      "expected_win_risk_weight": 0.0,
+      "self_capture_weight": 0.0
+    }
+  },
+  "seed": 2026,
+  "max_turns": 200,
+  "wall_seconds": 1.218
+}

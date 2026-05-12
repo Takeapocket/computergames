@@ -1,36 +1,18 @@
 from __future__ import annotations
 
 from ai.risk import distance_weighted_capture_risk, expected_target_win_risk
+from ai.self_capture import self_capture_mobility_gain
 from core.game_state import GameState
-from core.rules import generate_legal_moves_for_piece, target_corner
+from core.rules import target_corner
 from core.types import Player, Position, chebyshev_distance
 
 
 WIN_SCORE: float = 1_000_000.0
 DISTANCE_WEIGHT: float = 1.0
 MATERIAL_WEIGHT: float = 10.0
-STUCK_PIECE_PENALTY: float = 100.0
 EXPECTED_RISK_WEIGHT: float = 3.0
 EXPECTED_WIN_RISK_WEIGHT: float = 500.0
-
-
-def count_stuck_pieces(state: GameState, player: Player) -> int:
-    """统计 ``player`` 一方"alive 但当前没有任何合法走法"的棋子数。
-
-    历史用途：evaluator 的 stuck_penalty——被自家围死的棋子在 dice 强制选中时会触发
-    forfeit，属于潜在的"自杀风险"，需要在评估时折现。
-
-    R-0 后语义退化：合规规则允许吃本方棋子，任何"被自家围死"的棋子都能自残脱困，
-    因此本函数在非终局状态下基本恒为 0（唯一为非零的位置是己方目标角，但到达即胜，
-    不会进入 evaluator）。``STUCK_PIECE_PENALTY`` 因此成为准死代码，
-    完整删除及 CLI flag 清理留待 R-0-followup。
-    """
-    player = Player.from_value(player)
-    return sum(
-        1
-        for piece in state.pieces[player].values()
-        if piece.alive and not generate_legal_moves_for_piece(piece, state.piece_at)
-    )
+SELF_CAPTURE_WEIGHT: float = 0.0
 
 
 def evaluate(
@@ -39,20 +21,17 @@ def evaluate(
     *,
     distance_weight: float = DISTANCE_WEIGHT,
     material_weight: float = MATERIAL_WEIGHT,
-    stuck_penalty: float = STUCK_PIECE_PENALTY,
     expected_risk_weight: float = 0.0,
     expected_win_risk_weight: float = 0.0,
+    self_capture_weight: float = SELF_CAPTURE_WEIGHT,
 ) -> float:
     """从 ``perspective`` 视角对 ``state`` 打分。
 
     终局直接返回 ±WIN_SCORE。否则线性组合：
     - 距离差：对方距其目标角越远越好；自己距己方目标角越近越好。
     - 子力差：自己存活子越多越好。
-    - stuck 差：自己被围死的子越少越好（避免 dice 强制选中触发 forfeit）。
     - 风险项：仅惩罚 ``perspective`` 自身的下一轮被吃/被冲线风险。
-
-    权重通过 kwargs 注入（默认值 = 模块常量）。reproducer 可用 ``stuck_penalty=0``
-    复现 4.1 baseline (commit baea8bb 之前的行为)。
+    - self-capture 机动性增益：默认 0；候选实验可通过非零权重开启。
 
     注意：当 ``expected_risk_weight`` 或 ``expected_win_risk_weight`` 非零时，本函数不保证
     ``evaluate(state, RED) == -evaluate(state, BLUE)``。当前用途是 GreedyAI 对同一视角下候选
@@ -78,15 +57,16 @@ def evaluate(
     )
     own_alive = sum(1 for p in own_pieces.values() if p.alive)
     opp_alive = sum(1 for p in opp_pieces.values() if p.alive)
-    own_stuck = count_stuck_pieces(state, perspective)
-    opp_stuck = count_stuck_pieces(state, perspective.opponent)
     own_expected_risk = distance_weighted_capture_risk(state, perspective)
     own_expected_win_risk = expected_target_win_risk(state, perspective)
+    own_self_capture_gain = (
+        self_capture_mobility_gain(state, perspective) if self_capture_weight else 0.0
+    )
 
     return (
         distance_weight * (opp_distance_total - own_distance_total)
         + material_weight * (own_alive - opp_alive)
-        + stuck_penalty * (opp_stuck - own_stuck)
         - expected_risk_weight * own_expected_risk
         - expected_win_risk_weight * own_expected_win_risk
+        + self_capture_weight * own_self_capture_gain
     )

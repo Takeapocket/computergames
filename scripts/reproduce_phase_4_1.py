@@ -6,11 +6,14 @@ review #1 + #3 提到：旧 5 份 bench JSON 缺 per-game 明细与可复现命�
 
 固定文件名（不带时间戳，方便 git diff 与重复重跑）：
   reports/bench_phase_4_0_random_vs_random.json
-  reports/bench_phase_4_1_baseline_greedy_vs_random.json   (stuck_penalty=0, 复现 0.59)
-  reports/bench_phase_4_1_greedy_vs_random.json            (stuck_penalty=100, 当前 0.65)
+  reports/bench_phase_4_1_baseline_greedy_vs_random.json   (standard_triangle 布局)
+  reports/bench_phase_4_1_greedy_vs_random.json            (default_no_stuck_corner_v1)
   reports/bench_phase_4_1_random_vs_greedy.json            (蓝 greedy, 反向 sanity)
   reports/bench_phase_4_1_greedy_vs_greedy.json            (自对弈, 100 局)
   replays/match_phase_4_0_sample_random_vs_random_seed2026.json   (schema v2 replay 范例)
+
+注：R-0 followup 清理后，baseline 与 production 在 evaluator 上等价；
+两者仅在 ``--starting-layout`` 不同，baseline 仍保留以对比布局影响。
 
 用法：
   python scripts/reproduce_phase_4_1.py                # 全部跑
@@ -44,7 +47,6 @@ BENCH_PLAN: list[tuple[str, str, list[str]]] = [
         [
             "--red", "greedy", "--blue", "random",
             "--games", "200", "--seed", "2026",
-            "--red-stuck-penalty", "0",
             "--starting-layout", "standard_triangle_v1",
         ],
     ),

@@ -1,0 +1,9 @@
+{
+  "ai": "greedy_risk",
+  "distance_weight": 1.0,
+  "material_weight": 10.0,
+  "expected_risk_weight": 3.0,
+  "expected_win_risk_weight": 500.0,
+  "self_capture_weight": 0.0,
+  "promotion_report": null
+}

@@ -19,7 +19,7 @@ from ai.match import (
     play_one_game,
     starting_state_for,
 )
-from scripts._bench_meta import build_provenance, greedy_kwargs
+from scripts._bench_meta import build_provenance
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,18 +28,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--blue", required=True, help="Blue AI kind (e.g. random / greedy)")
     parser.add_argument("--seed", type=int, default=2026, help="Master seed for dice and AI RNGs")
     parser.add_argument("--max-turns", type=int, default=200, help="Hard cap on total half-moves; reaching it = draw")
-    parser.add_argument(
-        "--red-stuck-penalty",
-        type=float,
-        default=None,
-        help="Override GreedyAI stuck_penalty for red (use 0 to reproduce 4.1 baseline).",
-    )
-    parser.add_argument(
-        "--blue-stuck-penalty",
-        type=float,
-        default=None,
-        help="Override GreedyAI stuck_penalty for blue (use 0 to reproduce 4.1 baseline).",
-    )
     parser.add_argument(
         "--starting-layout",
         default=STARTING_LAYOUT_ID,
@@ -63,16 +51,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if args.red != "greedy" and args.red_stuck_penalty is not None:
-        parser.error("--red-stuck-penalty requires --red greedy")
-    if args.blue != "greedy" and args.blue_stuck_penalty is not None:
-        parser.error("--blue-stuck-penalty requires --blue greedy")
-
-    red_kwargs = greedy_kwargs(args.red_stuck_penalty) if args.red == "greedy" else {}
-    blue_kwargs = greedy_kwargs(args.blue_stuck_penalty) if args.blue == "greedy" else {}
-
-    red_ai = build_ai(args.red, seed=args.seed * 3 + 1, **red_kwargs)
-    blue_ai = build_ai(args.blue, seed=args.seed * 3 + 2, **blue_kwargs)
+    red_ai = build_ai(args.red, seed=args.seed * 3 + 1)
+    blue_ai = build_ai(args.blue, seed=args.seed * 3 + 2)
     dice_rng = random.Random(args.seed * 3)
 
     result = play_one_game(

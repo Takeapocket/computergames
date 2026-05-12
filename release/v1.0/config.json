@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "default_ai": "greedy_risk",
+  "default_layout": "balanced_v1",
+  "board_size": 5,
+  "time_limit_seconds": 240,
+  "max_games_per_match": 7,
+  "games_to_win_match": 4,
+  "offline_required": true
+}

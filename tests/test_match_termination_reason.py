@@ -237,5 +237,5 @@ def test_ai_version_signature_for_greedy_includes_evaluator_weights() -> None:
     sig = ai_version_signature(ai)
 
     assert sig["name"] == "greedy"
-    # GreedyAI 在 task #7 中会曝光 stuck_penalty/distance_weight/material_weight 属性。
+    # GreedyAI 在 task #7 中会曝光 distance_weight/material_weight 属性。
     # 此处先断言 name；具体 weight 字段的存在由 task #7 的测试保障。

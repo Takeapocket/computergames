@@ -269,8 +269,8 @@ def play_one_game(
 def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlayer":
     """按 kind 字符串构造带种子的 AI。
 
-    额外的 keyword 参数会按 AI 类型透传（例如 ``stuck_penalty=0.0`` 给 GreedyAI 用于
-    复现 4.1 baseline）。``random`` 不接受任何 evaluator 类参数；传入会抛 TypeError。
+    额外的 keyword 参数会按 AI 类型透传。``random`` 不接受任何 evaluator 类参数；
+    传入会抛 TypeError。
     """
     rng = random.Random(seed)
     if kind == "random":
@@ -321,11 +321,11 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     sig: dict[str, Any] = {"name": ai.name}
     for attr in (
         "depth",
-        "stuck_penalty",
         "distance_weight",
         "material_weight",
         "expected_risk_weight",
         "expected_win_risk_weight",
+        "self_capture_weight",
     ):
         if hasattr(ai, attr):
             sig[attr] = getattr(ai, attr)

@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-12
+更新时间：2026-05-12（收官冲刺 Task Group 01-02-04 完成）
 
 ## 当前结论
 
@@ -11,6 +11,7 @@
 - **2026-05-11 R-0 已完成**：core 现已合规允许吃本方棋子；4.1 / 4.2 / 4.4 bench 已用合规规则重跑（slim 格式入库），全部门槛通过。详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`。
 - **2026-05-11 R-1 / R-2 / R-3 已完成**：开局录入 GUI（R-1）+ 七盘制比赛模式（R-2）+ 崩溃自救（R-3）均已实现并通过 324 条 pytest（含 80 条 R-2 新增）。R-2 详见 `reports/r2-rehearsal.md`；R-1 review followup 决策见 `reports/r1-review-followup.md`。
 - **2026-05-12 S2 headless 自动演练已完成，真实 GUI 手动表待填**：`scripts/s2_rehearsal.py` 8 个 scenario 全 PASS（4:0 / 4:3 / 先手序列 / 超时判负 / 盘间恢复 / 盘中恢复 / 悔棋边界 / 整轮结束后行为）；落地 `docs/MATCH_CHECKLIST.md` 现场操作清单 + `docs/EMERGENCY_GUIDE.md` 应急手册；全量 pytest 已通过。详见 `reports/gui-rehearsal.md`。下一步先补真实 Tk GUI 手动演练记录，再进入 S3/S4。
+- **2026-05-12 收官冲刺 Task Group 01-02 + 04 已完成**：S3（AI 低风险清理 + harness 工程化）落地 `scripts/quick_bench.py` Wilson CI、新增 `scripts/tournament.py` pairwise matrix、清理 R-0 followup `stuck_penalty` 准死代码（grep 无残留）；S4（封版）落地 `release/v1.0/` 全套文档（README + config + default_params + known_limitations + test_report）。AI / 开局候选流水线（`scripts/param_sweep.py` / `scripts/search_openings.py` / `ai/self_capture.py`）已建立但未做大样本晋升验证；默认 AI 保持 `greedy_risk`、默认布局保持 `balanced_v1`。最终验证：364 pytest passed、smoke OK、s2_rehearsal 8/8 PASS、AI baseline 双向 200 局 `greedy_risk` 合并胜率 55.75%（CI 通过），0 illegal / 0 crash / 0 timeout、max_step 6.84ms。决策详见 `reports/ai_promotion_decision.md` 与 `release/v1.0/test_report.md`。剩余 P0：S2 真实 Tk GUI 手动演练表（用户分工，由操作员现场填写）。
 
 ## 已确认的比赛事实
 

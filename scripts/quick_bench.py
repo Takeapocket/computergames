@@ -21,7 +21,18 @@ from ai.match import (
     starting_state_for,
 )
 from core.types import Player
-from scripts._bench_meta import build_provenance, greedy_kwargs
+from scripts._bench_meta import build_provenance
+
+
+def wilson_ci(wins: int, games: int, z: float = 1.96) -> tuple[float, float]:
+    """Return Wilson score 95% confidence interval for a win proportion."""
+    if games <= 0:
+        return 0.0, 0.0
+    p = wins / games
+    denom = 1.0 + z * z / games
+    center = (p + z * z / (2.0 * games)) / denom
+    margin = z * ((p * (1.0 - p) / games + z * z / (4.0 * games * games)) ** 0.5) / denom
+    return max(0.0, center - margin), min(1.0, center + margin)
 
 
 def _aggregate(results) -> dict:
@@ -45,6 +56,9 @@ def _aggregate(results) -> dict:
     avg_step = sum(all_step_times) / len(all_step_times) if all_step_times else 0.0
     max_step = max(all_step_times) if all_step_times else 0.0
 
+    red_ci = wilson_ci(winners[Player.RED], games)
+    blue_ci = wilson_ci(winners[Player.BLUE], games)
+
     return {
         "games": games,
         "red_wins": winners[Player.RED],
@@ -53,6 +67,8 @@ def _aggregate(results) -> dict:
         "red_win_rate": winners[Player.RED] / games,
         "blue_win_rate": winners[Player.BLUE] / games,
         "draw_rate": winners[None] / games,
+        "red_win_ci95": [red_ci[0], red_ci[1]],
+        "blue_win_ci95": [blue_ci[0], blue_ci[1]],
         "average_turns": total_turns / games,
         "illegal_moves": total_illegal,
         "crashes": total_crashes,
@@ -97,18 +113,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=2026, help="Master seed; per-game seed = master*100000 + i")
     parser.add_argument("--max-turns", type=int, default=200, help="Per-game half-move cap; reaching it = draw")
     parser.add_argument(
-        "--red-stuck-penalty",
-        type=float,
-        default=None,
-        help="Override GreedyAI stuck_penalty for red (use 0 to reproduce 4.1 baseline).",
-    )
-    parser.add_argument(
-        "--blue-stuck-penalty",
-        type=float,
-        default=None,
-        help="Override GreedyAI stuck_penalty for blue (use 0 to reproduce 4.1 baseline).",
-    )
-    parser.add_argument(
         "--starting-layout",
         default=STARTING_LAYOUT_ID,
         choices=sorted(LAYOUTS),
@@ -141,14 +145,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if args.red != "greedy" and args.red_stuck_penalty is not None:
-        parser.error("--red-stuck-penalty requires --red greedy")
-    if args.blue != "greedy" and args.blue_stuck_penalty is not None:
-        parser.error("--blue-stuck-penalty requires --blue greedy")
-
-    red_kwargs = greedy_kwargs(args.red_stuck_penalty) if args.red == "greedy" else {}
-    blue_kwargs = greedy_kwargs(args.blue_stuck_penalty) if args.blue == "greedy" else {}
-
     start = time.perf_counter()
     results = []
     per_game: list[dict] = []
@@ -160,8 +156,8 @@ def main(argv: list[str] | None = None) -> int:
         red_seed = per_game_seed * 3 + 1
         blue_seed = per_game_seed * 3 + 2
         dice_seed = per_game_seed * 3
-        red_ai = build_ai(args.red, seed=red_seed, **red_kwargs)
-        blue_ai = build_ai(args.blue, seed=blue_seed, **blue_kwargs)
+        red_ai = build_ai(args.red, seed=red_seed)
+        blue_ai = build_ai(args.blue, seed=blue_seed)
         if i == 0:
             red_signature = ai_version_signature(red_ai)
             blue_signature = ai_version_signature(blue_ai)

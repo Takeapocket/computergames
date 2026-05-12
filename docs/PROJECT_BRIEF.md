@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-12
+更新时间：2026-05-12（收官冲刺 Task Group 01-02-04 完成）
 
 ## 项目定位
 
@@ -8,21 +8,23 @@
 
 程序目标不是命令行工具，而是比赛现场可操作的软件：操作员录入骰子和对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
 
-## 当前阶段判断（2026-05-12）
+## 当前阶段判断（2026-05-12，收官冲刺 Task Group 01-02-04 完成）
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
-- 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。
+- 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
 - 阶段 2：Tkinter GUI 已实现（棋盘显示、开局录入、骰子录入、合法走法选择、执行、悔棋、重置、AI 推荐）。
-- 阶段 3：棋谱、计时、比赛模式已完成主链路。R-1 开局录入、R-2 七盘制、R-3 崩溃自救均已实现；S2 headless 自动演练已完成，真实 GUI 手动表待填。
+- 阶段 3：棋谱、计时、比赛模式已完成主链路。R-1 开局录入、R-2 七盘制、R-3 崩溃自救均已实现；S2 headless 自动演练已完成，真实 GUI 手动表待操作员现场填写。
 - 阶段 4.0 / 4.1 / 4.2：基础对战 harness、GreedyAI、greedy_risk 已完成；**R-0 合规重跑后**门槛全部通过：
   - 4.1 GreedyAI vs RandomAI 合并 63.75% ≥ 60%（详见 `reports/4-1-rebench.md`）
-  - 4.2 greedy_risk vs greedy 合并 55.75%，与 n=2000 真值 53.8% 差 +2pp（详见 `reports/4-2-rebench.md`）
-- 阶段 4.4：ExpectimaxAI 在 R-0 合规重跑后仍弱（合并 45.0% vs 旧 46.5%），保留为研究/实验代码（详见 `reports/4-4-rebench.md`）。
+  - 4.2 greedy_risk vs greedy 合并 55.75%，2026-05-12 release 验证仍为 55.75%（详见 `release/v1.0/test_report.md`）
+- 阶段 4.4：ExpectimaxAI 在 R-0 合规重跑后仍弱（合并 45.0%），保留为研究/实验代码。
+- **S3 完成（2026-05-12）**：`scripts/quick_bench.py` 新增 Wilson 95% CI；`scripts/tournament.py` pairwise matrix 落地；`stuck_penalty` 死代码清理完毕；`ai/self_capture.py`（默认关闭）/ `scripts/param_sweep.py` / `scripts/search_openings.py` 候选实验流水线建立。
+- **S4 基本完成（2026-05-12）**：`release/v1.0/` 目录 README + config + default_params + known_limitations + test_report 已完整落地；候选未晋升，默认 AI 保持 `greedy_risk`，默认布局保持 `balanced_v1`，决策见 `reports/ai_promotion_decision.md`。
 
 下一会话优先级：
-1. 补齐 `reports/gui-rehearsal.md` §4 真实 Tk GUI 手动演练表。
-2. S3 / R-0-followup：删 stuck_penalty 死代码 + ai/risk.py 加 self-capture 战略评估。
-3. S4 封版准备。
+1. 补齐 `reports/gui-rehearsal.md` §4 真实 Tk GUI 手动演练表（用户分工）。
+2. 如时间允许：跑 `scripts/param_sweep.py` / `scripts/search_openings.py` 大样本，按门禁决定是否替换默认 AI / 默认布局。
+3. 整体 sign-off 后将 `release/v1.0` 归档。
 
 ## 当前技术栈
 
@@ -86,9 +88,9 @@
 
 ## 下一步建议（下一会话）
 
-详见 `PROJECT_PHASES.md` 顶部"赛事规则对齐补丁"章节。简版顺序：
+详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
 
-1. **S2 手动补齐**：真实 Tk GUI 跑通并填写 `reports/gui-rehearsal.md` §4。
-2. **R-0-followup / S3**：删 stuck_penalty 死代码 + ai/risk.py self-capture 扩展，工程化 harness。
-3. **S4 封版准备**：冻结运行版本、整理报告和现场材料。
-4. 之后才回到 Expectimax 强化 / 开局库与参数优化主线。
+1. **S2 手动补齐**：真实 Tk GUI 跑通并填写 `reports/gui-rehearsal.md` §4（用户分工，操作员现场完成）。
+2. **可选**：跑大样本 `scripts/param_sweep.py` / `scripts/search_openings.py`，按门禁更新 `reports/ai_promotion_decision.md` 与 `release/v1.0/default_params.json`。
+3. **整体 sign-off**：把 release/v1.0 归档，准备现场。
+4. 比赛后再回到 Expectimax 强化 / 开局库 / RolloutAI 实验主线。
