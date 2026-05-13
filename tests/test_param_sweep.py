@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import scripts.param_sweep as param_sweep
 from core.types import Player
-from scripts.param_sweep import iter_param_grid, summarize_candidate
+from scripts.param_sweep import iter_param_grid, promotion_gate_lines, summarize_candidate
 
 
 def test_iter_param_grid_contains_expected_keys():
@@ -123,3 +123,11 @@ def test_run_bilateral_candidate_combines_red_and_blue_orientations(monkeypatch)
     assert stats["wins"] == 3
     assert stats["games"] == 6
     assert stats["max_step_time_ms"] == 5.0
+
+
+def test_param_sweep_promotion_gate_lines_match_ai_strengthening_spec():
+    text = "\n".join(promotion_gate_lines())
+
+    assert "candidate vs greedy_risk 双边合并胜率 >= 60%" in text
+    assert "Wilson 95% CI 下界 >= 52%" in text
+    assert "avg_step_time_ms < 1000, max_step_time_ms < 5000" in text

@@ -159,6 +159,19 @@ def _opponent_blue_layouts(
     return {"mirror": mirror_layout_for_blue(red_layout), **blue_presets}
 
 
+def promotion_gate_lines() -> list[str]:
+    return [
+        "候选布局晋升需通过：",
+        "",
+        "- candidate layout vs current default layout 双边合并胜率 >= 55%",
+        "- Wilson 95% CI 下界 >= 50%",
+        "- 至少 3 个不同 seed 池复验",
+        "- illegal_moves = 0, crashes = 0, timeouts = 0",
+        "- 保留均衡 / 速攻 / 防守三类候选，不声称最优布局",
+        "- 必须落地到 GUI OpeningPanel preset 才能成为默认；report 仅记录候选",
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Search 720 red-zone permutations for promising opening candidates.")
     parser.add_argument("--sample-size", type=int, default=100, help="Random sample from 720 permutations")
@@ -239,13 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     lines.append("")
     lines.append("## Promotion gate")
     lines.append("")
-    lines.append("候选布局晋升需通过：")
-    lines.append("")
-    lines.append("- candidate vs current default 至少 400 总局，红蓝两侧覆盖")
-    lines.append("- 合并胜率 > 53%")
-    lines.append("- Wilson 95% CI 下界 >= 50%")
-    lines.append("- illegal_moves = 0, crashes = 0, timeouts = 0")
-    lines.append("- 必须落地到 GUI OpeningPanel preset 才能成为默认；report 仅记录候选")
+    lines.extend(promotion_gate_lines())
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text("\n".join(lines) + "\n", encoding="utf-8")
