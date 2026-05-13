@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "default_ai": "greedy_risk",
+  "default_ai": "rollout",
   "default_layout": "balanced_v1",
   "board_size": 5,
   "time_limit_seconds": 240,

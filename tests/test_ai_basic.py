@@ -182,3 +182,27 @@ def test_build_ai_supports_greedy_risk():
     assert ai.expected_win_risk_weight > ai.expected_risk_weight
     assert ai_version_signature(ai)["expected_risk_weight"] == ai.expected_risk_weight
     assert ai_version_signature(ai)["expected_win_risk_weight"] == ai.expected_win_risk_weight
+
+
+def test_build_ai_supports_rollout():
+    from ai.match import ai_version_signature, build_ai
+
+    ai = build_ai(
+        "rollout",
+        seed=2026,
+        rollouts_per_move=3,
+        max_rollout_turns=9,
+        max_step_time_ms=250,
+        epsilon=0.2,
+    )
+    signature = ai_version_signature(ai)
+
+    assert ai.name == "rollout"
+    assert ai.rollouts_per_move == 3
+    assert ai.max_rollout_turns == 9
+    assert ai.max_step_time_ms == 250.0
+    assert ai.epsilon == 0.2
+    assert signature["rollouts_per_move"] == 3
+    assert signature["max_rollout_turns"] == 9
+    assert signature["max_step_time_ms"] == 250.0
+    assert signature["epsilon"] == 0.2

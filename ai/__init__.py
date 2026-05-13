@@ -8,6 +8,7 @@ from core.move import Move
 from ai.expectimax_ai import ExpectimaxAI
 from ai.greedy_ai import GreedyAI
 from ai.random_ai import RandomAI, choose_random_move
+from ai.rollout_ai import RolloutAI
 
 
 class AIPlayer(Protocol):
@@ -24,5 +25,6 @@ __all__ = [
     "ExpectimaxAI",
     "GreedyAI",
     "RandomAI",
+    "RolloutAI",
     "choose_random_move",
 ]

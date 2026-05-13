@@ -294,6 +294,10 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
             expected_win_risk_weight=expected_win_risk_weight,
             **ai_kwargs,
         )
+    if kind == "rollout":
+        from ai.rollout_ai import RolloutAI
+
+        return RolloutAI(rng=rng, **ai_kwargs)
     if kind == "expectimax":
         from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
         from ai.expectimax_ai import ExpectimaxAI
@@ -326,6 +330,10 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "expected_risk_weight",
         "expected_win_risk_weight",
         "self_capture_weight",
+        "rollouts_per_move",
+        "max_rollout_turns",
+        "max_step_time_ms",
+        "epsilon",
     ):
         if hasattr(ai, attr):
             sig[attr] = getattr(ai, attr)

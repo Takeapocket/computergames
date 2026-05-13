@@ -25,7 +25,7 @@ docs/      规则假设和项目文档
 - Tkinter GUI：开局录入、骰子录入、合法走法执行、悔棋、AI 推荐。
 - JSON 棋谱保存 / 加载、单方 4 分钟包干计时、自动保存恢复。
 - 七盘制比赛流程：甲乙身份、先手序列、比分推进、先胜 4 盘。
-- 随机 AI、贪心 AI、`greedy_risk` 默认参赛候选 AI、实验性 Expectimax。
+- 随机 AI、贪心 AI、`greedy_risk` 回退 AI、`rollout` 默认参赛推荐 AI、实验性 Expectimax。
 
 ## 运行测试
 

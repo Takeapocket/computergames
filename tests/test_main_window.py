@@ -595,17 +595,44 @@ def test_match_mode_panel_waits_for_dice_before_showing_recommendation(tk_root):
     assert "等待骰子" in window.match_mode_panel.recommendation_var.get()
 
 
-def test_match_mode_panel_displays_greedy_recommendation_after_dice_input(tk_root):
+def test_match_mode_panel_displays_rollout_recommendation_after_dice_input(tk_root):
     window = MainWindow(tk_root)
     window.pack()
 
     window._handle_dice_change("6")
 
     recommendation = window.match_mode_panel.recommendation_var.get()
-    assert "greedy_risk" in recommendation
+    assert "rollout" in recommendation
     assert "红方 6:" in recommendation
     assert "->" in recommendation
     assert "未启用" not in recommendation
+
+
+def test_recommendation_is_cached_until_state_or_dice_changes(tk_root):
+    class CountingAI:
+        name = "counting"
+
+        def __init__(self):
+            self.calls = 0
+
+        def choose_move(self, state, dice):
+            self.calls += 1
+            return state.legal_moves(state.current_player, dice)[0]
+
+    window = MainWindow(tk_root)
+    window.pack()
+    ai = CountingAI()
+    window._recommender = ai
+
+    window._handle_dice_change("6")
+    window._refresh()
+    window._refresh()
+
+    assert ai.calls == 1
+
+    window._handle_dice_change("5")
+
+    assert ai.calls == 2
 
 
 def test_match_mode_panel_record_status_changes_on_apply(tk_root):

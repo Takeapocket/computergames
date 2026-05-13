@@ -32,6 +32,13 @@ from record.match_record import MatchRecord, MatchRole
 
 
 DEFAULT_RECORD_DIR = Path(__file__).resolve().parents[1] / "records"
+DEFAULT_RECOMMENDER_KIND = "rollout"
+DEFAULT_RECOMMENDER_KWARGS = {
+    "rollouts_per_move": 16,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 500.0,
+    "epsilon": 0.15,
+}
 
 
 class MainWindow(tk.Frame):
@@ -66,7 +73,9 @@ class MainWindow(tk.Frame):
         self._match: MatchRecord | None = None
         self._match_finished_notified = False
         # R-2 review Critical #5：AI 在 __init__ 一次构造、复用，避免每次 _refresh 都新建。
-        self._recommender = build_ai("greedy_risk", seed=0)
+        self._recommender = build_ai(DEFAULT_RECOMMENDER_KIND, seed=0, **DEFAULT_RECOMMENDER_KWARGS)
+        self._recommendation_cache_key: tuple[int, str] | None = None
+        self._recommendation_cache_move: Move | None = None
 
         self.board = BoardWidget(self, self._handle_square_click)
         self.board.pack(side=tk.LEFT, padx=(0, 16), pady=0)
@@ -655,10 +664,23 @@ class MainWindow(tk.Frame):
         if self._awaiting_dice:
             return "等待骰子"
 
-        move = self._recommender.choose_move(self.state, self.current_dice)
+        move = self._recommended_move()
         if move is None:
             return "当前骰子无合法走法"
-        return f"greedy_risk：{format_move_label(move)}"
+        return f"{DEFAULT_RECOMMENDER_KIND}：{format_move_label(move)}"
+
+    def _recommended_move(self) -> Move | None:
+        key = self._recommendation_key()
+        if self._recommendation_cache_key != key:
+            self._recommendation_cache_key = key
+            self._recommendation_cache_move = self._recommender.choose_move(self.state, self.current_dice)
+        return self._recommendation_cache_move
+
+    def _recommendation_key(self) -> tuple[int, str]:
+        return (
+            self.current_dice,
+            repr(self.state.serialize(include_history=False)),
+        )
 
     def _move_source(self, mover: Player) -> Literal["self", "opponent", "unknown"]:
         if self._mode != "match" or self._our_side is None:

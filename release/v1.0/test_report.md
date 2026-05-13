@@ -6,11 +6,13 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 
 | command | exit code | result |
 |---|---:|---|
-| `.venv/Scripts/python.exe -m pytest -q` | 0 | 371 passed |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 332 passed, 50 skipped |
 | `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过 |
 | `.venv/Scripts/python.exe scripts/s2_rehearsal.py` | 0 | 8/8 scenarios passed |
 | `python scripts/quick_bench.py --red greedy_risk --blue greedy --games 200 --seed 2026` | 0 | red_win_rate=0.58 |
 | `python scripts/quick_bench.py --red greedy --blue greedy_risk --games 200 --seed 2026` | 0 | blue_win_rate=0.535 |
+| `python scripts/quick_bench.py --red rollout --blue greedy_risk --games 400 --seed 2026` | 0 | red_win_rate=0.605 |
+| `python scripts/quick_bench.py --red greedy_risk --blue rollout --games 400 --seed 2026` | 0 | blue_win_rate=0.6475 |
 | `rg "import socket\|import urllib\|import requests" --glob "*.py"` | 1 | 无生产网络依赖 |
 | `rg "stuck_penalty\|STUCK_PIECE_PENALTY\|count_stuck_pieces" --glob "*.py"` | 1 | R-0 followup 清理完成 |
 
@@ -19,7 +21,7 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 ## pytest
 
 ```
-371 passed
+332 passed, 50 skipped
 ```
 
 0 failed / 0 errors。
@@ -108,14 +110,29 @@ greedy_risk 双侧 Wilson CI 下界均 > 50% / > 47%（红方下界 0.51，蓝�
 
 `greedy_risk` 在两侧均击败 `greedy`，红方略强（先手 / 短盘特性）。所有局合法、零崩溃、零超时；最大单步耗时 6.84 ms，远低于 5000 ms 上限。
 
+### rollout promotion vs greedy_risk, 800 局, seed=2026
+
+```text
+rollout red win rate:  60.50% (242 / 400), Wilson lower 55.63%
+rollout blue win rate: 64.75% (259 / 400), Wilson lower 59.95%
+combined win rate:     62.62% (501 / 800), Wilson lower 59.22%
+illegal_moves:         0
+crashes:               0
+timeouts:              0
+max_step_time_ms:      469.14
+report_paths:
+  reports/rollout_vs_greedy_risk_red.json
+  reports/greedy_risk_vs_rollout_blue.json
+```
+
 ## Promotion decisions
 
 参见 `reports/ai_promotion_decision.md`：
 
-- **AI 默认**：保持 `greedy_risk`，未做候选晋升。
+- **AI 默认**：`rollout` 晋升为 GUI/release 默认；`greedy_risk` 保留为应急回退。
 - **开局默认**：保持 `balanced_v1`，未做候选晋升。
 
-参数搜索 / 开局搜索 / pairwise tournament 流水线均已落地为 `scripts/param_sweep.py`、`scripts/search_openings.py`、`scripts/tournament.py`，但本 release 未执行大样本跑。
+参数搜索 / 开局搜索 / pairwise tournament 流水线均已落地为 `scripts/param_sweep.py`、`scripts/search_openings.py`、`scripts/tournament.py`；本 release 未替换默认布局。
 
 ## Known limitations
 

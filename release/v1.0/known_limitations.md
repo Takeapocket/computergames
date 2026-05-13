@@ -12,11 +12,12 @@
 
 ## AI
 
-6. **实验性 AI 不是默认**：`ExpectimaxAI(depth=1)` 在 R-0 合规规则下合并胜率 45.0%，弱于 `greedy_risk`，不作为默认参赛 AI。RolloutAI / ExpectimaxV2 在本 release 中**未实现**或仅停留在实验入口。
-7. **参数 / 布局搜索未做晋升**：`scripts/param_sweep.py` 与 `scripts/search_openings.py` 提供流水线，但本 release 未跑大样本，未替换 GUI 默认。
-8. **没有学习型 AI**：本 release 不引入 PyTorch / Gymnasium / OpenSpiel runtime 依赖；所有 AI 都是规则评估 + greedy / risk-aware greedy。
+6. **RolloutAI 是当前默认，但仍保留回退**：`rollout` 已按 `reports/ai_promotion_decision.md` 晋升为默认推荐 AI；若现场发现输出异常，可回退到 `greedy_risk`。
+7. **Expectimax 仍不作为默认**：`ExpectimaxAI(depth=1)` 在 R-0 合规规则下合并胜率 45.0%，弱于 `greedy_risk`；`expectimax_v2` 需要 fresh harness 复验后才能重新评估。
+8. **参数 / 布局搜索未做晋升**：`scripts/param_sweep.py` 与 `scripts/search_openings.py` 提供流水线，但本 release 未跑大样本，未替换默认布局。
+9. **没有学习型 AI**：本 release 不引入 PyTorch / Gymnasium / OpenSpiel runtime 依赖；默认 AI 是规则引擎 + greedy fallback + bounded rollout。
 
 ## 协议 / 部署
 
-9. **不依赖统一平台 / 网络 API**：当前 release 假设比赛现场操作员录入骰子和对方走法。若赛事确认引入统一平台，需要在 `adapters/` 增加适配层，但不在 release/v1.0 范围内。
-10. **不提供二进制包**：发布形态是源码 + `.venv/`；现场用 `scripts/run_gui.py` 启动。
+10. **不依赖统一平台 / 网络 API**：当前 release 假设比赛现场操作员录入骰子和对方走法。若赛事确认引入统一平台，需要在 `adapters/` 增加适配层，但不在 release/v1.0 范围内。
+11. **不提供二进制包**：发布形态是源码 + `.venv/`；现场用 `scripts/run_gui.py` 启动。

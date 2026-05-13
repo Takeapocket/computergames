@@ -31,7 +31,7 @@
 | 崩溃自救 R-3 | 已完成 | `record/auto_save.py`、启动恢复、走子/悔棋自动保存已实现并有测试。 |
 | 七盘制 R-2 | 已完成 | `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已落地；R-2 review Critical+Important 修复已合并；甲乙身份选择、先手序列、盘内/整轮 auto-save 全链路打通。 |
 | S2 GUI 全流程演练 | 已完成 | `scripts/s2_rehearsal.py` 8/8 PASS；`docs/MATCH_CHECKLIST.md` + `docs/EMERGENCY_GUIDE.md` 落地；2026-05-13 操作员真实 Tk GUI 手动表填写完成（`reports/gui-rehearsal.md` §4，21/21 正常）。 |
-| 默认 AI | 可用 | `greedy_risk` 作为当前默认参赛 AI；R-0 合规重跑后 4.1/4.2 门槛通过。 |
+| 默认 AI | 已晋升 | `rollout` 作为当前默认参赛 AI；`greedy_risk` 保留为应急回退。`rollout` vs `greedy_risk` 双边 800 局合并胜率 62.62%，0 illegal / 0 crash / 0 timeout。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
 下一步主线：**路线 B 务实混合推进（AI 参数优化+开局搜索+Expectimax 结构修复→封版）。**
@@ -272,15 +272,15 @@ illegal_moves = 0，crashes = 0，timeouts = 0。
 
 ### A2：Rollout / MCTS 备选实验
 
-外部参考：ewn-gym 的 `MctsAgent` 使用每个候选走法后的随机 rollout 统计胜率，结构简单但不是完整 UCT。可作为轻量实验，不作为默认主线。
+外部参考：ewn-gym 的 `MctsAgent` 使用每个候选走法后的随机 rollout 统计胜率，结构简单但不是完整 UCT。当前项目已采用轻量 `RolloutAI` 作为默认推荐 AI，后续只做参数和性能复验，不引入完整 MCTS 框架。
 
 建议实现边界：
 
 ```text
-新增 RolloutAI 或 mcts_experiment，不改 core。
+RolloutAI 不改 core，只通过 GameState / legal_moves / apply_move 运行模拟。
 每个合法走法 rollout N 次，按胜率选。
 必须支持时间上限和 greedy fallback。
-先与 random/greedy/greedy_risk 做 100-200 局对比。
+继续用 random/greedy/greedy_risk 做批量复验；默认变更必须保留报告。
 ```
 
 不做事项：短期不引入 Gymnasium、Stable-Baselines3、AlphaZero 或神经网络训练。
@@ -409,4 +409,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**S2/S3/S4 全部闭环（2026-05-13）。下一步：release/v1.0 归档准备 + 比赛后 Expectimax/开局库/RolloutAI 实验主线。新鲜验证（2026-05-13）：pytest 371 passed、smoke OK、s2_rehearsal 8/8 PASS、S2 §4 手动表 21/21 正常、`greedy_risk` 合并胜率 55.75% / CI 通过 / 0 illegal / 0 crash。**
+当前最近任务：**S2/S3/S4 全部闭环（2026-05-13）。`rollout` 已按 800 局 harness 门禁晋升为 GUI/release 默认 AI，`greedy_risk` 保留为应急回退。下一步：release/v1.0 归档准备 + 比赛后 Expectimax/开局库继续实验。**

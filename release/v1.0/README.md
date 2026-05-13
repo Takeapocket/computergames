@@ -22,7 +22,7 @@
 4. 选择我方开局布局（默认 `balanced_v1`，可用 `aggressive_v1` / `defensive_v1` / 自定义）。
 5. 录入对方开局，点击"确认开局"进入 playing 阶段。
 6. 每回合：先录入骰子，再录入对方走法（若对方先手），或读取我方推荐走法并执行。
-7. 我方推荐 AI = `greedy_risk`（详见 `default_params.json`）。
+7. 我方推荐 AI = `rollout`（详见 `default_params.json`）。
 8. 单盘结束后 dialog 提示胜方，进入下一盘开局录入。
 9. 任一方 4 胜后 dialog 提示整轮胜方，停止开新盘。
 
@@ -37,10 +37,10 @@
 
 ## 默认 AI
 
-- 名称：`greedy_risk`
-- 实现：`ai/greedy_ai.py` + `ai/evaluator.py`（含 expected capture / win risk 项）
+- 名称：`rollout`
+- 实现：`ai/rollout_ai.py`（有时间上限的平面 rollout，fallback 为 `greedy_risk`）
 - 参数：见 `default_params.json`
-- 晋升状态：**未替换**。详见 `reports/ai_promotion_decision.md`
+- 晋升状态：已按 `reports/ai_promotion_decision.md` 的 800 局双边门禁数据晋升。
 - AI 候选实验入口保留在 `scripts/param_sweep.py` / `scripts/search_openings.py` / `scripts/tournament.py`
 
 ## 工程化基线
@@ -53,5 +53,5 @@
 
 ## 紧急回滚
 
-- 若现场 AI 输出异常，可在 `gui/main_window.py` 中临时把 `build_ai("greedy_risk", ...)` 换为 `build_ai("greedy", ...)`（无 risk 项的纯贪心）。
+- 若现场 AI 输出异常，可在 `gui/main_window.py` 中临时把 `DEFAULT_RECOMMENDER_KIND` 改为 `"greedy_risk"`，并把 `DEFAULT_RECOMMENDER_KWARGS` 改为 `{}`。
 - 若布局录入异常，可切回 `balanced_v1` 默认。
