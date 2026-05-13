@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import scripts.search_openings as search_openings
 from core.types import Position
-from scripts.search_openings import generate_side_layouts, mirror_layout_for_blue
+from scripts.search_openings import generate_side_layouts, mirror_layout_for_blue, promotion_gate_lines
 
 
 def test_generate_side_layouts_can_limit_count():
@@ -116,3 +116,10 @@ def test_run_against_opponents_aggregates_each_opponent(monkeypatch):
     assert stats["wins"] == 3
     assert stats["games"] == 6
     assert stats["max_step_time_ms"] == 2.0
+
+def test_promotion_gate_lines_match_ai_strengthening_spec():
+    text = "\n".join(promotion_gate_lines())
+
+    assert "candidate layout vs current default layout 双边合并胜率 >= 55%" in text
+    assert "Wilson 95% CI 下界 >= 50%" in text
+    assert "至少 3 个不同 seed 池复验" in text

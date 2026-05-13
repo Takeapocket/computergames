@@ -313,6 +313,9 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
             expected_win_risk_weight=expected_win_risk_weight,
             **ai_kwargs,
         )
+    if kind == "expectimax_v2":
+        from ai.expectimax_v2 import ExpectimaxV2
+        return ExpectimaxV2(rng=rng, **ai_kwargs)
     raise ValueError(f"unknown AI: {kind!r}")
 
 
@@ -325,6 +328,8 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     sig: dict[str, Any] = {"name": ai.name}
     for attr in (
         "depth",
+        "time_limit_ms",
+        "randomize_ties",
         "distance_weight",
         "material_weight",
         "expected_risk_weight",

@@ -120,7 +120,7 @@ def run_direction(
             starting_state=starting_state_for(starting_layout),
         )
         winner = _winner_value(result.winner)
-        rows.append({
+        row = {
             "game_index": i + 1,
             "winner": winner,
             "termination_reason": result.termination_reason,
@@ -128,7 +128,8 @@ def run_direction(
             "illegal_moves": result.illegal_moves,
             "crashes": result.crashes,
             "loser": _loser_for(winner),
-        })
+        }
+        rows.append(row)
 
     return rows, aggregate_buckets(rows, perspective=perspective)
 

@@ -6,6 +6,7 @@ from core.game_state import GameState
 from core.move import Move
 
 from ai.expectimax_ai import ExpectimaxAI
+from ai.expectimax_v2 import ExpectimaxV2
 from ai.greedy_ai import GreedyAI
 from ai.random_ai import RandomAI, choose_random_move
 from ai.rollout_ai import RolloutAI
@@ -23,6 +24,7 @@ class AIPlayer(Protocol):
 __all__ = [
     "AIPlayer",
     "ExpectimaxAI",
+    "ExpectimaxV2",
     "GreedyAI",
     "RandomAI",
     "RolloutAI",

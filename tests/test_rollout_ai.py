@@ -40,7 +40,7 @@ def test_rollout_ai_returns_none_when_no_legal_moves():
         blue={1: Position(0, 0)},
         current_player=Player.RED,
     )
-    ai = RolloutAI(rng=random.Random(1))
+    ai = RolloutAI(rollouts_per_move=2, max_rollout_turns=6, max_step_time_ms=1000, rng=random.Random(1))
 
     assert ai.choose_move(state, 1) is None
 

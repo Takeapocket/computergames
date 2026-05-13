@@ -15,10 +15,15 @@ Date: 2026-05-13
 | rollout | red vs greedy_risk | 400 | 242 | 60.50% | 55.63% | 0 | 0 | 0 | 61.58 | 469.14 |
 | rollout | blue vs greedy_risk | 400 | 259 | 64.75% | 59.95% | 0 | 0 | 0 | 54.66 | 418.91 |
 | **rollout combined** | combined | **800** | **501** | **62.62%** | **59.22%** | **0** | **0** | **0** | **61.58** | **469.14** |
+| expectimax_v2 | red vs greedy_risk | 400 | 178 | 44.50% | 39.70% | 0 | 0 | 0 | 0.33 | 17.85 |
+| expectimax_v2 | blue vs greedy_risk | 400 | 192 | 48.00% | 43.15% | 0 | 0 | 0 | 0.35 | 22.28 |
+| **expectimax_v2 combined** | combined | **800** | **370** | **46.25%** | **42.82%** | **0** | **0** | **0** | **0.35** | **22.28** |
 
 Timing note: combined `avg ms` and `max ms` use the slower observed direction as a conservative summary, not a weighted average.
 
-## Gate
+Expectimax note: the `expectimax_v2` rows are retained as historical evidence from the pre-depth-fix implementation. After the 2026-05-13 depth semantics fix, `expectimax_v2` needs a fresh resource-approved harness rerun before any promotion decision.
+
+## Gate (for AI promotion)
 
 - candidate vs greedy_risk 双边合并胜率 >= 60%
 - Wilson 95% CI 下界 >= 52%
@@ -30,7 +35,7 @@ Timing note: combined `avg ms` and `max ms` use the slower observed direction as
 
 ## Decision
 
-`rollout` passes the numerical harness gates and is promoted to the GUI / release default AI.
+**rollout** passes the numerical harness gates:
 
 | gate | threshold | actual | pass |
 |---|---:|---:|---|
@@ -42,9 +47,24 @@ Timing note: combined `avg ms` and `max ms` use the slower observed direction as
 | avg_step_time_ms | < 1000 | 61.58 | PASS |
 | max_step_time_ms | < 5000 | 469.14 | PASS |
 
+**expectimax_v2** is not promotion-eligible:
+
+| gate | threshold | actual | pass |
+|---|---:|---:|---|
+| combined win rate | >= 60% | 46.25% | FAIL |
+| Wilson 95% CI lower | >= 52% | 42.82% | FAIL |
+| illegal_moves | = 0 | 0 | PASS |
+| crashes | = 0 | 0 | PASS |
+| timeouts | = 0 | 0 | PASS |
+| avg_step_time_ms | < 1000 | 0.35 | PASS |
+| max_step_time_ms | < 5000 | 22.28 | PASS |
+
+Default AI is promoted to `rollout` for GUI and release configuration. `greedy_risk` remains the emergency fallback. `expectimax_v2` remains experimental and is not promotion-eligible on the recorded evidence.
+
 Implementation:
 
 - `gui/main_window.py` default recommender: `rollout`
+- `release/v1.0/config.json`: `default_ai = rollout`
 - `release/v1.0/default_params.json`: rollout parameters and `fallback_ai = greedy_risk`
 - emergency fallback: set `DEFAULT_RECOMMENDER_KIND = "greedy_risk"` and `DEFAULT_RECOMMENDER_KWARGS = {}`
 
@@ -52,3 +72,5 @@ Implementation:
 
 - `reports/rollout_vs_greedy_risk_red.json`
 - `reports/greedy_risk_vs_rollout_blue.json`
+- `reports/expectimax_v2_vs_greedy_risk_red.json`
+- `reports/greedy_risk_vs_expectimax_v2_blue.json`
