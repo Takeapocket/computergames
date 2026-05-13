@@ -4,6 +4,7 @@ import tkinter as tk
 from collections.abc import Callable, Iterable
 
 from core.game_state import GameState
+from core.move import Move
 from core.types import BOARD_SIZE, Player, Position
 
 
@@ -20,6 +21,7 @@ class BoardWidget(tk.Canvas):
         self._state: GameState | None = None
         self._selected: Position | None = None
         self._legal_destinations: set[Position] = set()
+        self._preview_move: Move | None = None
         self._edit_mode = False
         self._edit_zone_cells: set[Position] = set()
         self._on_edit_cell_click: Callable[[Position], None] | None = None
@@ -40,10 +42,12 @@ class BoardWidget(tk.Canvas):
         *,
         selected: Position | None = None,
         legal_destinations: Iterable[Position] = (),
+        preview_move: Move | None = None,
     ) -> None:
         self._state = state
         self._selected = selected
         self._legal_destinations = set(legal_destinations)
+        self._preview_move = preview_move
         self._render()
 
     def set_edit_mode(
@@ -74,6 +78,8 @@ class BoardWidget(tk.Canvas):
         if self._state is None:
             return
         self._draw_pieces()
+        if self._preview_move is not None:
+            self._draw_preview(self._preview_move)
 
     def _draw_cells(self) -> None:
         for row in range(BOARD_SIZE):
@@ -117,4 +123,34 @@ class BoardWidget(tk.Canvas):
             text=str(piece_id),
             fill="white",
             font=("Segoe UI", 22, "bold"),
+        )
+
+    def _draw_preview(self, move: Move) -> None:
+        padding = 12
+        position = move.to_pos
+        x0 = position.col * self.cell_size + padding
+        y0 = position.row * self.cell_size + padding
+        x1 = (position.col + 1) * self.cell_size - padding
+        y1 = (position.row + 1) * self.cell_size - padding
+        fill = "#bf2f2f" if move.player is Player.RED else "#2459a6"
+
+        self.create_oval(
+            x0,
+            y0,
+            x1,
+            y1,
+            fill=fill,
+            stipple="gray50",
+            outline=fill,
+            width=2,
+            dash=(4, 2),
+            tags=("preview",),
+        )
+        self.create_text(
+            (x0 + x1) / 2,
+            (y0 + y1) / 2,
+            text=str(move.piece_id),
+            fill=fill,
+            font=("Segoe UI", 22, "bold"),
+            tags=("preview",),
         )

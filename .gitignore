@@ -21,6 +21,10 @@ build/
 # Local opening layouts saved from the GUI
 layouts/*.json
 
+# Local game records saved from the GUI
+records/*.json
+records/**/*.json
+
 # Auto-save runtime artifacts
 replays/auto_save.json
 replays/auto_save_match.json

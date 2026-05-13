@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-05-12（S3 完成 + 封版材料落地）
+更新时间：2026-05-13（S2 真实 Tk GUI 手动表填写完成，S2/S3/S4 全部闭环）
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：离线 GUI 参赛程序
 
@@ -30,7 +30,7 @@
 | 开局录入 R-1 | 已完成 | 支持预设布局、自定义布局、录入对方布局，并写入棋谱 metadata。 |
 | 崩溃自救 R-3 | 已完成 | `record/auto_save.py`、启动恢复、走子/悔棋自动保存已实现并有测试。 |
 | 七盘制 R-2 | 已完成 | `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已落地；R-2 review Critical+Important 修复已合并；甲乙身份选择、先手序列、盘内/整轮 auto-save 全链路打通。 |
-| S2 GUI 全流程演练 | 部分完成 | `scripts/s2_rehearsal.py` 8/8 PASS；`docs/MATCH_CHECKLIST.md` + `docs/EMERGENCY_GUIDE.md` 落地；真实 Tk GUI 手动演练表仍需填写 `reports/gui-rehearsal.md` §4。 |
+| S2 GUI 全流程演练 | 已完成 | `scripts/s2_rehearsal.py` 8/8 PASS；`docs/MATCH_CHECKLIST.md` + `docs/EMERGENCY_GUIDE.md` 落地；2026-05-13 操作员真实 Tk GUI 手动表填写完成（`reports/gui-rehearsal.md` §4，21/21 正常）。 |
 | 默认 AI | 可用 | `greedy_risk` 作为当前默认参赛 AI；R-0 合规重跑后 4.1/4.2 门槛通过。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
@@ -122,13 +122,13 @@ pytest 通过；GUI 手动演练至少跑通一轮 4:0 和一轮 4:3 的流程�
 
 ### S2：GUI 全流程演练与现场打磨
 
-状态：部分完成（2026-05-12：headless 自动演练完成；真实 GUI 手动表待填）。
-优先级：P1，R-2 后立即做。
+状态：已完成（2026-05-13）。
+优先级：P1，赛前必须。
 
 完成记录：详见 `reports/gui-rehearsal.md`。`scripts/s2_rehearsal.py` 8/8 PASS；
 `docs/MATCH_CHECKLIST.md` 与 `docs/EMERGENCY_GUIDE.md` 已落地；现有 pytest
-已实质覆盖 R-2 后 GUI 回归。真实 Tk GUI 手动 4 胜流程尚未填表，不能把
-headless 自动化等同于完整现场手测。
+已实质覆盖 R-2 后 GUI 回归；2026-05-13 操作员真实 Tk GUI 手动表
+（`reports/gui-rehearsal.md` §4，21 项）全部"正常"，S2 完整闭环。
 
 目标：验证完整比赛操作链路，而不是单个控件可用。
 
@@ -201,7 +201,7 @@ quick_bench 仍可复现 4.1/4.2 基线。
 
 ### S4：封版准备
 
-状态：基本完成（2026-05-12，release/v1.0 文档已落地，待 S2 真实 GUI 手动表完成后整体 sign-off）。
+状态：已完成（2026-05-13，S2 全部手测项填表完成后整体 sign-off）。
 优先级：P1，比赛前最后阶段。
 
 目标：冻结比赛版本，降低现场风险。
@@ -409,4 +409,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**补齐 S2 真实 Tk GUI 手动演练记录（用户分工）；其余 S3 / S4 已基本完成。新鲜验证（2026-05-12）：pytest 364 passed、smoke OK、s2_rehearsal 8/8 PASS、`greedy_risk` 合并胜率 55.75% / CI 通过 / 0 illegal / 0 crash。**
+当前最近任务：**S2/S3/S4 全部闭环（2026-05-13）。下一步：release/v1.0 归档准备 + 比赛后 Expectimax/开局库/RolloutAI 实验主线。新鲜验证（2026-05-13）：pytest 371 passed、smoke OK、s2_rehearsal 8/8 PASS、S2 §4 手动表 21/21 正常、`greedy_risk` 合并胜率 55.75% / CI 通过 / 0 illegal / 0 crash。**

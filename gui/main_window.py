@@ -605,11 +605,18 @@ class MainWindow(tk.Frame):
         if self._phase == "setup":
             self._refresh_setup_board()
         else:
+            preview_move: Move | None = None
+            if (
+                self.selected_move_index is not None
+                and 0 <= self.selected_move_index < len(moves)
+            ):
+                preview_move = moves[self.selected_move_index]
             self.board.set_edit_mode(False)
             self.board.set_state(
                 self.state,
                 selected=self.selected_position,
                 legal_destinations=legal_destinations,
+                preview_move=preview_move,
             )
 
     def _current_moves(self) -> list[Move]:

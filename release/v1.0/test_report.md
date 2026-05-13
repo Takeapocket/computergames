@@ -1,14 +1,14 @@
 # Test Report
 
-Date: 2026-05-12
+Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）
 
 ## Commands
 
 | command | exit code | result |
 |---|---:|---|
-| `python -m pytest -q` | 0 | 364 passed |
-| `python scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过 |
-| `python scripts/s2_rehearsal.py` | 0 | 8/8 scenarios passed |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 371 passed |
+| `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过 |
+| `.venv/Scripts/python.exe scripts/s2_rehearsal.py` | 0 | 8/8 scenarios passed |
 | `python scripts/quick_bench.py --red greedy_risk --blue greedy --games 200 --seed 2026` | 0 | red_win_rate=0.58 |
 | `python scripts/quick_bench.py --red greedy --blue greedy_risk --games 200 --seed 2026` | 0 | blue_win_rate=0.535 |
 | `rg "import socket\|import urllib\|import requests" --glob "*.py"` | 1 | 无生产网络依赖 |
@@ -19,7 +19,7 @@ Date: 2026-05-12
 ## pytest
 
 ```
-364 passed in 10.47s
+371 passed
 ```
 
 0 failed / 0 errors。
@@ -55,7 +55,16 @@ Total: 8/8 scenarios passed
 
 ## GUI manual rehearsal
 
-`reports/gui-rehearsal.md` §4 的真实 Tk GUI 手动表由操作员现场填写；本次 release 验证未填表。S2 自动化（8/8）+ pytest GUI 集成测试已实质覆盖回归项，但视觉/dialog 文案/键盘焦点等仍需现场过一遍。
+`reports/gui-rehearsal.md` §4 真实 Tk GUI 手动表 2026-05-13 由操作员现场填表完成，21 项全"正常"：
+
+- §4.1 启动到 4:0 整轮（8 步）：全部正常
+- §4.2 4:3 决胜（3 步）：全部正常
+- §4.3 盘内崩溃恢复（2 步）：全部正常
+- §4.4 盘间崩溃恢复（2 步）：全部正常
+- §4.5 误操作恢复（3 步）：全部正常
+- §4.6 整轮结束后操作（3 步）：全部正常
+
+S2 完整闭环（headless 自动 8/8 + 真实 GUI 手动 21/21）。
 
 ## AI baseline
 

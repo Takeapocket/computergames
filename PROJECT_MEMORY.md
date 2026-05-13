@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-12（收官冲刺 Task Group 01-02-04 完成）
+更新时间：2026-05-13（S2 真实 Tk GUI 手动表填写完成，S2/S3/S4 全部闭环）
 
 ## 当前结论
 
@@ -10,8 +10,9 @@
 - 爱恩斯坦棋有骰子随机性，但程序仍可通过开局布阵、局面评估、期望搜索、蒙特卡洛模拟等方法显著提升胜率。
 - **2026-05-11 R-0 已完成**：core 现已合规允许吃本方棋子；4.1 / 4.2 / 4.4 bench 已用合规规则重跑（slim 格式入库），全部门槛通过。详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`。
 - **2026-05-11 R-1 / R-2 / R-3 已完成**：开局录入 GUI（R-1）+ 七盘制比赛模式（R-2）+ 崩溃自救（R-3）均已实现并通过 324 条 pytest（含 80 条 R-2 新增）。R-2 详见 `reports/r2-rehearsal.md`；R-1 review followup 决策见 `reports/r1-review-followup.md`。
-- **2026-05-12 S2 headless 自动演练已完成，真实 GUI 手动表待填**：`scripts/s2_rehearsal.py` 8 个 scenario 全 PASS（4:0 / 4:3 / 先手序列 / 超时判负 / 盘间恢复 / 盘中恢复 / 悔棋边界 / 整轮结束后行为）；落地 `docs/MATCH_CHECKLIST.md` 现场操作清单 + `docs/EMERGENCY_GUIDE.md` 应急手册；全量 pytest 已通过。详见 `reports/gui-rehearsal.md`。下一步先补真实 Tk GUI 手动演练记录，再进入 S3/S4。
-- **2026-05-12 收官冲刺 Task Group 01-02 + 04 已完成**：S3（AI 低风险清理 + harness 工程化）落地 `scripts/quick_bench.py` Wilson CI、新增 `scripts/tournament.py` pairwise matrix、清理 R-0 followup `stuck_penalty` 准死代码（grep 无残留）；S4（封版）落地 `release/v1.0/` 全套文档（README + config + default_params + known_limitations + test_report）。AI / 开局候选流水线（`scripts/param_sweep.py` / `scripts/search_openings.py` / `ai/self_capture.py`）已建立但未做大样本晋升验证；默认 AI 保持 `greedy_risk`、默认布局保持 `balanced_v1`。最终验证：364 pytest passed、smoke OK、s2_rehearsal 8/8 PASS、AI baseline 双向 200 局 `greedy_risk` 合并胜率 55.75%（CI 通过），0 illegal / 0 crash / 0 timeout、max_step 6.84ms。决策详见 `reports/ai_promotion_decision.md` 与 `release/v1.0/test_report.md`。剩余 P0：S2 真实 Tk GUI 手动演练表（用户分工，由操作员现场填写）。
+- **2026-05-13 S2 完整闭环**：操作员现场用真实 Tk GUI 跑完 `reports/gui-rehearsal.md` §4 全部 21 个手测步骤（4.1 启动到 4:0 / 4.2 4:3 决胜 / 4.3 盘内崩溃恢复 / 4.4 盘间崩溃恢复 / 4.5 误操作恢复 / 4.6 整轮结束后操作），全部"正常"。S2 自此不再是"部分完成"，整个 final-sprint 完成定义（plan §9）全部满足，进入 release/v1.0 sign-off 与归档阶段。
+- **2026-05-12 S2 headless 自动演练已完成**：`scripts/s2_rehearsal.py` 8 个 scenario 全 PASS（4:0 / 4:3 / 先手序列 / 超时判负 / 盘间恢复 / 盘中恢复 / 悔棋边界 / 整轮结束后行为）；落地 `docs/MATCH_CHECKLIST.md` 现场操作清单 + `docs/EMERGENCY_GUIDE.md` 应急手册；全量 pytest 已通过。详见 `reports/gui-rehearsal.md`。
+- **2026-05-12 收官冲刺 Task Group 01-02 + 04 已完成**：S3（AI 低风险清理 + harness 工程化）落地 `scripts/quick_bench.py` Wilson CI、新增 `scripts/tournament.py` pairwise matrix、清理 R-0 followup `stuck_penalty` 准死代码（grep 无残留）；S4（封版）落地 `release/v1.0/` 全套文档（README + config + default_params + known_limitations + test_report）。AI / 开局候选流水线（`scripts/param_sweep.py` / `scripts/search_openings.py` / `ai/self_capture.py`）已建立但未做大样本晋升验证；默认 AI 保持 `greedy_risk`、默认布局保持 `balanced_v1`。Review 后 codex 已修复 `param_sweep.py` 双边对战门禁 + `search_openings.py` 训练/验证对手对齐与 AI 对称化，并补回归测试。2026-05-13 复验：371 pytest passed、smoke OK、s2_rehearsal 8/8 PASS、AI baseline 双向 200 局 `greedy_risk` 合并胜率 55.75%（CI 通过），0 illegal / 0 crash / 0 timeout、max_step 6.84ms。决策详见 `reports/ai_promotion_decision.md` 与 `release/v1.0/test_report.md`。**2026-05-13 S2 §4 真实 Tk GUI 手动表填表完成后，已无剩余 P0 工程项。**
 
 ## 已确认的比赛事实
 
@@ -55,7 +56,7 @@
 - 棋谱保存：JSON 格式（已实现）；后续如有组委会规范再适配。
 - 悔棋/恢复局面（已实现）。
 - 比赛模式：合法步校验、当前轮状态提示、当前推荐走法（已实现）。
-- 7 盘制比赛流程（R-2 已实现）。开局录入 GUI（R-1）与崩溃自救（R-3）已实现。S2 headless 自动演练已完成，真实 GUI 手动演练表仍需赛前填写。
+- 7 盘制比赛流程（R-2 已实现）。开局录入 GUI（R-1）与崩溃自救（R-3）已实现。S2 headless 自动演练 + 真实 Tk GUI 手动表（21/21 正常）均已完成，S2 完整闭环。
 
 ## 工程约束
 
@@ -79,9 +80,9 @@
 ## 下一次对话建议第一步
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
-2. R-0 / R-1 / R-2 / R-3 已完成；S2 headless 自动演练已完成，但真实 GUI 手动表待填。下一优先项是补齐 S2 手动记录，随后 S3（AI 低风险清理与 harness 工程化）可与 S4 封版准备并行。
-3. R-0-followup 可与 S3/S4 并行：删除 stuck_penalty 死代码 + ai/risk.py 加入 self-capture 战略评估。
-4. 阶段 6 Expectimax 主线决策：R-0 合规重跑后 ExpectimaxAI 仍弱（合并 45.0%），如果要做需先实验 `reports/4-4-rebench.md` 列出的 4 个方向之一。
+2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 全部完成；下一步是 release/v1.0 归档准备和赛前最后核对。
+3. 比赛后再回到 Expectimax 主线（合并胜率 45.0% 弱于 baseline，需按 `reports/4-4-rebench.md` 方向实验）/ 开局库 / RolloutAI 实验。
+4. 如有时间，可跑大样本 `scripts/param_sweep.py` 或 `scripts/search_openings.py` 看是否产出能过门禁的候选。
 
 ## 待确认事项
 
