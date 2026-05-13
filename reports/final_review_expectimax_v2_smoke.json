@@ -1,0 +1,51 @@
+{
+  "games": 20,
+  "red_wins": 10,
+  "blue_wins": 10,
+  "draws": 0,
+  "red_win_rate": 0.5,
+  "blue_win_rate": 0.5,
+  "draw_rate": 0.0,
+  "red_win_ci95": [
+    0.2992949144298199,
+    0.7007050855701801
+  ],
+  "blue_win_ci95": [
+    0.2992949144298199,
+    0.7007050855701801
+  ],
+  "average_turns": 18.9,
+  "illegal_moves": 0,
+  "crashes": 0,
+  "timeouts": 0,
+  "average_step_time_ms": 0.328836772250869,
+  "max_step_time_ms": 1.135200000135228,
+  "schema_version": 2,
+  "generated_at": "2026-05-13T09:59:40",
+  "git_revision": "6fef880837a93f2994bcf3ef5d9e7b8e8292e46b",
+  "git_dirty": true,
+  "command": "python scripts/quick_bench.py --red expectimax_v2 --blue greedy --games 20 --seed 2026 --report-name final_review_expectimax_v2_smoke",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "red_ai": "expectimax_v2",
+  "blue_ai": "greedy",
+  "ai_versions": {
+    "red": {
+      "name": "expectimax_v2",
+      "depth": 1,
+      "expected_risk_weight": 0.0,
+      "expected_win_risk_weight": 0.0
+    },
+    "blue": {
+      "name": "greedy",
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 0.0,
+      "expected_win_risk_weight": 0.0,
+      "self_capture_weight": 0.0
+    }
+  },
+  "seed": 2026,
+  "max_turns": 200,
+  "wall_seconds": 0.143
+}

@@ -173,6 +173,19 @@ def _run_bilateral_candidate(
     return _combine_stats([red_stats, blue_stats])
 
 
+def promotion_gate_lines() -> list[str]:
+    return [
+        "候选晋升判断由 `reports/ai_promotion_decision.md` 单独决定，并需通过：",
+        "",
+        "- candidate vs greedy_risk 双边合并胜率 >= 60%",
+        "- Wilson 95% CI 下界 >= 52%",
+        "- 每个方向至少 400 局，合并至少 800 局；若时间不足，最小可接受为双边各 200 局",
+        "- illegal_moves = 0, crashes = 0, timeouts = 0",
+        "- avg_step_time_ms < 1000, max_step_time_ms < 5000",
+        "- 报告写入 reports/",
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Random sweep over greedy_risk evaluator weights.")
     parser.add_argument("--sample-size", type=int, default=20, help="Random samples drawn from full grid")
@@ -259,12 +272,7 @@ def main(argv: list[str] | None = None) -> int:
     lines.append("")
     lines.append("## Promotion gate")
     lines.append("")
-    lines.append("候选晋升判断由 `reports/ai_promotion_decision.md` 单独决定，并需通过：")
-    lines.append("")
-    lines.append("- candidate vs greedy_risk 双边各 200 局合并胜率 > 55%")
-    lines.append("- Wilson 95% CI 下界 >= 50%")
-    lines.append("- illegal_moves = 0, crashes = 0, timeouts = 0")
-    lines.append("- avg_step_time_ms < 1000, max_step_time_ms < 5000")
+    lines.extend(promotion_gate_lines())
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -3,6 +3,8 @@ import random
 import pytest
 
 from ai import AIPlayer, RandomAI
+from ai.greedy_ai import GreedyAI
+from ai.match import ai_version_signature, build_ai
 from core.game_state import GameState
 from core.types import Player, Position
 
@@ -56,9 +58,6 @@ def test_random_ai_is_deterministic_under_same_seed():
 def test_random_ai_custom_name():
     ai = RandomAI(rng=random.Random(0), name="random_v2")
     assert ai.name == "random_v2"
-
-
-from ai.greedy_ai import GreedyAI
 
 
 def test_greedy_ai_is_protocol_compatible():
@@ -164,8 +163,6 @@ def test_greedy_ai_expected_risk_avoids_simple_capture_exposure():
 
 
 def test_build_ai_supports_greedy():
-    from ai.match import build_ai
-
     ai = build_ai("greedy", seed=2026)
 
     assert ai.name == "greedy"
@@ -173,8 +170,6 @@ def test_build_ai_supports_greedy():
 
 
 def test_build_ai_supports_greedy_risk():
-    from ai.match import ai_version_signature, build_ai
-
     ai = build_ai("greedy_risk", seed=2026)
 
     assert ai.name == "greedy_risk"
@@ -182,3 +177,33 @@ def test_build_ai_supports_greedy_risk():
     assert ai.expected_win_risk_weight > ai.expected_risk_weight
     assert ai_version_signature(ai)["expected_risk_weight"] == ai.expected_risk_weight
     assert ai_version_signature(ai)["expected_win_risk_weight"] == ai.expected_win_risk_weight
+
+
+def test_build_ai_rollout_registers_signature_fields():
+    ai = build_ai(
+        "rollout",
+        seed=1,
+        rollouts_per_move=3,
+        max_rollout_turns=9,
+        max_step_time_ms=250,
+        epsilon=0.2,
+    )
+    signature = ai_version_signature(ai)
+
+    assert signature["name"] == "rollout"
+    assert signature["rollouts_per_move"] == 3
+    assert signature["max_rollout_turns"] == 9
+    assert signature["max_step_time_ms"] == 250.0
+    assert signature["epsilon"] == 0.2
+
+
+def test_build_ai_expectimax_v2_registers_signature_fields():
+    ai = build_ai("expectimax_v2", seed=1, depth=2, time_limit_ms=300, randomize_ties=False)
+    signature = ai_version_signature(ai)
+
+    assert signature["name"] == "expectimax_v2"
+    assert signature["depth"] == 2
+    assert signature["time_limit_ms"] == 300.0
+    assert signature["randomize_ties"] is False
+    assert signature["expected_risk_weight"] == 0.0
+    assert signature["expected_win_risk_weight"] == 0.0

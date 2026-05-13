@@ -1,64 +1,68 @@
 # AI Promotion Decision
 
-date: 2026-05-12
-baseline: `greedy_risk` (默认 evaluator 权重, ai/match.build_ai)
-candidate: 无
+Date: 2026-05-13
 
-## 决策
+## Baseline
 
-**保持 `greedy_risk` 作为 GUI 默认 AI 和 release/v1.0 推荐 AI。**
+- default AI: `greedy_risk`
+- default layout: `balanced_v1`
 
-## 依据
+## Candidate Summary
 
-收官冲刺期间（Task Group 02）已建立两条候选流水线：
+| candidate | comparison | games | candidate wins | win rate | Wilson lower | illegal | crashes | timeouts | avg ms | max ms |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| rollout | red vs greedy_risk | 400 | 242 | 60.50% | 55.63% | 0 | 0 | 0 | 61.58 | 469.14 |
+| rollout | blue vs greedy_risk | 400 | 259 | 64.75% | 59.95% | 0 | 0 | 0 | 54.66 | 418.91 |
+| **rollout combined** | combined | **800** | **501** | **62.62%** | **59.22%** | **0** | **0** | **0** | **61.58** | **469.14** |
+| expectimax_v2 | red vs greedy_risk | 400 | 178 | 44.50% | 39.70% | 0 | 0 | 0 | 0.33 | 17.85 |
+| expectimax_v2 | blue vs greedy_risk | 400 | 192 | 48.00% | 43.15% | 0 | 0 | 0 | 0.35 | 22.28 |
+| **expectimax_v2 combined** | combined | **800** | **370** | **46.25%** | **42.82%** | **0** | **0** | **0** | **0.35** | **22.28** |
 
-1. `scripts/param_sweep.py` — 随机采样 evaluator 权重（distance / material / expected_risk / expected_win_risk / self_capture）做 train + validation。
-2. `scripts/search_openings.py` — 在出发区 720 种排列中采样并对比 mirror / balanced / aggressive / defensive 蓝方布局。
+Timing note: combined `avg ms` and `max ms` use the slower observed direction as a conservative summary, not a weighted average.
 
-两条流水线已通过 smoke 验证，但尚未做大样本 train/validation 跑，因此当前没有任何候选满足 AI 晋升门禁：
+Expectimax note: the `expectimax_v2` rows are retained as historical evidence from the pre-depth-fix implementation. After the 2026-05-13 depth semantics fix, `expectimax_v2` needs a fresh resource-approved harness rerun before any promotion decision.
 
-```text
-candidate vs greedy_risk: red/blue 各 200 局，合并 400 局
-candidate vs greedy:       red/blue 各 200 局，合并 400 局
-合并胜率 > 55%
-Wilson 95% CI 下界 >= 50%
-illegal_moves = 0
-crashes = 0
-timeouts = 0
-avg_step_time_ms < 1000
-max_step_time_ms < 5000
-报告写入 reports/
-```
+## Gate (for AI promotion)
 
-未满足门禁的候选只保留为实验入口，不进入 GUI 或 release 默认。
+- candidate vs greedy_risk 双边合并胜率 >= 60%
+- Wilson 95% CI 下界 >= 52%
+- illegal_moves = 0
+- crashes = 0
+- timeouts = 0
+- avg_step_time_ms < 1000
+- max_step_time_ms < 5000
 
-## 方法学说明
+## Decision
 
-2026-05-13 已收敛实验脚本的方法学边界：
+**rollout** passes the numerical harness gates:
 
-- `scripts/param_sweep.py` 的 train pass 仍保留 candidate=red 的低成本筛选；validation pass 改为 candidate 红/蓝双边各 `--validation-games` 局，并按 candidate 视角合并胜率。
-- `scripts/search_openings.py` 双方 AI 统一为 `greedy_risk`，避免把 `greedy_risk` vs `greedy` 的 AI 强度差误记为布局收益。
-- `scripts/search_openings.py` train 与 validation 使用同一组 4 个蓝方对手布局（mirror + balanced + aggressive + defensive）；但它仍只是红方布局筛选，默认布局晋升前仍需另跑红蓝两侧覆盖的门禁复验。
+| gate | threshold | actual | pass |
+|---|---:|---:|---|
+| combined win rate | >= 60% | 62.62% | PASS |
+| Wilson 95% CI lower | >= 52% | 59.22% | PASS |
+| illegal_moves | = 0 | 0 | PASS |
+| crashes | = 0 | 0 | PASS |
+| timeouts | = 0 | 0 | PASS |
+| avg_step_time_ms | < 1000 | 61.58 | PASS |
+| max_step_time_ms | < 5000 | 469.14 | PASS |
 
-## 当前 baseline 验证
+**expectimax_v2** is not promotion-eligible:
 
-`greedy_risk` 自 R-0 合规以来 4.1 / 4.2 门槛已通过；本次 release 验证将由 Task 12 用新鲜 `quick_bench` 输出更新：
+| gate | threshold | actual | pass |
+|---|---:|---:|---|
+| combined win rate | >= 60% | 46.25% | FAIL |
+| Wilson 95% CI lower | >= 52% | 42.82% | FAIL |
+| illegal_moves | = 0 | 0 | PASS |
+| crashes | = 0 | 0 | PASS |
+| timeouts | = 0 | 0 | PASS |
+| avg_step_time_ms | < 1000 | 0.35 | PASS |
+| max_step_time_ms | < 5000 | 22.28 | PASS |
 
-```powershell
-& ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red greedy_risk --blue greedy --games 200 --seed 2026 --report-name release_greedy_risk_vs_greedy
-& ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red greedy --blue greedy_risk --games 200 --seed 2026 --report-name release_greedy_vs_greedy_risk
-```
+Default AI remains `greedy_risk`. Neither candidate is promoted at this time: `rollout` passed the recorded numerical harness gates, but default promotion requires a separate explicit decision to update `gui/main_window.py` and `release/` configs, plus a resource-safe rerun plan for long harness jobs. `expectimax_v2` has no current promotion evidence after the depth semantics fix. No default or release config changes are performed here.
 
-## 候选回滚路径
+## Raw report files
 
-如赛前余下时间允许做实测：
-
-1. 运行 `scripts/param_sweep.py --sample-size 20 --games 100 --validation-games 200 --seed 2026 --output reports/param_sweep.md`。
-2. 对 validation 前几名以 `scripts/quick_bench.py` 双向 200 局复测对 `greedy_risk` 与 `greedy`。
-3. 若某候选满足门禁，将 `gui/main_window.py` 的 `build_ai("greedy_risk", seed=0)` 改为带新参数的构造；同步更新 `release/v1.0/default_params.json` 与本文件。
-
-未来若需引入 `greedy_risk_tuned` 等新 kind，需要先在 `ai/match.build_ai` 注册。
-
-## 开局布局
-
-GUI 默认 `balanced_v1` 保留。开局搜索（`scripts/search_openings.py`）已建立流水线，但同样未跑大样本，无候选进入晋升判断。
+- `reports/rollout_vs_greedy_risk_red.json`
+- `reports/greedy_risk_vs_rollout_blue.json`
+- `reports/expectimax_v2_vs_greedy_risk_red.json`
+- `reports/greedy_risk_vs_expectimax_v2_blue.json`

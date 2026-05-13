@@ -10,6 +10,8 @@
 
 **Git policy:** This project forbids unrequested git commit/push/branch operations. This plan intentionally contains no commit steps. Commit only if the user explicitly asks.
 
+**Resource safety note (2026-05-13 crash recovery):** Do not run the large local benchmark commands in Task 2 Step 6, Task 3 Step 6, Task 6 Step 1, or Task 7 Step 1 on this laptop without explicit approval. The existing 400+400 rollout gate took about 817 seconds, and the planned opening search, parameter sweep, and tournament commands can run thousands to tens of thousands of games. Prefer smoke commands and existing JSON evidence during cleanup; schedule large reruns separately with smaller batches or an overnight window.
+
 ---
 
 ## File Structure
@@ -466,6 +468,8 @@ Report includes the 55% opening gate and Wilson lower-bound text
 
 Run:
 
+Approval required before running this large command on the laptop; see Resource safety note.
+
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/search_openings.py" --sample-size 120 --games 50 --validation-games 200 --seed 2026 --top-k 10 --output reports/opening_search_v2.md
 ```
@@ -575,6 +579,8 @@ Report includes the 60% candidate gate and Wilson lower-bound text
 - [ ] **Step 6: Run the real parameter sweep**
 
 Run:
+
+Approval required before running this large command on the laptop; see Resource safety note.
 
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/param_sweep.py" --sample-size 40 --games 100 --validation-games 200 --seed 2026 --top-k 8 --output reports/param_sweep_v2.md
@@ -1147,6 +1153,8 @@ Create `reports/expectimax_v2_experiment.md`:
 
 For a candidate AI kind such as `rollout` or `expectimax_v2`, run:
 
+Approval required before running this large command on the laptop; see Resource safety note.
+
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red rollout --blue greedy_risk --games 400 --seed 2026 --report-name rollout_vs_greedy_risk_red
 & ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red greedy_risk --blue rollout --games 400 --seed 2026 --report-name greedy_risk_vs_rollout_blue
@@ -1267,6 +1275,8 @@ s2_rehearsal.py exits 0 and prints Total: 8/8 scenarios passed
 - [ ] **Step 1: Run pairwise matrix**
 
 Run:
+
+Approval required before running this large command on the laptop; see Resource safety note.
 
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/tournament.py" --ais random,greedy,greedy_risk,rollout --games 200 --seed 2026 --report reports/tournament_matrix_ai_strengthening.md
