@@ -50,8 +50,30 @@ def find_winning_moves(state, dice: int, perspective):
     return winning
 
 
-def opponent_winning_dice_set(state, *, opponent):  # noqa: D401
-    raise NotImplementedError
+def opponent_winning_dice_set(state, *, opponent) -> set[int]:
+    """``opponent`` 下一回合能用哪些骰子值一步获胜，返回 set[int]。
+
+    显式收 ``opponent`` 而非用 ``state.current_player``：本函数会被前后两种 state
+    状态下调用（行动前 current_player==perspective，行动后 current_player==opponent）。
+
+    一步获胜判定依赖 ``state.get_winner()``，同时覆盖「到角胜」和「吃光胜」。
+    用反序列化副本模拟，绝不触碰原 state。
+    """
+    from core.game_state import GameState
+
+    winning_dice: set[int] = set()
+    snapshot = state.serialize()
+    for d in range(1, 7):
+        sim = GameState.deserialize(snapshot)
+        sim.current_player = opponent
+        for move in sim.legal_moves(opponent, d):
+            sim.apply_move(move, dice=d)
+            if sim.get_winner() is opponent:
+                winning_dice.add(d)
+                sim.undo_move()
+                break
+            sim.undo_move()
+    return winning_dice
 
 
 def find_neutralizing_moves(state, dice, perspective):  # noqa: D401

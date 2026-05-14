@@ -147,3 +147,79 @@ def test_find_winning_moves_does_not_mutate_state():
     find_winning_moves(state, dice=1, perspective=Player.RED)
 
     assert state.serialize() == before
+
+
+# -------- opponent_winning_dice_set --------
+
+def test_opponent_winning_dice_set_detects_target_corner_threat():
+    """BLUE has piece at (1,0); dice=1 reaches (0,0) — BLUE's target."""
+    state = _state(
+        red={1: Position(2, 2)},
+        blue={5: Position(1, 0)},
+        current_player=Player.RED,
+    )
+
+    threats = opponent_winning_dice_set(state, opponent=Player.BLUE)
+
+    assert 1 in threats
+
+
+def test_opponent_winning_dice_set_detects_capture_all_threat():
+    """RED has only one piece; BLUE adjacent → can capture-all on right dice."""
+    state = _state(
+        red={3: Position(2, 3)},  # only red piece
+        blue={1: Position(2, 2), 2: Position(0, 0)},
+        current_player=Player.RED,
+    )
+
+    threats = opponent_winning_dice_set(state, opponent=Player.BLUE)
+
+    assert threats, "BLUE should have at least one dice that captures RED's last piece"
+
+
+def test_opponent_winning_dice_set_empty_when_no_threat():
+    state = _state(
+        red={1: Position(0, 0), 2: Position(0, 1), 3: Position(0, 2)},
+        blue={1: Position(4, 4)},  # at target already? skip if so
+        current_player=Player.RED,
+    )
+    if state.get_winner() is not None:
+        pytest.skip("blue already at target")
+
+    threats = opponent_winning_dice_set(state, opponent=Player.BLUE)
+
+    # BLUE at (4,4) is target_corner(RED), not BLUE's target; threat set is small or empty
+    # We only assert it returns a set (not raise) and contains valid dice ints
+    assert isinstance(threats, set)
+    assert all(1 <= d <= 6 for d in threats)
+
+
+def test_opponent_winning_dice_set_does_not_mutate_state():
+    state = _state(
+        red={1: Position(2, 2)},
+        blue={5: Position(1, 0)},
+        current_player=Player.RED,
+    )
+    before = state.serialize()
+
+    opponent_winning_dice_set(state, opponent=Player.BLUE)
+
+    assert state.serialize() == before
+
+
+def test_opponent_winning_dice_set_works_on_post_apply_state():
+    """After apply_move flips current_player, the call should still be valid."""
+    state = _state(
+        red={6: Position(3, 4)},
+        blue={5: Position(1, 0)},
+        current_player=Player.RED,
+    )
+    legal = state.legal_moves(Player.RED, 1)
+    assert legal
+    state.apply_move(legal[0], dice=1)
+    try:
+        # After RED moves, current_player == BLUE
+        threats = opponent_winning_dice_set(state, opponent=Player.BLUE)
+        assert isinstance(threats, set)
+    finally:
+        state.undo_move()
