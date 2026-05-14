@@ -1,0 +1,52 @@
+"""Tactical-patch wrapper AI: two hard rules (direct win / one-step neutralize)
+layered on top of any base AI that follows the AIPlayer protocol.
+
+无战术规则触发时，对 base AI 完全透明：base 看到同一个 state/dice，且只被调一次。
+"""
+from __future__ import annotations
+
+import random
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # avoid circular import with ai/__init__.py
+    from ai import AIPlayer
+    from core.game_state import GameState
+    from core.move import Move
+    from core.types import Player
+
+
+def pick_max_material(moves, rng: random.Random):
+    """从 moves 里优先选「吃对手子」的走法；多个则 rng.choice；
+    若无任何吃对手子的走法则在全部 moves 上 rng.choice。
+
+    设计文档 §5.2：tie-break 顺序最大吃子 → rng 抽签。
+    自己吃自己（罕见但 core 允许）不计入「吃子」。
+    """
+    if not moves:
+        raise ValueError("pick_max_material called with empty moves list")
+    perspective_capturing = [
+        m for m in moves
+        if m.captured_piece is not None and m.captured_piece.player is not m.player
+    ]
+    pool = perspective_capturing if perspective_capturing else list(moves)
+    return rng.choice(pool)
+
+
+# Forward declarations — populated in later tasks.
+def find_winning_moves(state, dice, perspective):  # noqa: D401
+    raise NotImplementedError
+
+
+def opponent_winning_dice_set(state, *, opponent):  # noqa: D401
+    raise NotImplementedError
+
+
+def find_neutralizing_moves(state, dice, perspective):  # noqa: D401
+    raise NotImplementedError
+
+
+class TacticalAI:
+    name: str
+
+    def __init__(self, *, base, rng=None, name=None):
+        raise NotImplementedError
