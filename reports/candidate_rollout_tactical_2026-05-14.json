@@ -1,0 +1,99 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-14T23:08:46",
+  "git_revision": "bdf74e9a69d66c52f7df20a80701c72950b19bf7",
+  "git_dirty": true,
+  "command": "python scripts/bench_ai.py --candidate rollout_tactical --stage candidate --report-name candidate_rollout_tactical_2026-05-14",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "experiment": "rollout_tactical_candidate",
+  "candidate": "rollout_tactical",
+  "candidate_kwargs": {},
+  "stage": "candidate",
+  "opponent": "rollout",
+  "opponent_kwargs": {},
+  "games_per_side": 400,
+  "red_direction": {
+    "label": "candidate_red_vs_rollout_blue",
+    "summary": {
+      "games": 400,
+      "candidate_wins": 212,
+      "opponent_wins": 188,
+      "draws": 0,
+      "candidate_win_rate": 0.53,
+      "candidate_win_ci95": [
+        0.48103525950149856,
+        0.5783939820625206
+      ],
+      "average_turns": 17.47,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 115.68700187466804,
+      "max_step_time_ms": 436.19800000305986
+    }
+  },
+  "blue_direction": {
+    "label": "rollout_red_vs_candidate_blue",
+    "summary": {
+      "games": 400,
+      "candidate_wins": 208,
+      "opponent_wins": 192,
+      "draws": 0,
+      "candidate_win_rate": 0.52,
+      "candidate_win_ci95": [
+        0.4710820210989228,
+        0.5685374732770901
+      ],
+      "average_turns": 17.425,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 113.75501867998017,
+      "max_step_time_ms": 442.1591999998782
+    }
+  },
+  "combined": {
+    "games": 800,
+    "candidate_wins": 420,
+    "candidate_win_rate": 0.525,
+    "candidate_win_ci95": [
+      0.49035821040477107,
+      0.5594028370453734
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "average_step_time_ms": 114.7210102773241,
+    "max_step_time_ms": 442.1591999998782
+  },
+  "gates_pass": false,
+  "gate_failures": [
+    "candidate_win_rate = 52.5%（要求 ≥ 55.0%）",
+    "candidate_win_ci_lower = 49.0%（要求 ≥ 52.0%）"
+  ],
+  "ai_versions": {
+    "candidate": {
+      "name": "rollout_tactical",
+      "base": {
+        "name": "rollout",
+        "rollouts_per_move": 16,
+        "max_rollout_turns": 80,
+        "max_step_time_ms": 500.0,
+        "epsilon": 0.15
+      },
+      "patches": [
+        "direct_win",
+        "block_one_step_win"
+      ]
+    },
+    "opponent": {
+      "name": "rollout",
+      "rollouts_per_move": 16,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 500.0,
+      "epsilon": 0.15
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 1601.733
+}
