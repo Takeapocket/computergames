@@ -220,6 +220,30 @@ def test_opponent_winning_dice_set_does_not_mutate_state():
     assert state.serialize() == before
 
 
+def test_opponent_winning_dice_set_empty_when_opponent_has_no_legal_moves():
+    """终局防御：BLUE 唯一活子在 (0,0)（即 BLUE 已达目标角，是 BLUE 胜利的终局），
+    BLUE 此时所有骰子值下 legal_moves 都为空。函数必须返回空集且不抛。
+
+    设计 §10.1 test 13 的语义在本游戏规则下只能在终局复现——非终局且对手有活子时
+    至少有一个 legal move。这里以 terminal-edge 形式守住「无 legal action 不崩」的语义，
+    保证 TacticalAI.choose_move 万一被误调用在终局上时不会因威胁扫描挂掉。
+    """
+    state = _state(
+        red={1: Position(2, 2)},
+        blue={1: Position(0, 0)},
+        current_player=Player.RED,
+    )
+    assert state.get_winner() is Player.BLUE, "fixture must be a BLUE-won terminal state"
+    for d in range(1, 7):
+        assert state.legal_moves(Player.BLUE, d) == [], (
+            f"BLUE piece at (0,0) must have zero legal moves for dice={d}"
+        )
+
+    threats = opponent_winning_dice_set(state, opponent=Player.BLUE)
+
+    assert threats == set()
+
+
 def test_opponent_winning_dice_set_works_on_post_apply_state():
     """After apply_move flips current_player, the call should still be valid."""
     state = _state(
@@ -440,6 +464,142 @@ def test_tactical_ai_direct_win_takes_priority_over_neutralizing_threat():
     assert chosen.to_pos == Position(4, 4)
     assert base.calls == []
 
+
+def test_tactical_ai_ties_among_winning_moves_use_rng():
+    """两个等价（同 material）赢手：固定 seed 必须给出确定结果。
+
+    设计 §10.1 test 3：pick_max_material 在无吃子时退化为 rng.choice，
+    TacticalAI 的 RNG 控制了 tie-break，必须是 wrapper rng 自身（不消耗 base rng）。
+    """
+    state = _state(
+        red={2: Position(3, 4), 4: Position(4, 3)},
+        blue={3: Position(1, 1)},
+    )
+    winning = find_winning_moves(state, dice=3, perspective=Player.RED)
+    assert len(winning) >= 2, "fixture should produce ≥2 winning moves of equal material"
+    assert all(m.captured_piece is None for m in winning), (
+        "fixture should keep material equal — no winning move may capture"
+    )
+
+    base_a = RecordingBase()
+    base_b = RecordingBase()
+    ai_a = TacticalAI(base=base_a, rng=random.Random(2026))
+    ai_b = TacticalAI(base=base_b, rng=random.Random(2026))
+
+    chosen_a = ai_a.choose_move(state, 3)
+    chosen_b = ai_b.choose_move(state, 3)
+
+    assert chosen_a is not None and chosen_b is not None
+    assert (chosen_a.from_pos, chosen_a.to_pos) == (chosen_b.from_pos, chosen_b.to_pos)
+    winning_pairs = {(m.from_pos, m.to_pos) for m in winning}
+    assert (chosen_a.from_pos, chosen_a.to_pos) in winning_pairs
+    assert base_a.calls == [] and base_b.calls == []
+
+
+def test_tactical_ai_partial_neutralizing_delegates_to_base_unfiltered():
+    """对手 ≥2 个一步胜威胁、我方任一走法都消不光：base 被调一次且其选择被原样使用。
+
+    设计 §10.1 test 10：Patch 2 保守语义——部分化解不算 neutralizing，
+    交回 base 让它用概率/搜索能力自己决断；wrapper 不做过滤。
+    """
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={5: Position(1, 0), 6: Position(0, 1)},
+    )
+    pre_threat = opponent_winning_dice_set(state, opponent=Player.BLUE)
+    assert pre_threat, "fixture must put BLUE in one-step-win threat"
+    neutralizing = find_neutralizing_moves(state, dice=1, perspective=Player.RED)
+    assert neutralizing == [], "fixture must allow no full neutralization"
+
+    base_choice = _move(Player.RED, 1, Position(0, 0), Position(1, 1))
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 1)
+
+    assert chosen == base_choice
+    assert base.calls == [(state, 1)]
+
+
+def test_tactical_ai_does_not_mutate_state_across_branches():
+    """TacticalAI.choose_move 在 patch1 / patch2-filter / patch2-passthrough / transparent
+    四条决策路径上都必须保持 state.serialize() 不变。
+
+    设计 §10.1 test 17：包装器作为整体的不变性回归网。
+    """
+    from ai.match import starting_state_for, STARTING_LAYOUT_ID
+
+    scenarios = [
+        # Patch 1: 直接赢
+        (
+            _state(red={1: Position(3, 4)}, blue={1: Position(0, 1)}),
+            1,
+        ),
+        # Patch 2: filter+delegate（base 选 unsafe 走法时 rng 兜底）
+        (
+            _state(
+                red={1: Position(0, 0)},
+                blue={5: Position(1, 0), 6: Position(4, 4)},
+            ),
+            1,
+        ),
+        # Patch 2: 部分化解 → base 全权决定
+        (
+            _state(
+                red={1: Position(0, 0)},
+                blue={5: Position(1, 0), 6: Position(0, 1)},
+            ),
+            1,
+        ),
+        # Transparent fallback: 无威胁 → base 直接决定
+        (
+            _state(red={1: Position(0, 0)}, blue={1: Position(4, 4)}),
+            1,
+        ),
+        # 默认开局 + 多个骰子
+        (starting_state_for(STARTING_LAYOUT_ID), 3),
+    ]
+
+    for state, dice in scenarios:
+        legal = state.legal_moves(state.current_player, dice)
+        if not legal:
+            continue
+        base = RecordingBase(move=legal[0])
+        ai = TacticalAI(base=base, rng=random.Random(0))
+        before = state.serialize()
+
+        ai.choose_move(state, dice)
+
+        assert state.serialize() == before, (
+            f"TacticalAI mutated state on scenario dice={dice} legal[0]={legal[0]}"
+        )
+
+
+def test_tactical_ai_returns_legal_move_for_every_dice_from_default_state():
+    """默认开局下，骰子 1-6 调用 TacticalAI(GreedyAI) 都返回 legal_moves 子集中的 move。
+
+    设计 §10.1 test 18：把 TacticalAI 当成「黑盒 AI 协议实现」检 smoke——
+    包装器自己产生的兜底（pick_max_material / rng.choice）以及透传给 base 的路径
+    都不能产出非法走法。
+    """
+    from ai.match import starting_state_for, STARTING_LAYOUT_ID
+
+    for dice in range(1, 7):
+        state = starting_state_for(STARTING_LAYOUT_ID)
+        legal = state.legal_moves(state.current_player, dice)
+        assert legal, f"starting layout must give legal moves for dice={dice}"
+        legal_pairs = {(m.from_pos, m.to_pos) for m in legal}
+
+        base = GreedyAI(rng=random.Random(2026 + dice))
+        ai = TacticalAI(base=base, rng=random.Random(dice))
+
+        move = ai.choose_move(state, dice)
+
+        assert move is not None, f"TacticalAI returned None for dice={dice}"
+        assert (move.from_pos, move.to_pos) in legal_pairs, (
+            f"TacticalAI returned illegal move {move} for dice={dice}; "
+            f"legal options were {legal_pairs}"
+        )
 
 
 # -------- build_ai("rollout_tactical") + ai_version_signature --------
