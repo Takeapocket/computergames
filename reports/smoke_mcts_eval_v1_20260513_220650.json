@@ -1,0 +1,92 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-13T22:06:50",
+  "git_revision": "31d078c7d2a24a45aba30b06c1d389dc96f80f92",
+  "git_dirty": true,
+  "command": "python scripts/smoke_mcts.py --games-per-side 50 --time-limit-ms 200 --seed 2026",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "experiment": "mcts_eval_v1_phase1_smoke",
+  "red_direction": {
+    "label": "mcts_red_vs_greedy_blue",
+    "summary": {
+      "games": 50,
+      "mcts_wins": 32,
+      "opponent_wins": 18,
+      "draws": 0,
+      "mcts_win_rate": 0.64,
+      "mcts_win_ci95": [
+        0.5014076201030195,
+        0.7586143703281711
+      ],
+      "average_turns": 18.16,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 96.15181872255152,
+      "max_step_time_ms": 201.5529999989667,
+      "avg_iterations": 5775.96,
+      "max_depth": 11
+    }
+  },
+  "blue_direction": {
+    "label": "greedy_red_vs_mcts_blue",
+    "summary": {
+      "games": 50,
+      "mcts_wins": 26,
+      "opponent_wins": 24,
+      "draws": 0,
+      "mcts_win_rate": 0.52,
+      "mcts_win_ci95": [
+        0.3851151225880844,
+        0.6520308760449429
+      ],
+      "average_turns": 17.04,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 90.70308286387666,
+      "max_step_time_ms": 207.6892000004591,
+      "avg_iterations": 3648.9,
+      "max_depth": 11
+    }
+  },
+  "combined": {
+    "games": 100,
+    "mcts_wins": 58,
+    "mcts_win_rate": 0.58,
+    "mcts_win_ci95": [
+      0.4820630799889527,
+      0.672017750814887
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "average_step_time_ms": 93.42745079321408,
+    "max_step_time_ms": 207.6892000004591,
+    "avg_iterations": 4712.43,
+    "max_depth": 11
+  },
+  "smoke_pass": true,
+  "smoke_failures": [],
+  "ai_versions": {
+    "mcts": {
+      "name": "mcts_eval_v1",
+      "time_limit_ms": 200.0,
+      "c_uct": 1.4142135623730951,
+      "scale": 100.0,
+      "max_iterations": null
+    },
+    "greedy": {
+      "name": "greedy",
+      "randomize_ties": true,
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 0.0,
+      "expected_win_risk_weight": 0.0,
+      "self_capture_weight": 0.0
+    }
+  },
+  "max_turns": 200,
+  "max_step_gate_ms": 1000.0,
+  "wall_seconds": 164.655
+}

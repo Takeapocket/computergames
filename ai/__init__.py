@@ -8,6 +8,7 @@ from core.move import Move
 from ai.expectimax_ai import ExpectimaxAI
 from ai.expectimax_v2 import ExpectimaxV2
 from ai.greedy_ai import GreedyAI
+from ai.mcts import MCTSAI
 from ai.random_ai import RandomAI, choose_random_move
 from ai.rollout_ai import RolloutAI
 
@@ -26,6 +27,7 @@ __all__ = [
     "ExpectimaxAI",
     "ExpectimaxV2",
     "GreedyAI",
+    "MCTSAI",
     "RandomAI",
     "RolloutAI",
     "choose_random_move",

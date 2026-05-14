@@ -316,6 +316,10 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
     if kind == "expectimax_v2":
         from ai.expectimax_v2 import ExpectimaxV2
         return ExpectimaxV2(rng=rng, **ai_kwargs)
+    if kind == "mcts_eval_v1":
+        from ai.mcts import MCTSAI
+
+        return MCTSAI(rng=rng, **ai_kwargs)
     raise ValueError(f"unknown AI: {kind!r}")
 
 
@@ -339,6 +343,9 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "max_rollout_turns",
         "max_step_time_ms",
         "epsilon",
+        "c_uct",
+        "scale",
+        "max_iterations",
     ):
         if hasattr(ai, attr):
             sig[attr] = getattr(ai, attr)

@@ -1,0 +1,97 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-13T22:49:39",
+  "git_revision": "31d078c7d2a24a45aba30b06c1d389dc96f80f92",
+  "git_dirty": true,
+  "command": "python scripts/bench_mcts.py --stage candidate --seed 2026 --time-limit-ms 200 --report-name candidate_mcts_eval_v1_20260513_223851",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "experiment": "mcts_eval_v1_phase1_candidate",
+  "stage": "candidate",
+  "opponent": "greedy_risk",
+  "opponent_kwargs": {},
+  "games_per_side": 200,
+  "red_direction": {
+    "label": "mcts_red_vs_greedy_risk_blue",
+    "summary": {
+      "games": 200,
+      "mcts_wins": 108,
+      "opponent_wins": 92,
+      "draws": 0,
+      "mcts_win_rate": 0.54,
+      "mcts_win_ci95": [
+        0.4708216309361468,
+        0.6076706885903875
+      ],
+      "average_turns": 18.14,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 93.36981601433942,
+      "max_step_time_ms": 214.71070000188774,
+      "avg_iterations": 3348.165,
+      "max_depth": 11
+    }
+  },
+  "blue_direction": {
+    "label": "greedy_risk_red_vs_mcts_blue",
+    "summary": {
+      "games": 200,
+      "mcts_wins": 97,
+      "opponent_wins": 103,
+      "draws": 0,
+      "mcts_win_rate": 0.485,
+      "mcts_win_ci95": [
+        0.4166726249238525,
+        0.5538927552536972
+      ],
+      "average_turns": 17.135,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 90.37038062446365,
+      "max_step_time_ms": 233.23989999698824,
+      "avg_iterations": 4138.925,
+      "max_depth": 11
+    }
+  },
+  "combined": {
+    "games": 400,
+    "mcts_wins": 205,
+    "mcts_win_rate": 0.5125,
+    "mcts_win_ci95": [
+      0.463629805456242,
+      0.5611323785287659
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "average_step_time_ms": 91.87009831940154,
+    "max_step_time_ms": 233.23989999698824,
+    "avg_iterations": 3743.545,
+    "max_depth": 11
+  },
+  "gates_pass": false,
+  "gate_failures": [
+    "mcts_win_rate = 51.2%（要求 ≥ 55.0%）"
+  ],
+  "ai_versions": {
+    "mcts": {
+      "name": "mcts_eval_v1",
+      "time_limit_ms": 200.0,
+      "c_uct": 1.4142135623730951,
+      "scale": 100.0,
+      "max_iterations": null
+    },
+    "opponent": {
+      "name": "greedy_risk",
+      "randomize_ties": true,
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 3.0,
+      "expected_win_risk_weight": 500.0,
+      "self_capture_weight": 0.0
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 648.683
+}

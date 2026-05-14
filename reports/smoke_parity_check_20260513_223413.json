@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-13T22:36:52",
+  "git_revision": "31d078c7d2a24a45aba30b06c1d389dc96f80f92",
+  "git_dirty": true,
+  "command": "python scripts/bench_mcts.py --stage smoke --seed 2026 --games-per-side 50 --time-limit-ms 200 --report-name smoke_parity_check_20260513_223413",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "experiment": "mcts_eval_v1_phase1_smoke",
+  "stage": "smoke",
+  "opponent": "greedy",
+  "opponent_kwargs": {},
+  "games_per_side": 50,
+  "red_direction": {
+    "label": "mcts_red_vs_greedy_blue",
+    "summary": {
+      "games": 50,
+      "mcts_wins": 30,
+      "opponent_wins": 20,
+      "draws": 0,
+      "mcts_win_rate": 0.6,
+      "mcts_win_ci95": [
+        0.4618118910275937,
+        0.7239181021375425
+      ],
+      "average_turns": 17.92,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 94.8710400670052,
+      "max_step_time_ms": 201.2704999979178,
+      "avg_iterations": 4319.42,
+      "max_depth": 9
+    }
+  },
+  "blue_direction": {
+    "label": "greedy_red_vs_mcts_blue",
+    "summary": {
+      "games": 50,
+      "mcts_wins": 24,
+      "opponent_wins": 26,
+      "draws": 0,
+      "mcts_win_rate": 0.48,
+      "mcts_win_ci95": [
+        0.3479691239550571,
+        0.6148848774119157
+      ],
+      "average_turns": 17.04,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 89.43629542254328,
+      "max_step_time_ms": 204.53819999966072,
+      "avg_iterations": 3059.36,
+      "max_depth": 9
+    }
+  },
+  "combined": {
+    "games": 100,
+    "mcts_wins": 54,
+    "mcts_win_rate": 0.54,
+    "mcts_win_ci95": [
+      0.44264685393523856,
+      0.6343935614666815
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "average_step_time_ms": 92.15366774477425,
+    "max_step_time_ms": 204.53819999966072,
+    "avg_iterations": 3689.39,
+    "max_depth": 9
+  },
+  "gates_pass": true,
+  "gate_failures": [],
+  "ai_versions": {
+    "mcts": {
+      "name": "mcts_eval_v1",
+      "time_limit_ms": 200.0,
+      "c_uct": 1.4142135623730951,
+      "scale": 100.0,
+      "max_iterations": null
+    },
+    "opponent": {
+      "name": "greedy",
+      "randomize_ties": true,
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 0.0,
+      "expected_win_risk_weight": 0.0,
+      "self_capture_weight": 0.0
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 161.27
+}
