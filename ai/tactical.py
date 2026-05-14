@@ -33,8 +33,21 @@ def pick_max_material(moves, rng: random.Random):
 
 
 # Forward declarations — populated in later tasks.
-def find_winning_moves(state, dice, perspective):  # noqa: D401
-    raise NotImplementedError
+def find_winning_moves(state, dice: int, perspective):
+    """返回 apply 后让 perspective 立即获胜的 legal_moves 子集。
+
+    依赖 ``state.get_winner()`` 同时覆盖「到角胜」和「吃光胜」两种 core 胜利条件。
+    用 apply_move/undo_move 配对，包在 try/finally 内以保证异常路径不污染 state。
+    """
+    winning = []
+    for move in state.legal_moves(perspective, dice):
+        state.apply_move(move, dice)
+        try:
+            if state.get_winner() is perspective:
+                winning.append(move)
+        finally:
+            state.undo_move()
+    return winning
 
 
 def opponent_winning_dice_set(state, *, opponent):  # noqa: D401

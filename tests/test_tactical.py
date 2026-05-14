@@ -93,3 +93,57 @@ def test_pick_max_material_ignores_self_captures():
     chosen = pick_max_material([fake_self_piece_move, fake_opp_capture], rng)
 
     assert chosen is fake_opp_capture
+
+
+# -------- find_winning_moves --------
+
+def test_find_winning_moves_detects_target_corner_win():
+    """RED piece one step from (4,4); dice=1 should reach target_corner and win."""
+    state = _state(
+        red={6: Position(3, 4)},
+        blue={1: Position(0, 4)},
+    )
+
+    winning = find_winning_moves(state, dice=1, perspective=Player.RED)
+
+    assert winning, "should find at least one winning move"
+    assert all(m.to_pos == Position(4, 4) for m in winning)
+
+
+def test_find_winning_moves_detects_capture_all_win():
+    """RED has piece adjacent to BLUE's last surviving piece; capture wins by elimination."""
+    state = _state(
+        red={1: Position(2, 2)},
+        blue={1: Position(2, 3)},  # blue has only one piece
+    )
+
+    winning = find_winning_moves(state, dice=1, perspective=Player.RED)
+
+    assert winning
+    captured_targets = [m.captured_piece for m in winning if m.captured_piece]
+    assert any(c and c.player is Player.BLUE for c in captured_targets)
+
+
+def test_find_winning_moves_returns_empty_when_no_win():
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={1: Position(4, 4)},  # blue already at target — opponent already won? skip if so
+    )
+    if state.get_winner() is not None:
+        pytest.skip("layout produces immediate winner")
+
+    winning = find_winning_moves(state, dice=1, perspective=Player.RED)
+
+    assert winning == []
+
+
+def test_find_winning_moves_does_not_mutate_state():
+    state = _state(
+        red={6: Position(3, 4)},
+        blue={1: Position(0, 4)},
+    )
+    before = state.serialize()
+
+    find_winning_moves(state, dice=1, perspective=Player.RED)
+
+    assert state.serialize() == before
