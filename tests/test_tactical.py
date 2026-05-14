@@ -165,16 +165,18 @@ def test_opponent_winning_dice_set_detects_target_corner_threat():
 
 
 def test_opponent_winning_dice_set_detects_capture_all_threat():
-    """RED has only one piece; BLUE adjacent → can capture-all on right dice."""
+    """RED has one piece at (2,3); BLUE piece 4 at (2,4) captures it via dice 4.
+    No pre-existing winner; win is by capture-all only."""
     state = _state(
-        red={3: Position(2, 3)},  # only red piece
-        blue={1: Position(2, 2), 2: Position(0, 0)},
+        red={3: Position(2, 3)},
+        blue={4: Position(2, 4), 1: Position(4, 4)},
         current_player=Player.RED,
     )
+    assert state.get_winner() is None, "fixture must not have a pre-existing winner"
 
     threats = opponent_winning_dice_set(state, opponent=Player.BLUE)
 
-    assert threats, "BLUE should have at least one dice that captures RED's last piece"
+    assert 4 in threats, "BLUE dice=4 should move piece 4 (0,-1) to (2,3), capturing RED's last piece"
 
 
 def test_opponent_winning_dice_set_empty_when_no_threat():
