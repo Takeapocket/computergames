@@ -320,6 +320,20 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
         from ai.mcts import MCTSAI
 
         return MCTSAI(rng=rng, **ai_kwargs)
+    if kind == "rollout_tactical":
+        from ai.rollout_ai import RolloutAI
+        from ai.tactical import TacticalAI
+
+        # 注意：本分支故意不复用函数顶部的 ``rng``。包装器类 AI 必须独立构造
+        # base_rng / wrapper_rng，禁止共享或从 base_rng 抽数派生 wrapper_seed，
+        # 否则战术 tie-break 会提前推进 base 的 rollout 随机流、破坏 bench
+        # 复现性。未来再加 ``mcts_tactical`` 等包装器 kind 时务必遵循同样模式。
+        # 详见 docs/superpowers/specs/2026-05-14-tactical-patches-design.md §5.3。
+        base_rng = random.Random(seed)
+        wrapper_seed = None if seed is None else (int(seed) ^ 0x5DEECE66D)
+        wrapper_rng = random.Random(wrapper_seed)
+        base = RolloutAI(rng=base_rng, **ai_kwargs)
+        return TacticalAI(base=base, rng=wrapper_rng, name="rollout_tactical")
     raise ValueError(f"unknown AI: {kind!r}")
 
 
@@ -328,7 +342,19 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
 
     包含 ``name`` 以及 evaluator 类权重属性若实例上存在。这样 baseline、
     production 与 4.2 risk candidate 在 metadata 里有显式区分。
+
+    ``TacticalAI`` 等包装器额外暴露 ``base`` 子签名（递归调用）与 ``patches``
+    列表，让 bench metadata 能区分「裸 base」与「base + 战术补丁」。
     """
+    from ai.tactical import TacticalAI
+
+    if isinstance(ai, TacticalAI):
+        return {
+            "name": ai.name,
+            "base": ai_version_signature(ai.base),
+            "patches": ["direct_win", "block_one_step_win"],
+        }
+
     sig: dict[str, Any] = {"name": ai.name}
     for attr in (
         "depth",

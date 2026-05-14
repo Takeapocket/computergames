@@ -11,6 +11,7 @@ from ai.greedy_ai import GreedyAI
 from ai.mcts import MCTSAI
 from ai.random_ai import RandomAI, choose_random_move
 from ai.rollout_ai import RolloutAI
+from ai.tactical import TacticalAI
 
 
 class AIPlayer(Protocol):
@@ -30,5 +31,6 @@ __all__ = [
     "MCTSAI",
     "RandomAI",
     "RolloutAI",
+    "TacticalAI",
     "choose_random_move",
 ]

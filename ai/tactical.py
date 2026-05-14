@@ -77,11 +77,60 @@ def opponent_winning_dice_set(state, *, opponent) -> set[int]:
 
 
 def find_neutralizing_moves(state, dice, perspective):  # noqa: D401
-    raise NotImplementedError
+    """返回 apply 后完全消除对手一步胜威胁的 legal_moves 子集。"""
+    neutralizing = []
+    for move in state.legal_moves(perspective, dice):
+        state.apply_move(move, dice=dice)
+        try:
+            post_threat = opponent_winning_dice_set(
+                state, opponent=perspective.opponent
+            )
+            if not post_threat:
+                neutralizing.append(move)
+        finally:
+            state.undo_move()
+    return neutralizing
 
 
 class TacticalAI:
     name: str
 
     def __init__(self, *, base, rng=None, name=None):
-        raise NotImplementedError
+        self.base = base
+        self.rng = rng if rng is not None else random.Random()
+        if name is not None:
+            self.name = name
+        else:
+            base_name = getattr(base, "name", "base")
+            self.name = f"{base_name}_tactical"
+
+    def choose_move(self, state, dice):
+        legal = state.legal_moves(state.current_player, dice)
+        if not legal:
+            return None
+
+        perspective = state.current_player
+        winning = find_winning_moves(state, dice, perspective)
+        if winning:
+            return pick_max_material(winning, self.rng)
+
+        pre_move_threat = opponent_winning_dice_set(
+            state, opponent=perspective.opponent
+        )
+        if pre_move_threat:
+            neutralizing = find_neutralizing_moves(state, dice, perspective)
+            if neutralizing:
+                return self._delegate_to_base_filtered(state, dice, neutralizing)
+
+        return self.base.choose_move(state, dice)
+
+    def _delegate_to_base_filtered(self, state, dice, allowed):
+        base_choice = self.base.choose_move(state, dice)
+        allowed_pairs = {(move.from_pos, move.to_pos) for move in allowed}
+        if (
+            base_choice is not None
+            and (base_choice.from_pos, base_choice.to_pos) in allowed_pairs
+        ):
+            return base_choice
+
+        return self.rng.choice(allowed)

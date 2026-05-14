@@ -35,6 +35,17 @@ def _move(player, piece_id, frm, to, captured=None) -> Move:
     )
 
 
+class RecordingBase:
+    def __init__(self, move=None, name="recording"):
+        self.move = move
+        self.name = name
+        self.calls = []
+
+    def choose_move(self, state, dice):
+        self.calls.append((state, dice))
+        return self.move
+
+
 # -------- pick_max_material --------
 
 def test_pick_max_material_returns_only_move():
@@ -225,3 +236,295 @@ def test_opponent_winning_dice_set_works_on_post_apply_state():
         assert isinstance(threats, set)
     finally:
         state.undo_move()
+
+
+# -------- find_neutralizing_moves --------
+
+def test_find_neutralizing_moves_uses_perspective_opponent():
+    """BLUE can capture RED's one-step target-corner threat; opponent is RED."""
+    state = _state(
+        red={5: Position(3, 4), 6: Position(0, 0)},
+        blue={1: Position(4, 4)},
+        current_player=Player.BLUE,
+    )
+
+    neutralizing = find_neutralizing_moves(state, dice=1, perspective=Player.BLUE)
+
+    assert isinstance(neutralizing, list)
+    assert {(m.from_pos, m.to_pos) for m in neutralizing} == {
+        (Position(4, 4), Position(3, 4)),
+    }
+
+
+def test_find_neutralizing_moves_excludes_partial_threat_reduction():
+    """Capturing either BLUE threat still leaves the other immediate target win."""
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={5: Position(1, 0), 6: Position(0, 1)},
+        current_player=Player.RED,
+    )
+
+    neutralizing = find_neutralizing_moves(state, dice=1, perspective=Player.RED)
+
+    assert neutralizing == []
+
+
+def test_find_neutralizing_moves_does_not_mutate_state():
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={5: Position(1, 0), 6: Position(4, 0)},
+        current_player=Player.RED,
+    )
+    before = state.serialize()
+
+    find_neutralizing_moves(state, dice=1, perspective=Player.RED)
+
+    assert state.serialize() == before
+
+
+# -------- TacticalAI Task 5 --------
+
+def test_tactical_ai_picks_winning_move_without_calling_base():
+    state = _state(red={1: Position(3, 4)}, blue={1: Position(0, 1)})
+    base = RecordingBase()
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 1)
+
+    assert chosen is not None
+    assert chosen.to_pos == Position(4, 4)
+    assert base.calls == []
+
+
+def test_tactical_ai_prefers_capturing_winning_move():
+    state = _state(
+        red={2: Position(3, 4), 4: Position(3, 3)},
+        blue={1: Position(4, 3)},
+    )
+    base = RecordingBase()
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 3)
+
+    assert chosen is not None
+    assert chosen.to_pos == Position(4, 3)
+    assert chosen.captured_piece is not None
+    assert chosen.captured_piece.player is Player.BLUE
+    assert base.calls == []
+
+
+def test_tactical_ai_delegates_once_when_no_direct_win():
+    state = _state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    base_choice = state.legal_moves(Player.RED, 1)[0]
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 1)
+
+    assert chosen == base_choice
+    assert base.calls == [(state, 1)]
+
+
+def test_tactical_ai_returns_none_without_calling_base_when_no_legal_moves():
+    state = _state(red={}, blue={1: Position(4, 4)})
+    base = RecordingBase()
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 1)
+
+    assert chosen is None
+    assert base.calls == []
+
+
+def test_tactical_ai_neutralizes_target_corner_threat_with_filtered_fallback():
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={5: Position(1, 0), 6: Position(4, 4)},
+    )
+    non_neutralizing = _move(Player.RED, 1, Position(0, 0), Position(0, 1))
+    base = RecordingBase(move=non_neutralizing)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 1)
+
+    neutralizing = find_neutralizing_moves(state, dice=1, perspective=Player.RED)
+    assert {(m.from_pos, m.to_pos) for m in neutralizing} == {
+        (Position(0, 0), Position(1, 0)),
+    }
+    assert (chosen.from_pos, chosen.to_pos) == (Position(0, 0), Position(1, 0))
+    assert base.calls == [(state, 1)]
+
+
+def test_tactical_ai_neutralizes_capture_all_threat_with_filtered_fallback():
+    state = _state(
+        red={3: Position(1, 3)},
+        blue={4: Position(2, 4), 1: Position(4, 4)},
+    )
+    non_neutralizing = _move(Player.RED, 3, Position(1, 3), Position(2, 3))
+    base = RecordingBase(move=non_neutralizing)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 3)
+
+    neutralizing = find_neutralizing_moves(state, dice=3, perspective=Player.RED)
+    assert {(m.from_pos, m.to_pos) for m in neutralizing} == {
+        (Position(1, 3), Position(2, 4)),
+    }
+    assert (chosen.from_pos, chosen.to_pos) == (Position(1, 3), Position(2, 4))
+    assert base.calls == [(state, 3)]
+
+
+def test_tactical_ai_respects_base_when_base_selects_neutralizing_move():
+    state = _state(
+        red={2: Position(0, 1), 4: Position(1, 0)},
+        blue={5: Position(1, 1), 6: Position(4, 4)},
+    )
+    neutralizing = find_neutralizing_moves(state, dice=3, perspective=Player.RED)
+    assert {(m.from_pos, m.to_pos) for m in neutralizing} == {
+        (Position(0, 1), Position(1, 1)),
+        (Position(1, 0), Position(1, 1)),
+    }
+    base_choice = neutralizing[-1]
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 3)
+
+    assert chosen == base_choice
+    assert base.calls == [(state, 3)]
+
+
+def test_tactical_ai_falls_back_to_legal_neutralizing_move_when_base_selects_other_move():
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={5: Position(1, 0), 6: Position(4, 4)},
+    )
+    base_choice = _move(Player.RED, 1, Position(0, 0), Position(1, 1))
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(3))
+
+    chosen = ai.choose_move(state, 1)
+
+    neutralizing = find_neutralizing_moves(state, dice=1, perspective=Player.RED)
+    allowed_pairs = {(m.from_pos, m.to_pos) for m in neutralizing}
+    assert (chosen.from_pos, chosen.to_pos) in allowed_pairs
+    assert (chosen.from_pos, chosen.to_pos) != (base_choice.from_pos, base_choice.to_pos)
+    assert base.calls == [(state, 1)]
+
+
+def test_tactical_ai_delegates_once_when_no_pre_move_threat():
+    state = _state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    assert opponent_winning_dice_set(state, opponent=Player.BLUE) == set()
+    base_choice = state.legal_moves(Player.RED, 1)[-1]
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 1)
+
+    assert chosen == base_choice
+    assert base.calls == [(state, 1)]
+
+
+def test_tactical_ai_direct_win_takes_priority_over_neutralizing_threat():
+    state = _state(
+        red={1: Position(3, 4)},
+        blue={5: Position(1, 0), 6: Position(4, 4)},
+    )
+    assert opponent_winning_dice_set(state, opponent=Player.BLUE)
+    base = RecordingBase()
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    chosen = ai.choose_move(state, 1)
+
+    assert chosen is not None
+    assert chosen.to_pos == Position(4, 4)
+    assert base.calls == []
+
+
+
+# -------- build_ai("rollout_tactical") + ai_version_signature --------
+
+def test_build_ai_rollout_tactical_returns_tactical_with_rollout_base():
+    from ai.match import build_ai
+    from ai.rollout_ai import RolloutAI
+
+    ai = build_ai("rollout_tactical", seed=42)
+
+    assert isinstance(ai, TacticalAI)
+    assert isinstance(ai.base, RolloutAI)
+    assert ai.name == "rollout_tactical"
+
+
+def test_build_ai_rollout_tactical_supports_seed_none():
+    from ai.match import build_ai
+    from ai.rollout_ai import RolloutAI
+
+    ai = build_ai("rollout_tactical", seed=None)
+
+    assert isinstance(ai, TacticalAI)
+    assert isinstance(ai.base, RolloutAI)
+    assert ai.name == "rollout_tactical"
+
+
+def test_build_ai_rollout_tactical_isolates_wrapper_rng_from_base_rng():
+    """wrapper_rng 必须独立派生；构造时不能从 base_rng 抽数派生 wrapper_seed。"""
+    from ai.match import build_ai
+
+    seed = 42
+    ai = build_ai("rollout_tactical", seed=seed)
+
+    expected_base_state = random.Random(seed).getstate()
+    assert ai.base._rng.getstate() == expected_base_state, (
+        "base_rng 被推进，说明 wrapper_seed 是从 base_rng 派生的"
+    )
+
+    expected_wrapper_state = random.Random(seed ^ 0x5DEECE66D).getstate()
+    assert ai.rng.getstate() == expected_wrapper_state, (
+        "wrapper_rng 不是 random.Random(seed ^ 0x5DEECE66D)"
+    )
+
+
+def test_ai_version_signature_for_rollout_tactical_includes_base_and_patches():
+    from ai.match import ai_version_signature, build_ai
+
+    ai = build_ai("rollout_tactical", seed=7)
+    sig = ai_version_signature(ai)
+
+    assert sig["name"] == "rollout_tactical"
+    assert sig["patches"] == ["direct_win", "block_one_step_win"]
+    assert "base" in sig
+    base_sig = sig["base"]
+    assert base_sig["name"] == "rollout"
+    # base 子签名应当走完整的 ai_version_signature 字段循环
+    assert "rollouts_per_move" in base_sig
+
+
+
+def test_build_ai_rollout_tactical_choose_move_smoke():
+    """End-to-end: TacticalAI 包装 RolloutAI 后 choose_move 必须能跑通并返回 legal move。
+
+    单纯的构造形状测试覆盖不到 TacticalAI <-> RolloutAI 的接口拼接面；
+    这里压低 rollouts_per_move / max_step_time_ms 保证耗时 << 1s。
+    """
+    from ai.match import build_ai
+
+    ai = build_ai(
+        "rollout_tactical",
+        seed=42,
+        rollouts_per_move=2,
+        max_step_time_ms=20,
+    )
+    state = _state(
+        red={1: Position(0, 0), 2: Position(1, 0)},
+        blue={1: Position(4, 4), 2: Position(3, 4)},
+        current_player=Player.RED,
+    )
+    dice = 3
+    legal = state.legal_moves(state.current_player, dice)
+    assert legal, "fixture should produce legal moves"
+
+    move = ai.choose_move(state, dice)
+
+    assert move is not None
+    legal_pairs = {(m.from_pos, m.to_pos) for m in legal}
+    assert (move.from_pos, move.to_pos) in legal_pairs
