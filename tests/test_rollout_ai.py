@@ -15,6 +15,49 @@ def test_rollout_ai_returns_legal_move():
     assert move in state.legal_moves(state.current_player, 6)
 
 
+def test_rollout_ai_deadline_safety_ms_reduces_internal_deadline(monkeypatch):
+    state = default_starting_state()
+    seen_deadlines = []
+
+    def fake_sample(score, **kwargs):
+        seen_deadlines.append(kwargs["deadline"])
+        score.record_cutoff(0.5)
+        return False
+
+    monkeypatch.setattr("ai.rollout_ai.time.perf_counter", lambda: 100.0)
+    ai = RolloutAI(
+        rollouts_per_move=1,
+        max_rollout_turns=0,
+        max_step_time_ms=100.0,
+        deadline_safety_ms=30.0,
+        rng=random.Random(1),
+    )
+    monkeypatch.setattr(ai, "_sample_move_score", fake_sample)
+
+    ai.choose_move(state, 6)
+
+    assert seen_deadlines
+    assert all(abs(deadline - 100.07) < 1e-9 for deadline in seen_deadlines)
+
+
+def test_rollout_ai_cutoff_eval_zweistein_uses_zweistein_score(monkeypatch):
+    state = default_starting_state()
+    monkeypatch.setattr(
+        "ai.rollout_ai.zweistein_lite_score",
+        lambda state, perspective: 12.0,
+        raising=False,
+    )
+    ai = RolloutAI(cutoff_eval="zweistein", rng=random.Random(1))
+
+    assert ai._cutoff_score(state, Player.RED) == 1.0
+
+    monkeypatch.setattr("ai.rollout_ai.zweistein_lite_score", lambda state, perspective: -12.0)
+    assert ai._cutoff_score(state, Player.RED) == 0.0
+
+    monkeypatch.setattr("ai.rollout_ai.zweistein_lite_score", lambda state, perspective: 0.0)
+    assert ai._cutoff_score(state, Player.RED) == 0.5
+
+
 def test_rollout_ai_records_candidate_diagnostics():
     state = GameState.from_layout(
         red={

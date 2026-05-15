@@ -27,6 +27,22 @@ def test_expectimax_returns_none_when_no_legal_moves():
     assert ai.choose_move(state, dice=1) is None
 
 
+def test_expectimax_leaf_evaluator_zweistein_uses_zweistein_score(monkeypatch):
+    state = make_state(
+        red={1: Position(1, 1)},
+        blue={1: Position(3, 3)},
+        current_player=Player.RED,
+    )
+    monkeypatch.setattr(
+        "ai.expectimax_ai.zweistein_lite_score",
+        lambda state, perspective: 123.0,
+        raising=False,
+    )
+    ai = ExpectimaxAI(depth=0, leaf_evaluator="zweistein", rng=random.Random(1))
+
+    assert ai._leaf_score(state, Player.RED) == 123.0
+
+
 # --- basic behavior ---
 
 

@@ -80,12 +80,40 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
         "promotion": {"opponent": "rollout", "games_per_side": 400},
     },
     "rollout_risk_playout": {
-        "candidate": {"opponent": "rollout", "games_per_side": 100},
-        "promotion": {"opponent": "rollout", "games_per_side": 400},
+        "candidate": {
+            "opponent": "rollout",
+            "games_per_side": 100,
+            "candidate_kwargs": {"deadline_safety_ms": 30.0},
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "games_per_side": 400,
+            "candidate_kwargs": {"deadline_safety_ms": 30.0},
+        },
     },
     "rollout_cutoff_eval": {
-        "candidate": {"opponent": "rollout", "games_per_side": 100},
-        "promotion": {"opponent": "rollout", "games_per_side": 400},
+        "candidate": {
+            "opponent": "rollout",
+            "games_per_side": 100,
+            "candidate_kwargs": {"deadline_safety_ms": 30.0},
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "games_per_side": 400,
+            "candidate_kwargs": {"deadline_safety_ms": 30.0},
+        },
+    },
+    "rollout_zweistein_cutoff": {
+        "candidate": {
+            "opponent": "rollout",
+            "games_per_side": 100,
+            "candidate_kwargs": {"deadline_safety_ms": 30.0},
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "games_per_side": 400,
+            "candidate_kwargs": {"deadline_safety_ms": 30.0},
+        },
     },
     "rollout_tactical": {
         # 设计 §10.3：candidate vs rollout 等价于 MCTS 的 promotion，
@@ -116,6 +144,10 @@ class Side:
 
 def _make_ai(seed: int, *, kind: str, ai_kwargs: dict | None):
     return build_ai(kind, seed=seed, **(ai_kwargs or {}))
+
+
+def _merge_profile_kwargs(profile: dict, explicit_kwargs: dict) -> dict:
+    return {**profile.get("candidate_kwargs", {}), **explicit_kwargs}
 
 
 def _candidate_telemetry(ai) -> dict[str, int]:
@@ -339,6 +371,10 @@ def _write_markdown(
     stage: str,
     opponent_kind: str,
     args: argparse.Namespace,
+    candidate_kwargs: dict,
+    opponent_kwargs: dict,
+    candidate_signature: dict | None,
+    opponent_signature: dict | None,
     red_summary: dict,
     blue_summary: dict,
     combined: dict,
@@ -361,6 +397,14 @@ def _write_markdown(
         f"- master seed：{args.seed}",
         f"- 每方局数：{args.games_per_side}",
         f"- 最大半步：{args.max_turns}",
+        "- 候选参数（有效）："
+        f"`{json.dumps(candidate_kwargs, ensure_ascii=False, sort_keys=True)}`",
+        "- 对手参数（有效）："
+        f"`{json.dumps(opponent_kwargs, ensure_ascii=False, sort_keys=True)}`",
+        "- 候选签名："
+        f"`{json.dumps(candidate_signature or {}, ensure_ascii=False, sort_keys=True)}`",
+        "- 对手签名："
+        f"`{json.dumps(opponent_signature or {}, ensure_ascii=False, sort_keys=True)}`",
     ]
     if args.candidate_arg:
         lines.append(f"- 候选参数：{', '.join(args.candidate_arg)}")
@@ -531,6 +575,7 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     candidate_kwargs = _parse_kv(args.candidate_arg, parser, "--candidate-arg")
+    candidate_kwargs = _merge_profile_kwargs(profile, candidate_kwargs)
     opponent_kwargs = _parse_kv(args.opponent_arg, parser, "--opponent-arg")
     gates = _resolve_gates(args.candidate, args.stage)
 
@@ -615,6 +660,10 @@ def main(argv: list[str] | None = None) -> int:
             stage=args.stage,
             opponent_kind=opponent_kind,
             args=args,
+            candidate_kwargs=candidate_kwargs,
+            opponent_kwargs=opponent_kwargs,
+            candidate_signature=red_sigs["candidate"],
+            opponent_signature=red_sigs["opponent"],
             red_summary=red_summary,
             blue_summary=blue_summary,
             combined=combined,

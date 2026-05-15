@@ -18,6 +18,7 @@
 - GUI 右侧推荐区：显示候选 rollout 明细，并能标记“置信：低”。
 - `scripts/rollout_stability.py`：固定局面重复推荐稳定性审计。
 - `scripts/quick_bench.py --red-kwargs/--blue-kwargs`：可以用 JSON kwargs 评测参数候选。
+- `RolloutAI.deadline_safety_ms`：默认 `0.0`；P2.5 candidate profile 可显式传 `30.0`，让内部 playout deadline 早于外部 `max_step_time_ms`。
 - adaptive rollout 候选参数（显式传参使用，不是 release 默认）：
 
 ```json
@@ -326,7 +327,41 @@ promotion stage: opponent=rollout, games_per_side=400
 - 后续若继续 P2 分支，应优先降低 step timeout（例如减少 rollout 数、降低 cutoff 深度或优化 playout），再重跑 candidate。
 - 默认 `rollout`、release 默认参数和 GUI 默认推荐均保持不变。
 
-## 9. 任务组 P3：Zweistein-lite evaluator
+## 9. 任务组 P2.5：Rollout deadline safety
+
+状态：已完成（2026-05-15）。
+
+目标：只修复 P2 正向候选的边界超时，不直接进入大规模 P3，不改 GUI/release 默认。
+
+实现：
+
+- `RolloutAI.__init__()` 新增 `deadline_safety_ms: float = 0.0`，默认不改变旧 `rollout` 行为。
+- `choose_move()` 内部采样 deadline 使用 `max_step_time_ms - deadline_safety_ms`，并用 `max(0.0, ...)` 防御负预算。
+- `ai_version_signature()` 记录 `deadline_safety_ms`。
+- `scripts/bench_ai.py` 支持 profile-level `candidate_kwargs`，且只给 `rollout_risk_playout` / `rollout_cutoff_eval` 的 candidate/promotion profile 传 `deadline_safety_ms=30.0`。
+- 未复验 `rollout_32`。
+
+复验：
+
+| 候选 | 合并局数 | 胜率 | timeouts | 结论 |
+|---|---:|---:|---:|---|
+| `rollout_risk_playout` | 200 | 58.5% | 1 | 未过总门禁 |
+| `rollout_cutoff_eval` | 200 | 57.0% | 0 | **P2.5 survives** |
+
+报告：
+
+- `reports/p25_candidate_rollout_risk_playout_20260515.json` / `.md`
+- `reports/p25_candidate_rollout_cutoff_eval_20260515.json` / `.md`
+
+结论：
+
+- `rollout_cutoff_eval` 是 P2.5 survivor，可作为 P3 组合验证的候选基础。
+- 这不是默认晋升；默认 `rollout`、GUI 默认推荐和 `release/v1.0/default_params.json` 均保持不变。
+- P2.5 结束后进入 P3 Zweistein-lite。
+
+## 10. 任务组 P3：Zweistein-lite evaluator
+
+状态：已完成基础实现与 candidate 小样本（2026-05-15）；未晋升默认。
 
 目标：实现一个本项目内可测试、可解释的估值函数，不追求论文 100% 复刻。
 
@@ -391,7 +426,33 @@ rollout + Zweistein cutoff + risk-aware playout
 - 三个派生 AI 能构造、能返回合法走法、不污染 state。
 - 至少 `rollout_zweistein_cutoff` 进入 P2 同等 bench 流程。
 
-## 10. 任务组 P4：MCTS opponent node 修复
+完成记录：
+
+- 新增 `ai/zweistein.py`，提供 `zweistein_lite_score(state, perspective)`。
+- 特征覆盖终局、推进距离、子力、期望机动性、距离加权被吃风险、直接到角风险。
+- 新增 `ZweisteinGreedyAI`，注册 `greedy_zweistein`。
+- `RolloutAI.cutoff_eval` 支持 `zweistein`，注册 `rollout_zweistein_cutoff`。
+- `ExpectimaxAI` 支持 `leaf_evaluator=current|zweistein`，注册 `expectimax_zweistein_d1`。
+- `ai_version_signature()` 记录 `leaf_evaluator`。
+- `scripts/bench_ai.py` 为 `rollout_zweistein_cutoff` candidate/promotion profile 注入 `deadline_safety_ms=30.0`。
+
+P3 candidate 结果：
+
+| 候选 | 合并局数 | 胜率 | timeouts | 门禁 |
+|---|---:|---:|---:|---|
+| `rollout_zweistein_cutoff` | 200 | 58.0% | 0 | 通过 candidate |
+
+报告：
+
+- `reports/p3_candidate_rollout_zweistein_cutoff_20260515.json` / `.md`
+
+结论：
+
+- `rollout_zweistein_cutoff` 可进入后续 promotion 400+400 复验。
+- 未跑 promotion，不能替换默认 AI。
+- 默认 `rollout`、GUI 默认推荐和 `release/v1.0/default_params.json` 均保持不变。
+
+## 11. 任务组 P4：MCTS opponent node 修复
 
 目标：先证明对手节点方向正确，再考虑大样本。
 
@@ -425,7 +486,7 @@ B：防守，阻止我方下一手直接胜
 
 - smoke 通过后才考虑 candidate。
 
-## 11. 任务组 P5：开局搜索
+## 12. 任务组 P5：开局搜索
 
 目标：等 AI 策略稳定后再搜开局，避免旧策略布局失效。
 
@@ -460,13 +521,14 @@ B：防守，阻止我方下一手直接胜
 - 不把单一布局称为最优。
 - GUI 默认布局变更必须有独立报告。
 
-## 12. 推荐执行顺序
+## 13. 推荐执行顺序
 
 ```text
 P1 Rollout 根节点诊断收敛（已完成）
   -> P2 三个 rollout 候选小样本筛选（已完成，未晋升）
-  -> P3 Zweistein-lite evaluator
-  -> P3b rollout_zweistein_cutoff + risk-aware playout 组合
+  -> P2.5 Rollout deadline safety（已完成，rollout_cutoff_eval survives）
+  -> P3 Zweistein-lite evaluator（已完成 candidate，rollout_zweistein_cutoff 通过）
+  -> P3 promotion（可选：rollout_zweistein_cutoff 400+400）
   -> P4 MCTS opponent node 修复
   -> P5 开局搜索
 ```
@@ -475,11 +537,12 @@ P1 Rollout 根节点诊断收敛（已完成）
 
 1. P1 必做，因为它直接解释怪棋。
 2. P2 必做，因为它把 rollout 变化变成可 bench 候选。
-3. P3 是下一阶段主线，因为强估值函数能复用到 rollout、expectimax 和 MCTS。
-4. P4 在 P3 后做，避免在弱 leaf eval 上过度优化树搜索。
-5. P5 最后做，因为开局布局依赖最终 AI 风格。
+3. P2.5 只处理 deadline safety，避免把边界 timeout 问题拖入大规模 P3。
+4. P3 已完成 candidate；若目标是默认晋升，先跑 400+400 promotion，否则进入 P4。
+5. P4 在 P3 后做，避免在弱 leaf eval 上过度优化树搜索。
+6. P5 最后做，因为开局布局依赖最终 AI 风格。
 
-## 13. 风险与缓解
+## 14. 风险与缓解
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
@@ -489,19 +552,20 @@ P1 Rollout 根节点诊断收敛（已完成）
 | MCTS bug 被大样本掩盖 | 浪费评测时间 | 先小局面方向性测试 |
 | 开局搜索过拟合旧 AI | 换策略后布局失效 | AI 默认冻结后再搜 |
 
-## 14. 下一步产物
+## 15. 下一步产物
 
 本 spec 通过后，按任务组分别写 implementation plan：
 
 1. `docs/superpowers/plans/2026-05-15-rollout-root-stats-plan.md`
 2. `docs/superpowers/plans/2026-05-15-rollout-candidates-plan.md`
-3. `docs/superpowers/plans/2026-05-15-zweistein-lite-plan.md`
-4. `docs/superpowers/plans/2026-05-15-mcts-opponent-node-plan.md`
-5. `docs/superpowers/plans/2026-05-15-opening-search-after-ai-plan.md`
+3. `docs/superpowers/plans/2026-05-15-rollout-deadline-safety-plan.md`
+4. `docs/superpowers/plans/2026-05-15-zweistein-lite-plan.md`
+5. `docs/superpowers/plans/2026-05-15-mcts-opponent-node-plan.md`
+6. `docs/superpowers/plans/2026-05-15-opening-search-after-ai-plan.md`
 
 每个 plan 独立执行、独立测试、独立报告；不把五个方向揉成一次大改。
 
-## 15. Spec 自检
+## 16. Spec 自检
 
 - 无规则语义变更。
 - 无外部依赖。

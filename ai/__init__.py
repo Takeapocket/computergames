@@ -12,6 +12,7 @@ from ai.mcts import MCTSAI
 from ai.random_ai import RandomAI, choose_random_move
 from ai.rollout_ai import RolloutAI
 from ai.tactical import TacticalAI
+from ai.zweistein_ai import ZweisteinGreedyAI
 
 
 class AIPlayer(Protocol):
@@ -32,5 +33,6 @@ __all__ = [
     "RandomAI",
     "RolloutAI",
     "TacticalAI",
+    "ZweisteinGreedyAI",
     "choose_random_move",
 ]

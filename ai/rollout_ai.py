@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 
 from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT, evaluate
 from ai.greedy_ai import GreedyAI
+from ai.zweistein import zweistein_lite_score
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player
@@ -110,12 +111,13 @@ class RolloutAI:
         low_confidence_margin: float = 0.08,
         playout_policy: str = "greedy",
         cutoff_eval: str = "draw",
+        deadline_safety_ms: float = 0.0,
         rng: random.Random | None = None,
         name: str = "rollout",
     ) -> None:
         if playout_policy not in {"greedy", "greedy_risk"}:
             raise ValueError(f"unknown playout_policy: {playout_policy!r}")
-        if cutoff_eval not in {"draw", "current"}:
+        if cutoff_eval not in {"draw", "current", "zweistein"}:
             raise ValueError(f"unknown cutoff_eval: {cutoff_eval!r}")
         self.rollouts_per_move = int(rollouts_per_move)
         self.max_rollout_turns = int(max_rollout_turns)
@@ -131,6 +133,7 @@ class RolloutAI:
         self.low_confidence_margin = float(low_confidence_margin)
         self.playout_policy = playout_policy
         self.cutoff_eval = cutoff_eval
+        self.deadline_safety_ms = max(0.0, float(deadline_safety_ms))
         self._rng = rng or random.Random()
         self.name = name
         self.fallback_count = 0
@@ -153,7 +156,8 @@ class RolloutAI:
         if not legal:
             return None
 
-        deadline = time.perf_counter() + self.max_step_time_ms / 1000.0
+        step_budget_ms = max(0.0, self.max_step_time_ms - self.deadline_safety_ms)
+        deadline = time.perf_counter() + step_budget_ms / 1000.0
         perspective = state.current_player
         fallback = GreedyAI(
             rng=random.Random(self._rng.randrange(2**31)),
@@ -297,7 +301,10 @@ class RolloutAI:
     def _cutoff_score(self, state: GameState, perspective: Player) -> float:
         if self.cutoff_eval == "draw":
             return 0.5
-        value = evaluate(state, perspective)
+        if self.cutoff_eval == "zweistein":
+            value = zweistein_lite_score(state, perspective)
+        else:
+            value = evaluate(state, perspective)
         if value > 0:
             return 1.0
         if value < 0:

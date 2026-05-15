@@ -319,6 +319,10 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
             expected_win_risk_weight=expected_win_risk_weight,
             **ai_kwargs,
         )
+    if kind == "greedy_zweistein":
+        from ai.zweistein_ai import ZweisteinGreedyAI
+
+        return ZweisteinGreedyAI(rng=rng, name="greedy_zweistein", **ai_kwargs)
     if kind == "rollout":
         from ai.rollout_ai import RolloutAI
 
@@ -368,6 +372,21 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
                 "cutoff_eval": "current",
             }),
         )
+    if kind == "rollout_zweistein_cutoff":
+        from ai.rollout_ai import RolloutAI
+
+        return RolloutAI(
+            rng=rng,
+            name="rollout_zweistein_cutoff",
+            **_merged({
+                "rollouts_per_move": 32,
+                "max_rollout_turns": 80,
+                "max_step_time_ms": 750.0,
+                "epsilon": 0.10,
+                "playout_policy": "greedy_risk",
+                "cutoff_eval": "zweistein",
+            }),
+        )
     if kind == "expectimax":
         from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
         from ai.expectimax_ai import ExpectimaxAI
@@ -382,6 +401,17 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
             expected_risk_weight=expected_risk_weight,
             expected_win_risk_weight=expected_win_risk_weight,
             **ai_kwargs,
+        )
+    if kind == "expectimax_zweistein_d1":
+        from ai.expectimax_ai import ExpectimaxAI
+
+        return ExpectimaxAI(
+            rng=rng,
+            name="expectimax_zweistein_d1",
+            **_merged({
+                "depth": 1,
+                "leaf_evaluator": "zweistein",
+            }),
         )
     if kind == "expectimax_v2":
         from ai.expectimax_v2 import ExpectimaxV2
@@ -444,6 +474,8 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "low_confidence_margin",
         "playout_policy",
         "cutoff_eval",
+        "deadline_safety_ms",
+        "leaf_evaluator",
         "c_uct",
         "scale",
         "max_iterations",

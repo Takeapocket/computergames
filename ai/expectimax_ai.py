@@ -4,6 +4,7 @@ import random
 import time
 
 from ai.evaluator import WIN_SCORE, evaluate
+from ai.zweistein import zweistein_lite_score
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player
@@ -30,15 +31,19 @@ class ExpectimaxAI:
         rng: random.Random | None = None,
         name: str = "expectimax",
         randomize_ties: bool = True,
+        leaf_evaluator: str = "current",
         **eval_kwargs: float,
     ) -> None:
         if depth < 0:
             raise ValueError(f"depth must be >= 0, got {depth}")
+        if leaf_evaluator not in {"current", "zweistein"}:
+            raise ValueError(f"unknown leaf_evaluator: {leaf_evaluator!r}")
         self.depth = depth
         self.time_limit_ms = time_limit_ms
         self._rng = rng or random.Random()
         self.name = name
         self.randomize_ties = randomize_ties
+        self.leaf_evaluator = leaf_evaluator
         self._eval_kwargs = eval_kwargs
         # 把 evaluator 类权重提升为公共属性，供 ai_version_signature 反射记录到 bench metadata。
         self.expected_risk_weight = eval_kwargs.get("expected_risk_weight", 0.0)
@@ -99,7 +104,7 @@ class ExpectimaxAI:
             return WIN_SCORE if winner is perspective else -WIN_SCORE
 
         if depth < 0:
-            return evaluate(state, perspective, **self._eval_kwargs)
+            return self._leaf_score(state, perspective)
 
         total = 0.0
         opponent = perspective.opponent
@@ -124,7 +129,7 @@ class ExpectimaxAI:
                     if depth > 0:
                         val = self._expectimax(state, perspective, depth - 1, deadline)
                     else:
-                        val = evaluate(state, perspective, **self._eval_kwargs)
+                        val = self._leaf_score(state, perspective)
                 finally:
                     state.undo_move()
 
@@ -148,7 +153,7 @@ class ExpectimaxAI:
             return WIN_SCORE if winner is perspective else -WIN_SCORE
 
         if depth < 0:
-            return evaluate(state, perspective, **self._eval_kwargs)
+            return self._leaf_score(state, perspective)
 
         total = 0.0
 
@@ -178,3 +183,8 @@ class ExpectimaxAI:
             total += best_for_me
 
         return total / 6.0
+
+    def _leaf_score(self, state: GameState, perspective: Player) -> float:
+        if self.leaf_evaluator == "zweistein":
+            return zweistein_lite_score(state, perspective)
+        return evaluate(state, perspective, **self._eval_kwargs)

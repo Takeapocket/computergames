@@ -32,6 +32,7 @@ replays/     auto_save 与对战 replay
 - JSON 棋谱保存/加载；单方 4 分钟包干计时；盘内/盘间 auto_save 自动恢复。
 - 七盘制比赛模式：甲乙身份、先手序列（甲方 1/4/5，乙方 2/3/6/7）、比分推进、先胜 4 盘判本轮胜方。
 - AI 体系：`random` / `greedy` / `greedy_risk`（回退）/ `rollout`（**默认**，release 参数为 16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15）/ `expectimax` 与 `expectimax_v2`（实验性）/ `mcts`（实验性）/ `tactical`（战术封装）。
+- P2/P2.5/P3 的 rollout / Zweistein 候选仅为显式实验候选，详见 `PROJECT_PHASES.md`，未进入 `release/v1.0` 默认配置。
 - adaptive rollout（32 初采样、close sample 到 128、低置信提示）是显式实验候选，不是 `release/v1.0` 默认参数；直接对旧 rollout 的 800 局合并胜率为 59.00%，未过 60% 默认晋升线。
 - Harness：`quick_bench`（Wilson CI）、`tournament`（pairwise matrix）、`param_sweep`、`search_openings`，slim JSON 报告默认入库。
 - `release/v1.0/` 已冻结比赛版本，含运行指引、参数、已知限制和 800 局双边晋升数据测试报告。

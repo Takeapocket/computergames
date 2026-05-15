@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-15（P2 rollout 候选小样本后同步；S2/S3/S4 全部闭环）
+更新时间：2026-05-15（P3 Zweistein-lite candidate 后同步；S2/S3/S4 全部闭环）
 
 ## 当前结论
 
@@ -16,6 +16,8 @@
 - **2026-05-15 code review follow-up 已完成**：修复 adaptive rollout 误写默认参数的问题。当前 GUI/release 默认 AI 仍是 `rollout`，但默认参数保持旧 flat 形态：`rollouts_per_move=16`、`max_rollout_turns=80`、`max_step_time_ms=500.0`、`epsilon=0.15`，见 `gui/main_window.py` 与 `release/v1.0/default_params.json`。adaptive rollout（32 初采样、close sample 到 128、低置信提示）仅作为显式实验候选保留；其 direct vs old rollout 800 局合并胜率 59.00%，未达 60% 默认晋升线，不进入 release/v1.0 默认参数。`RolloutAI` 诊断现区分 `score / winrate / cutoffs / avg`；`quick_bench.py` / `bench_ai.py` 已开始聚合真实 `timeouts`，历史报告中的 legacy timeout 字段不可单独作为晋升证据。最近一次全量验证：`495 passed in 11.68s`，详见 `release/v1.0/test_report.md`。
 - **2026-05-15 P1 Rollout 根节点诊断收敛已完成**：新增 canonical `RootMoveStats` 与 `RolloutAI.last_root_stats`，`last_diagnostics` 保持兼容别名；GUI 推荐区优先读取 root stats，候选明细显示 visits、score、winrate、wins、losses、draws、avg 与低置信标记。默认 `rollout` 参数、`release/v1.0/default_params.json` 和 core 规则均未变更。验证：`scripts/smoke_test.py` 正常退出；全量 `pytest` 为 `496 passed in 11.29s`。
 - **2026-05-15 P2 rollout 候选小样本已完成**：新增 benchable AI kind：`rollout_32`、`rollout_risk_playout`、`rollout_cutoff_eval`；`RolloutAI` 支持 `playout_policy=greedy|greedy_risk` 与 `cutoff_eval=draw|current`，`ai_version_signature()` 和 `scripts/bench_ai.py` profile 已记录相关元数据。默认 `rollout`、GUI 默认推荐、`release/v1.0/default_params.json` 和 core 规则均未变更。三组 candidate vs 当前默认 `rollout` 双边各 100 局均未过门禁：`rollout_32` 54.5% 且 timeouts=4；`rollout_risk_playout` 57.0% 但 timeouts=10；`rollout_cutoff_eval` 57.5% 但 timeouts=11。报告见 `reports/p2_candidate_rollout_32_20260515.*`、`reports/p2_candidate_rollout_risk_playout_20260515.*`、`reports/p2_candidate_rollout_cutoff_eval_20260515.*`。实现验证：`pytest` 为 `501 passed in 10.16s`，`scripts/smoke_test.py` 正常退出。
+- **2026-05-15 P2.5 rollout deadline safety 已完成**：`RolloutAI` 新增 `deadline_safety_ms`，默认 `0.0`，内部 playout deadline 使用 `max_step_time_ms - deadline_safety_ms`；`ai_version_signature()` 记录该字段；`bench_ai.py` 仅给 `rollout_risk_playout` / `rollout_cutoff_eval` 的 candidate/promotion profile 显式传 `deadline_safety_ms=30.0`，未复验 `rollout_32`。P2.5 正式复验仅跑两个正向候选，各双边 100+100、对手 `rollout`：`rollout_risk_playout` 合并胜率 58.5%，但总 `timeouts=1`，未过总门禁；`rollout_cutoff_eval` 合并胜率 57.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，标记为 **P2.5 survives**。报告见 `reports/p25_candidate_rollout_risk_playout_20260515.*` 与 `reports/p25_candidate_rollout_cutoff_eval_20260515.*`。默认 `rollout`、GUI 默认推荐、`release/v1.0/default_params.json` 和 core 规则均未变更。
+- **2026-05-15 P3 Zweistein-lite 已完成基础实现与 candidate 小样本**：新增 `ai/zweistein.py` 的 `zweistein_lite_score()`，特征包括终局、推进、子力、期望机动性、被吃风险和直接到角风险；新增 `greedy_zweistein`、`rollout_zweistein_cutoff`、`expectimax_zweistein_d1` 三个实验 kind。`RolloutAI.cutoff_eval` 支持 `zweistein`；`ExpectimaxAI` 支持 `leaf_evaluator=current|zweistein`；`ai_version_signature()` 记录 `leaf_evaluator`；`bench_ai.py` 为 `rollout_zweistein_cutoff` candidate/promotion profile 注入 `deadline_safety_ms=30.0`。P3 小样本：`rollout_zweistein_cutoff` vs `rollout` 双边 100+100，合并胜率 58.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，candidate 门禁通过。报告见 `reports/p3_candidate_rollout_zweistein_cutoff_20260515.*`。这只代表 P3 candidate 通过，不代表默认晋升；GUI/release 默认仍是旧 flat `rollout`。
 
 ## 已确认的比赛事实
 
@@ -83,8 +85,8 @@
 ## 下一次对话建议第一步
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
-2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 全部完成；AI 下一阶段 P1 / P2 均已完成。当前 release 默认参数仍是旧 flat `rollout`，不要把 adaptive rollout 或 P2 候选当作默认。
-3. 后续按 `docs/superpowers/specs/2026-05-15-ai-next-stage-roadmap-design.md` 顺序推进 P3 Zweistein-lite；若继续 P2 分支，应先降低 `rollout_risk_playout` / `rollout_cutoff_eval` 的真实 timeouts，再考虑 400+400 promotion。比赛后再回到 Expectimax 主线（合并胜率 45.0% 弱于 baseline，需按 `reports/4-4-rebench.md` 方向实验）。
+2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 全部完成；AI 下一阶段 P1 / P2 / P2.5 / P3 均已完成。当前 release 默认参数仍是旧 flat `rollout`，不要把 adaptive rollout 或 P2/P2.5/P3 候选当作默认。
+3. P3 candidate survivor 是 `rollout_zweistein_cutoff`：小样本 58.0%，timeouts=0。若继续默认晋升路线，下一步必须先跑 promotion 400+400 并满足 Wilson 下界；若暂不扩大样本，则按 roadmap 进入 P4 MCTS opponent node。比赛后再回到 Expectimax 主线（合并胜率 45.0% 弱于 baseline，需按 `reports/4-4-rebench.md` 方向实验）。
 4. 如有时间，可跑大样本 `scripts/param_sweep.py` 或 `scripts/search_openings.py` 看是否产出能过门禁的候选。
 
 ## 待确认事项

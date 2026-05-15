@@ -1,6 +1,7 @@
 """scripts/bench_ai.py 泛化框架 + scripts/bench_mcts.py 兼容入口的单测。"""
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -37,6 +38,40 @@ def test_resolve_profile_returns_defaults_for_p2_rollout_candidates():
         assert candidate["games_per_side"] == 100
         assert promotion["opponent"] == "rollout"
         assert promotion["games_per_side"] == 400
+
+
+def test_resolve_profile_sets_deadline_safety_for_p25_candidates():
+    for kind in ("rollout_risk_playout", "rollout_cutoff_eval"):
+        for stage in ("candidate", "promotion"):
+            profile = bench_ai._resolve_profile(kind, stage)
+
+            assert profile["candidate_kwargs"]["deadline_safety_ms"] == 30.0
+
+
+def test_resolve_profile_sets_deadline_safety_for_rollout_zweistein_cutoff():
+    for stage, games_per_side in (("candidate", 100), ("promotion", 400)):
+        profile = bench_ai._resolve_profile("rollout_zweistein_cutoff", stage)
+
+        assert profile["opponent"] == "rollout"
+        assert profile["games_per_side"] == games_per_side
+        assert profile["candidate_kwargs"]["deadline_safety_ms"] == 30.0
+
+
+def test_resolve_profile_does_not_inject_deadline_safety_for_rollout_32():
+    for stage in ("candidate", "promotion"):
+        profile = bench_ai._resolve_profile("rollout_32", stage)
+
+        assert "candidate_kwargs" not in profile
+
+
+def test_merge_profile_kwargs_keeps_cli_override():
+    profile = {"candidate_kwargs": {"deadline_safety_ms": 30.0, "rollouts_per_move": 32}}
+    explicit = {"deadline_safety_ms": 5.0}
+
+    assert bench_ai._merge_profile_kwargs(profile, explicit) == {
+        "deadline_safety_ms": 5.0,
+        "rollouts_per_move": 32,
+    }
 
 
 def test_resolve_gates_for_mcts_promotion_matches_stage_gates():
@@ -145,6 +180,48 @@ def test_combine_skips_telemetry_when_neither_side_has_it():
     assert "avg_iterations" not in combined
     assert "max_depth" not in combined
     assert combined["games"] == 2
+
+
+def test_write_markdown_records_effective_kwargs_and_ai_signatures(tmp_path: Path):
+    red = bench_ai._aggregate([(_R(Player.RED), {})], candidate_side=Player.RED)
+    blue = bench_ai._aggregate([(_R(Player.BLUE), {})], candidate_side=Player.BLUE)
+    combined = bench_ai._combine(red, blue)
+    md_path = tmp_path / "report.md"
+
+    bench_ai._write_markdown(
+        md_path,
+        candidate_kind="rollout_zweistein_cutoff",
+        stage="candidate",
+        opponent_kind="rollout",
+        args=argparse.Namespace(
+            seed=2026,
+            games_per_side=1,
+            max_turns=12,
+            candidate_arg=[],
+            opponent_arg=[],
+        ),
+        candidate_kwargs={"deadline_safety_ms": 30.0},
+        opponent_kwargs={},
+        candidate_signature={
+            "name": "rollout_zweistein_cutoff",
+            "deadline_safety_ms": 30.0,
+        },
+        opponent_signature={"name": "rollout"},
+        red_summary=red,
+        blue_summary=blue,
+        combined=combined,
+        gates_ok=True,
+        failures=[],
+        gates=bench_ai.STAGE_GATES["candidate"],
+        elapsed_seconds=0.1,
+        generated_at="2026-05-15T00:00:00+08:00",
+    )
+
+    text = md_path.read_text(encoding="utf-8")
+    assert '- 候选参数（有效）：`{"deadline_safety_ms": 30.0}`' in text
+    assert '- 对手参数（有效）：`{}`' in text
+    assert '"name": "rollout_zweistein_cutoff"' in text
+    assert '"name": "rollout"' in text
 
 
 # -------- _candidate_telemetry --------

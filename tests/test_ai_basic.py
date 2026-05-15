@@ -4,7 +4,7 @@ import pytest
 
 from ai import AIPlayer, RandomAI
 from ai.greedy_ai import GreedyAI
-from ai.match import ai_version_signature, build_ai
+from ai.match import ai_version_signature, build_ai, default_starting_state
 from core.game_state import GameState
 from core.types import Player, Position
 
@@ -185,8 +185,10 @@ def test_build_ai_rollout_default_keeps_flat_release_baseline():
 
     assert ai.rollouts_per_move == 16
     assert ai.close_sample_rollouts_per_move == 16
+    assert ai.deadline_safety_ms == 0.0
     assert signature["rollouts_per_move"] == 16
     assert signature["close_sample_rollouts_per_move"] == 16
+    assert signature["deadline_safety_ms"] == 0.0
 
 
 def test_build_ai_rollout_registers_signature_fields():
@@ -263,6 +265,54 @@ def test_build_ai_rollout_candidate_kwargs_can_override_defaults():
 
     assert ai.rollouts_per_move == 2
     assert ai.max_step_time_ms == 20.0
+
+
+def test_build_ai_supports_zweistein_experimental_kinds():
+    for kind in ("greedy_zweistein", "rollout_zweistein_cutoff", "expectimax_zweistein_d1"):
+        ai = build_ai(kind, seed=2026)
+
+        assert ai.name == kind
+        assert hasattr(ai, "choose_move")
+
+
+def test_build_ai_rollout_zweistein_cutoff_defaults_are_experimental():
+    ai = build_ai("rollout_zweistein_cutoff", seed=1)
+    signature = ai_version_signature(ai)
+
+    assert ai.cutoff_eval == "zweistein"
+    assert ai.playout_policy == "greedy_risk"
+    assert ai.deadline_safety_ms == 0.0
+    assert signature["cutoff_eval"] == "zweistein"
+
+
+def test_build_ai_expectimax_zweistein_signature_records_leaf_evaluator():
+    ai = build_ai("expectimax_zweistein_d1", seed=1)
+    signature = ai_version_signature(ai)
+
+    assert ai.depth == 1
+    assert ai.leaf_evaluator == "zweistein"
+    assert signature["leaf_evaluator"] == "zweistein"
+
+
+def test_zweistein_experimental_kinds_return_legal_move_without_mutating_state():
+    cases = {
+        "greedy_zweistein": {},
+        "rollout_zweistein_cutoff": {
+            "rollouts_per_move": 1,
+            "max_rollout_turns": 1,
+            "max_step_time_ms": 50,
+        },
+        "expectimax_zweistein_d1": {"time_limit_ms": 50},
+    }
+    for kind, kwargs in cases.items():
+        ai = build_ai(kind, seed=2026, **kwargs)
+        state = default_starting_state()
+        before = state.serialize()
+
+        move = ai.choose_move(state, dice=3)
+
+        assert move in state.legal_moves(state.current_player, 3)
+        assert state.serialize() == before
 
 
 def test_build_ai_expectimax_v2_registers_signature_fields():
