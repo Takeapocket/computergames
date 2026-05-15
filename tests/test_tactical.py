@@ -688,3 +688,140 @@ def test_build_ai_rollout_tactical_choose_move_smoke():
     assert move is not None
     legal_pairs = {(m.from_pos, m.to_pos) for m in legal}
     assert (move.from_pos, move.to_pos) in legal_pairs
+
+
+# -------- find_winning_moves perspective guard --------
+
+def test_find_winning_moves_asserts_when_perspective_mismatches_current_player():
+    """perspective 与 state.current_player 不一致是调用方 bug。
+
+    apply_move 内部要求 move.player == current_player，因此若 perspective != current_player，
+    实际上每个候选 move 都会抛 ValueError，函数会静默返回 []。assert 把这条隐式失败
+    显式化，避免上层把空集错认成「没有赢手」。
+    """
+    state = _state(
+        red={1: Position(3, 4)},
+        blue={5: Position(1, 0)},
+        current_player=Player.RED,
+    )
+
+    with pytest.raises(AssertionError):
+        find_winning_moves(state, dice=1, perspective=Player.BLUE)
+
+
+# -------- TacticalAI.fire_counts per-branch telemetry --------
+
+def test_tactical_ai_fire_counts_starts_empty():
+    """新构造的 TacticalAI 必须暴露空 fire_counts，用于 bench_ai _candidate_telemetry。"""
+    ai = TacticalAI(base=RecordingBase(), rng=random.Random(0))
+
+    assert dict(ai.fire_counts) == {}
+
+
+def test_tactical_ai_fire_counts_records_direct_win():
+    """Patch 1 触发：fire_counts 增加 direct_win，且不触碰 base。"""
+    state = _state(
+        red={1: Position(3, 4)},
+        blue={5: Position(1, 0), 6: Position(4, 4)},
+    )
+    base = RecordingBase()
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    ai.choose_move(state, 1)
+
+    assert dict(ai.fire_counts) == {"direct_win": 1}
+    assert base.calls == []
+
+
+def test_tactical_ai_fire_counts_records_neutralize_filter_respected():
+    """Patch 2 + base 选了 allowed 之一：记 neutralize_filter_respected。"""
+    state = _state(
+        red={2: Position(0, 1), 4: Position(1, 0)},
+        blue={5: Position(1, 1), 6: Position(4, 4)},
+    )
+    neutralizing = find_neutralizing_moves(state, dice=3, perspective=Player.RED)
+    assert len(neutralizing) >= 1
+    base = RecordingBase(move=neutralizing[-1])
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    ai.choose_move(state, 3)
+
+    assert dict(ai.fire_counts) == {"neutralize_filter_respected": 1}
+
+
+def test_tactical_ai_fire_counts_records_neutralize_filter_overrode():
+    """Patch 2 + base 选了 allowed 之外：记 neutralize_filter_overrode。"""
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={5: Position(1, 0), 6: Position(4, 4)},
+    )
+    base_choice = _move(Player.RED, 1, Position(0, 0), Position(1, 1))
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(3))
+
+    ai.choose_move(state, 1)
+
+    assert dict(ai.fire_counts) == {"neutralize_filter_overrode": 1}
+
+
+def test_tactical_ai_fire_counts_records_partial_neutralize_passthrough():
+    """对手有威胁但我方无法完全化解：fire_counts 记 partial_neutralize_passthrough。
+
+    这条分支与 no_threat_passthrough 在原实现里共用同一行 return，遥测必须能区分。
+    """
+    state = _state(
+        red={1: Position(0, 0)},
+        blue={5: Position(1, 0), 6: Position(0, 1)},
+    )
+    base_choice = _move(Player.RED, 1, Position(0, 0), Position(1, 1))
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    ai.choose_move(state, 1)
+
+    assert dict(ai.fire_counts) == {"partial_neutralize_passthrough": 1}
+
+
+def test_tactical_ai_fire_counts_records_no_threat_passthrough():
+    """无威胁透传 base：fire_counts 记 no_threat_passthrough。"""
+    state = _state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    base_choice = state.legal_moves(Player.RED, 1)[-1]
+    base = RecordingBase(move=base_choice)
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    ai.choose_move(state, 1)
+
+    assert dict(ai.fire_counts) == {"no_threat_passthrough": 1}
+
+
+def test_tactical_ai_fire_counts_not_incremented_when_no_legal_moves():
+    """无 legal move → choose_move 早返回 None，未做决策，不记任何分支。"""
+    state = _state(red={}, blue={1: Position(4, 4)})
+    base = RecordingBase()
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    result = ai.choose_move(state, 1)
+
+    assert result is None
+    assert dict(ai.fire_counts) == {}
+
+
+def test_tactical_ai_fire_counts_accumulates_across_calls():
+    """同一个 TacticalAI 在多次决策中累加 fire_counts，每局新 AI 隐式重置。"""
+    base = RecordingBase()
+    ai = TacticalAI(base=base, rng=random.Random(0))
+
+    # 两次 direct_win 场景
+    for _ in range(2):
+        state = _state(
+            red={1: Position(3, 4)},
+            blue={5: Position(1, 0), 6: Position(4, 4)},
+        )
+        ai.choose_move(state, 1)
+
+    # 一次 no_threat_passthrough
+    state = _state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    base.move = state.legal_moves(Player.RED, 1)[-1]
+    ai.choose_move(state, 1)
+
+    assert dict(ai.fire_counts) == {"direct_win": 2, "no_threat_passthrough": 1}

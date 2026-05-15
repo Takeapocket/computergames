@@ -108,6 +108,8 @@ def _candidate_telemetry(ai) -> dict[str, int]:
 
     ``last_iterations`` / ``last_max_depth`` are MCTS-specific; rollout / tactical
     AIs don't expose them and we just record an empty dict for those games.
+    ``fire_counts`` is TacticalAI-specific (Counter[str] of per-branch fire counts);
+    each label becomes a ``fire_<label>`` entry so _aggregate can sum it across games.
     """
     out: dict[str, int] = {}
     for attr, key in (
@@ -117,6 +119,10 @@ def _candidate_telemetry(ai) -> dict[str, int]:
         value = getattr(ai, attr, None)
         if value is not None:
             out[key] = int(value)
+    fire_counts = getattr(ai, "fire_counts", None)
+    if fire_counts is not None:
+        for label, count in fire_counts.items():
+            out[f"fire_{label}"] = int(count)
     return out
 
 
@@ -166,6 +172,9 @@ def _aggregate(results, candidate_side: Player) -> dict:
         summary["avg_iterations"] = sum(telemetry["iterations"]) / len(telemetry["iterations"])
     if "max_depth" in telemetry:
         summary["max_depth"] = max(telemetry["max_depth"])
+    for k, values in telemetry.items():
+        if k.startswith("fire_"):
+            summary[k] = sum(values)
     return summary
 
 
@@ -244,6 +253,12 @@ def _combine(red_summary: dict, blue_summary: dict) -> dict:
             red_summary.get("max_depth", 0),
             blue_summary.get("max_depth", 0),
         )
+    fire_keys = {
+        k for k in (*red_summary.keys(), *blue_summary.keys())
+        if k.startswith("fire_")
+    }
+    for k in fire_keys:
+        combined[k] = red_summary.get(k, 0) + blue_summary.get(k, 0)
     return combined
 
 
@@ -392,6 +407,12 @@ def _write_markdown(
         combined_row += f"| {combined.get('avg_iterations', 0.0):.1f} | {combined.get('max_depth', 0)} "
     combined_row += "|"
     lines.append(combined_row)
+
+    fire_keys = sorted(k for k in combined if k.startswith("fire_"))
+    if fire_keys:
+        lines.extend(["", "## 战术分支命中统计", ""])
+        for k in fire_keys:
+            lines.append(f"- {k}: {combined[k]}")
 
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

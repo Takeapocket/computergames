@@ -129,6 +129,78 @@ def test_candidate_telemetry_pulls_attrs_when_available():
     assert out == {"iterations": 123, "max_depth": 9}
 
 
+class _FakeTactical:
+    """模拟 TacticalAI 的最小接口：暴露 fire_counts(Counter[str])。"""
+
+    def __init__(self, counts):
+        from collections import Counter
+        self.fire_counts = Counter(counts)
+
+
+def test_candidate_telemetry_pulls_fire_counts_from_tactical_ai():
+    """_candidate_telemetry 必须把 TacticalAI.fire_counts 映射成 fire_<label> 条目。"""
+    ai = _FakeTactical({"direct_win": 2, "no_threat_passthrough": 5})
+
+    out = bench_ai._candidate_telemetry(ai)
+
+    assert out == {"fire_direct_win": 2, "fire_no_threat_passthrough": 5}
+
+
+def test_candidate_telemetry_skips_fire_counts_when_attr_missing():
+    """没有 fire_counts 的 AI（如 MCTS / 纯 rollout）不应出现 fire_* 条目。"""
+    out = bench_ai._candidate_telemetry(_FakeMcts())
+
+    assert all(not k.startswith("fire_") for k in out)
+
+
+def test_aggregate_sums_fire_counts_across_games():
+    """每局给一份 fire_<label> 计数，_aggregate 把它们累加到 summary。
+
+    没有出现过的 label 不应被新增；这是诊断失败候选时区分各分支贡献的核心信号。
+    """
+    results = [
+        (_R(Player.RED), {"fire_direct_win": 1, "fire_no_threat_passthrough": 3}),
+        (_R(Player.RED), {"fire_direct_win": 2, "fire_partial_neutralize_passthrough": 1}),
+    ]
+
+    summary = bench_ai._aggregate(results, candidate_side=Player.RED)
+
+    assert summary["fire_direct_win"] == 3
+    assert summary["fire_no_threat_passthrough"] == 3
+    assert summary["fire_partial_neutralize_passthrough"] == 1
+    assert "fire_neutralize_filter_respected" not in summary
+
+
+def test_combine_sums_fire_counts_across_red_and_blue():
+    """两方向各自的 fire_<label> 总和必须在 _combine 后汇总。"""
+    red = {
+        "games": 2,
+        "candidate_wins": 1,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "average_step_time_ms": 1.0,
+        "max_step_time_ms": 2.0,
+        "fire_direct_win": 3,
+        "fire_no_threat_passthrough": 5,
+    }
+    blue = {
+        "games": 2,
+        "candidate_wins": 1,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "average_step_time_ms": 1.0,
+        "max_step_time_ms": 2.0,
+        "fire_direct_win": 2,
+        "fire_partial_neutralize_passthrough": 1,
+    }
+
+    combined = bench_ai._combine(red, blue)
+
+    assert combined["fire_direct_win"] == 5
+    assert combined["fire_no_threat_passthrough"] == 5
+    assert combined["fire_partial_neutralize_passthrough"] == 1
+
+
 def test_candidate_telemetry_returns_empty_for_plain_ai():
     assert bench_ai._candidate_telemetry(_FakePlain()) == {}
 
@@ -221,7 +293,7 @@ def test_bench_ai_main_smokes_rollout_tactical_end_to_end(tmp_path: Path):
     assert "candidate_win_rate" in combined
     assert "candidate_win_ci95" in combined
     assert "mcts_wins" not in combined and "mcts_win_rate" not in combined
-    # rollout_tactical 无遥测
+    # rollout_tactical 不暴露 MCTS 专用遥测 (avg_iterations/max_depth)
     assert "avg_iterations" not in combined
     assert "max_depth" not in combined
     # AI 签名递归包了 base

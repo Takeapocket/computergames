@@ -1,14 +1,14 @@
 # Test Report
 
-Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）
+Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验）
 
 ## Commands
 
 | command | exit code | result |
 |---|---:|---|
-| `.venv/Scripts/python.exe -m pytest -q` | 0 | 332 passed, 50 skipped |
-| `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过 |
-| `.venv/Scripts/python.exe scripts/s2_rehearsal.py` | 0 | 8/8 scenarios passed |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 428 passed, 50 skipped |
+| `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过；undo restored: True |
+| `.venv/Scripts/python.exe scripts/s2_rehearsal.py` | 0 | Total: 8/8 scenarios passed |
 | `python scripts/quick_bench.py --red greedy_risk --blue greedy --games 200 --seed 2026` | 0 | red_win_rate=0.58 |
 | `python scripts/quick_bench.py --red greedy --blue greedy_risk --games 200 --seed 2026` | 0 | blue_win_rate=0.535 |
 | `python scripts/quick_bench.py --red rollout --blue greedy_risk --games 400 --seed 2026` | 0 | red_win_rate=0.605 |
@@ -21,7 +21,7 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 ## pytest
 
 ```
-332 passed, 50 skipped
+428 passed, 50 skipped
 ```
 
 0 failed / 0 errors。

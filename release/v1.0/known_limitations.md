@@ -15,7 +15,7 @@
 6. **RolloutAI 是当前默认，但仍保留回退**：`rollout` 已按 `reports/ai_promotion_decision.md` 晋升为默认推荐 AI；若现场发现输出异常，可回退到 `greedy_risk`。
 7. **Expectimax 仍不作为默认**：`ExpectimaxAI(depth=1)` 在 R-0 合规规则下合并胜率 45.0%，弱于 `greedy_risk`；`expectimax_v2` 需要 fresh harness 复验后才能重新评估。
 8. **参数 / 布局搜索未做晋升**：`scripts/param_sweep.py` 与 `scripts/search_openings.py` 提供流水线，但本 release 未跑大样本，未替换默认布局。
-9. **没有学习型 AI**：本 release 不引入 PyTorch / Gymnasium / OpenSpiel runtime 依赖；默认 AI 是规则引擎 + greedy fallback + bounded rollout。
+9. **没有学习型 AI**：本 release 不引入 PyTorch / Gymnasium / OpenSpiel runtime 依赖；默认 AI 是规则引擎 + `greedy_risk` fallback + bounded rollout。
 
 ## 协议 / 部署
 

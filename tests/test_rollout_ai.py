@@ -53,3 +53,24 @@ def test_rollout_ai_timeout_fallback_returns_legal_move():
 
     assert move in state.legal_moves(state.current_player, 6)
     assert ai.fallback_count >= 1
+
+
+def test_rollout_ai_timeout_fallback_uses_greedy_risk_weights():
+    state = GameState.from_layout(
+        red={1: Position(0, 2), 2: Position(2, 2)},
+        blue={
+            1: Position(4, 4),
+            2: Position(4, 2),
+            3: Position(4, 0),
+            4: Position(3, 2),
+            5: Position(2, 3),
+            6: Position(0, 4),
+        },
+        current_player=Player.RED,
+    )
+    ai = RolloutAI(rollouts_per_move=1000, max_rollout_turns=100, max_step_time_ms=0, rng=random.Random(2))
+
+    move = ai.choose_move(state, 3)
+
+    assert move is not None
+    assert move.to_pos == Position(2, 3)

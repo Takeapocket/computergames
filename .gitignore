@@ -2,6 +2,8 @@
 .claude/
 .serena/
 .spec-workflow/
+.playwright-mcp/
+tmp/
 
 # Saved WeChat article assets and source notification copy
 通知 _ 关于举办 2026 年辽宁省大学生计算机博弈大赛校内选拔赛的通知.html

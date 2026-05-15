@@ -6,6 +6,7 @@ layered on top of any base AI that follows the AIPlayer protocol.
 from __future__ import annotations
 
 import random
+from collections import Counter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # avoid circular import with ai/__init__.py
@@ -38,7 +39,16 @@ def find_winning_moves(state, dice: int, perspective):
 
     依赖 ``state.get_winner()`` 同时覆盖「到角胜」和「吃光胜」两种 core 胜利条件。
     用 apply_move/undo_move 配对，包在 try/finally 内以保证异常路径不污染 state。
+
+    前置：``perspective`` 必须等于 ``state.current_player``——apply_move 内部
+    校验 ``move.player == current_player``，若 perspective 不一致，所有候选都会抛
+    ValueError，函数静默返回 []。assert 显式锁死该前置，避免上层把
+    「调用方传错 perspective」误读为「没有赢手」。
     """
+    assert perspective is state.current_player, (
+        f"find_winning_moves precondition: perspective ({perspective}) must equal "
+        f"state.current_player ({state.current_player})"
+    )
     winning = []
     for move in state.legal_moves(perspective, dice):
         state.apply_move(move, dice)
@@ -103,6 +113,12 @@ class TacticalAI:
         else:
             base_name = getattr(base, "name", "base")
             self.name = f"{base_name}_tactical"
+        # Per-branch fire counts for post-hoc diagnosis of failed gates. bench_ai
+        # 的 _candidate_telemetry 会扫描该字段并把 fire_<label> 投到 summary。
+        # 标签集封闭于 5 种，对应 choose_move 的 5 条决策路径：
+        #   direct_win / neutralize_filter_respected / neutralize_filter_overrode
+        #   / partial_neutralize_passthrough / no_threat_passthrough
+        self.fire_counts: Counter = Counter()
 
     def choose_move(self, state, dice):
         legal = state.legal_moves(state.current_player, dice)
@@ -112,6 +128,7 @@ class TacticalAI:
         perspective = state.current_player
         winning = find_winning_moves(state, dice, perspective)
         if winning:
+            self.fire_counts["direct_win"] += 1
             return pick_max_material(winning, self.rng)
 
         pre_move_threat = opponent_winning_dice_set(
@@ -121,6 +138,10 @@ class TacticalAI:
             neutralizing = find_neutralizing_moves(state, dice, perspective)
             if neutralizing:
                 return self._delegate_to_base_filtered(state, dice, neutralizing)
+            # 部分化解：透传给 base，但与「无威胁透传」是两条不同路径，必须区分计数。
+            self.fire_counts["partial_neutralize_passthrough"] += 1
+        else:
+            self.fire_counts["no_threat_passthrough"] += 1
 
         return self.base.choose_move(state, dice)
 
@@ -131,6 +152,8 @@ class TacticalAI:
             base_choice is not None
             and (base_choice.from_pos, base_choice.to_pos) in allowed_pairs
         ):
+            self.fire_counts["neutralize_filter_respected"] += 1
             return base_choice
 
+        self.fire_counts["neutralize_filter_overrode"] += 1
         return self.rng.choice(allowed)

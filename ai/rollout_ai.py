@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 import time
 
+from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
 from ai.greedy_ai import GreedyAI
 from core.game_state import GameState
 from core.move import Move
@@ -37,7 +38,12 @@ class RolloutAI:
 
         deadline = time.perf_counter() + self.max_step_time_ms / 1000.0
         perspective = state.current_player
-        fallback = GreedyAI(rng=random.Random(self._rng.randrange(2**31)), name="rollout_fallback")
+        fallback = GreedyAI(
+            rng=random.Random(self._rng.randrange(2**31)),
+            name="rollout_fallback",
+            expected_risk_weight=EXPECTED_RISK_WEIGHT,
+            expected_win_risk_weight=EXPECTED_WIN_RISK_WEIGHT,
+        )
         best_move = fallback.choose_move(state, dice) or self._rng.choice(legal)
         best_score = float("-inf")
         scored_any = False
