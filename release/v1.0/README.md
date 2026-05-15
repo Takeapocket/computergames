@@ -22,7 +22,7 @@
 4. 选择我方开局布局（默认 `balanced_v1`，可用 `aggressive_v1` / `defensive_v1` / 自定义）。
 5. 录入对方开局，点击"确认开局"进入 playing 阶段。
 6. 每回合：先录入骰子，再录入对方走法（若对方先手），或读取我方推荐走法并执行。
-7. 我方推荐 AI = `rollout`（详见 `default_params.json`）。
+7. 我方推荐 AI = 旧 flat 参数的 `rollout`（详见 `default_params.json`）。
 8. 单盘结束后 dialog 提示胜方，进入下一盘开局录入。
 9. 任一方 4 胜后 dialog 提示整轮胜方，停止开新盘。
 
@@ -39,8 +39,9 @@
 
 - 名称：`rollout`
 - 实现：`ai/rollout_ai.py`（有时间上限的平面 rollout，fallback 为 `greedy_risk`）
-- 参数：见 `default_params.json`
+- 参数：见 `default_params.json`；v1.0 默认保持旧 flat rollout：16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15。
 - 晋升状态：已按 `reports/ai_promotion_decision.md` 的 800 局双边门禁数据晋升。
+- adaptive rollout 是显式实验候选，不是 v1.0 默认参数；它 direct vs old rollout 800 局合并胜率 59.00%，未过 60% 默认晋升线。
 - AI 候选实验入口保留在 `scripts/param_sweep.py` / `scripts/search_openings.py` / `scripts/tournament.py`
 
 ## 工程化基线

@@ -38,7 +38,7 @@ from ai.match import (
 )
 from core.types import Player
 from scripts._bench_meta import build_provenance
-from scripts.quick_bench import wilson_ci
+from scripts.quick_bench import _percentile, wilson_ci
 
 
 # 门禁运算符：name → (op, threshold)。op ∈ {"eq", "lt", "le", "ge"}
@@ -46,11 +46,13 @@ STAGE_GATES: dict[str, dict] = {
     "smoke": {
         "illegal_moves": ("eq", 0),
         "crashes": ("eq", 0),
+        "timeouts": ("eq", 0),
         "max_step_time_ms": ("lt", 1000.0),
     },
     "candidate": {
         "illegal_moves": ("eq", 0),
         "crashes": ("eq", 0),
+        "timeouts": ("eq", 0),
         "candidate_win_rate": ("ge", 0.55),
         "average_step_time_ms": ("le", 500.0),
         "max_step_time_ms": ("le", 5000.0),
@@ -58,6 +60,7 @@ STAGE_GATES: dict[str, dict] = {
     "promotion": {
         "illegal_moves": ("eq", 0),
         "crashes": ("eq", 0),
+        "timeouts": ("eq", 0),
         "candidate_win_rate": ("ge", 0.55),
         "candidate_win_ci_lower": ("ge", 0.52),
         "average_step_time_ms": ("le", 500.0),
@@ -136,6 +139,7 @@ def _aggregate(results, candidate_side: Player) -> dict:
     total_turns = 0
     total_illegal = 0
     total_crashes = 0
+    total_timeouts = 0
     all_step_times: list[float] = []
     telemetry: dict[str, list[int]] = {}
     for r, t in results:
@@ -148,10 +152,13 @@ def _aggregate(results, candidate_side: Player) -> dict:
         total_turns += r.turns
         total_illegal += r.illegal_moves
         total_crashes += r.crashes
+        total_timeouts += int(getattr(r, "timeouts", 0))
         all_step_times.extend(r.step_times_ms)
         for k, v in t.items():
             telemetry.setdefault(k, []).append(v)
     avg_step = sum(all_step_times) / len(all_step_times) if all_step_times else 0.0
+    p95_step = _percentile(all_step_times, 0.95)
+    p99_step = _percentile(all_step_times, 0.99)
     max_step = max(all_step_times) if all_step_times else 0.0
     ci = wilson_ci(candidate_wins, games)
     summary: dict = {
@@ -164,8 +171,10 @@ def _aggregate(results, candidate_side: Player) -> dict:
         "average_turns": total_turns / games,
         "illegal_moves": total_illegal,
         "crashes": total_crashes,
-        "timeouts": 0,
+        "timeouts": total_timeouts,
         "average_step_time_ms": avg_step,
+        "p95_step_time_ms": p95_step,
+        "p99_step_time_ms": p99_step,
         "max_step_time_ms": max_step,
     }
     if "iterations" in telemetry:
@@ -226,12 +235,15 @@ def _combine(red_summary: dict, blue_summary: dict) -> dict:
     candidate_wins = red_summary["candidate_wins"] + blue_summary["candidate_wins"]
     illegal = red_summary["illegal_moves"] + blue_summary["illegal_moves"]
     crashes = red_summary["crashes"] + blue_summary["crashes"]
+    timeouts = red_summary.get("timeouts", 0) + blue_summary.get("timeouts", 0)
     red_games = red_summary["games"]
     blue_games = blue_summary["games"]
     avg_step = (
         red_summary["average_step_time_ms"] * red_games
         + blue_summary["average_step_time_ms"] * blue_games
     ) / games
+    p95_step = max(red_summary.get("p95_step_time_ms", 0.0), blue_summary.get("p95_step_time_ms", 0.0))
+    p99_step = max(red_summary.get("p99_step_time_ms", 0.0), blue_summary.get("p99_step_time_ms", 0.0))
     max_step = max(red_summary["max_step_time_ms"], blue_summary["max_step_time_ms"])
     ci = wilson_ci(candidate_wins, games)
     combined: dict = {
@@ -241,7 +253,10 @@ def _combine(red_summary: dict, blue_summary: dict) -> dict:
         "candidate_win_ci95": [ci[0], ci[1]],
         "illegal_moves": illegal,
         "crashes": crashes,
+        "timeouts": timeouts,
         "average_step_time_ms": avg_step,
+        "p95_step_time_ms": p95_step,
+        "p99_step_time_ms": p99_step,
         "max_step_time_ms": max_step,
     }
     if "avg_iterations" in red_summary or "avg_iterations" in blue_summary:
@@ -371,14 +386,14 @@ def _write_markdown(
     ])
     if has_telemetry:
         lines.append(
-            "| 方向 | 局数 | 候选胜 | 对手胜 | 平 | 候选胜率 | avg_step_ms | max_step_ms | avg_iters | max_depth |"
+            "| 方向 | 局数 | 候选胜 | 对手胜 | 平 | 候选胜率 | avg_step_ms | p95_step_ms | p99_step_ms | max_step_ms | avg_iters | max_depth |"
         )
-        lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+        lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     else:
         lines.append(
-            "| 方向 | 局数 | 候选胜 | 对手胜 | 平 | 候选胜率 | avg_step_ms | max_step_ms |"
+            "| 方向 | 局数 | 候选胜 | 对手胜 | 平 | 候选胜率 | avg_step_ms | p95_step_ms | p99_step_ms | max_step_ms |"
         )
-        lines.append("|---|---:|---:|---:|---:|---:|---:|---:|")
+        lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
 
     def _row(label: str, s: dict) -> str:
         base = (
@@ -386,6 +401,8 @@ def _write_markdown(
             f"| {s['opponent_wins']} | {s['draws']} "
             f"| {s['candidate_win_rate']*100:.1f}% "
             f"| {s['average_step_time_ms']:.1f} "
+            f"| {s['p95_step_time_ms']:.1f} "
+            f"| {s['p99_step_time_ms']:.1f} "
             f"| {s['max_step_time_ms']:.1f} "
         )
         if has_telemetry:
@@ -401,6 +418,8 @@ def _write_markdown(
         f"(Wilson 95% CI [{combined['candidate_win_ci95'][0]*100:.1f}%, "
         f"{combined['candidate_win_ci95'][1]*100:.1f}%]) "
         f"| {combined['average_step_time_ms']:.1f} "
+        f"| {combined['p95_step_time_ms']:.1f} "
+        f"| {combined['p99_step_time_ms']:.1f} "
         f"| {combined['max_step_time_ms']:.1f} "
     )
     if has_telemetry:

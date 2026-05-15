@@ -1,5 +1,7 @@
 # 赛前收官冲刺 Design Spec
 
+> 历史设计稿（2026-05-12），已被 2026-05-15 状态取代：`release/v1.0` 已生成，S2 真实 GUI 手测已完成，当前默认 AI 为旧 flat `rollout`，adaptive rollout 不是 release 默认。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 Date: 2026-05-12
 Status: Review-Ready
 Scope: S2 真实 GUI 闭环 -> S3 低风险 AI 与 harness -> S4 封版提交
@@ -161,13 +163,13 @@ E   Release v1.0 封版与提交检查
 
 替换 GUI 默认 AI 或 release 默认 AI 前，候选必须同时满足：
 
-1. Candidate vs `greedy_risk`：红蓝各 200 局，共 400 局。
+1. Candidate vs 当前默认 AI（历史上下文为 `greedy_risk`；2026-05-15 后为旧 flat `rollout`）：红蓝各 200 局，共 400 局。
 2. Candidate vs `greedy`：红蓝各 200 局，共 400 局。
-3. Candidate 对 `greedy_risk` 合并胜率 > 55%。
+3. Candidate 对当前默认 AI 合并胜率 > 55%。
 4. Wilson 95% CI 下界不低于 50%，否则视为证据不足。
 5. `illegal_moves = 0`。
 6. `crashes = 0`。
-7. `timeouts = 0`。
+7. 基于 bench 聚合的真实 `timeouts = 0`；历史 legacy timeout 字段不可单独作为晋升证据。
 8. `avg_step_time_ms < 1000`。
 9. `max_step_time_ms < 5000`。
 10. 报告写入 `reports/`，包含命令、seed、games、布局、AI signature、pytest/smoke 状态。

@@ -1,5 +1,7 @@
 # 阶段 4.4 ExpectimaxAI 评测失败记录
 
+> 历史报告（2026-05-10）。本文中 `greedy_risk` 作为竞赛主力的表述是当时上下文；当前默认 AI 已升级为旧 flat `rollout`，`greedy_risk` 保留为应急回退。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 更新时间：2026-05-10
 
 ## 结论
@@ -33,7 +35,7 @@ evaluator 里的 `expected_target_win_risk(state, perspective)` 计算"对手下
 ## 工程决策
 
 - ExpectimaxAI、`tests/test_expectimax.py`、`build_ai` 的 `expectimax` 分支**保留**——代码本身正确（13 测试全过），只是默认配置在当前 evaluator 下不强。未来如果有人想做 (1)–(4) 中任意实验，可以直接复用。
-- 当前竞赛主力仍是 `greedy_risk`。
+- 当时竞赛主力仍是 `greedy_risk`；当前主力已改为旧 flat `rollout`。
 - 不在 `gui/main_window.py` 引用 expectimax。
 
 ## 工程文件

@@ -67,11 +67,12 @@ def test_resolve_gates_does_not_mutate_stage_gates():
 class _R:
     """轻量替身：模拟 play_one_game 返回的 MatchResult 字段子集。"""
 
-    def __init__(self, winner, *, turns=10, step_times=None):
+    def __init__(self, winner, *, turns=10, step_times=None, timeouts=0):
         self.winner = winner
         self.turns = turns
         self.illegal_moves = 0
         self.crashes = 0
+        self.timeouts = timeouts
         self.step_times_ms = list(step_times or [3.0, 4.0])
 
 
@@ -87,6 +88,29 @@ def test_aggregate_omits_telemetry_when_ai_does_not_expose_it():
     assert summary["candidate_win_rate"] == 0.5
     assert "avg_iterations" not in summary
     assert "max_depth" not in summary
+
+
+def test_aggregate_includes_step_time_percentiles():
+    results = [
+        (_R(Player.RED, step_times=[1.0, 2.0, 3.0], timeouts=1), {}),
+        (_R(Player.BLUE, step_times=[4.0, 5.0, 100.0], timeouts=2), {}),
+    ]
+
+    summary = bench_ai._aggregate(results, candidate_side=Player.RED)
+
+    assert summary["p95_step_time_ms"] == 100.0
+    assert summary["p99_step_time_ms"] == 100.0
+    assert summary["timeouts"] == 3
+
+
+def test_combine_uses_conservative_step_time_percentiles():
+    red = bench_ai._aggregate([(_R(Player.RED, step_times=[1.0, 2.0, 50.0]), {})], candidate_side=Player.RED)
+    blue = bench_ai._aggregate([(_R(Player.BLUE, step_times=[1.0, 2.0, 100.0]), {})], candidate_side=Player.BLUE)
+
+    combined = bench_ai._combine(red, blue)
+
+    assert combined["p95_step_time_ms"] == 100.0
+    assert combined["p99_step_time_ms"] == 100.0
 
 
 def test_aggregate_includes_telemetry_when_present():

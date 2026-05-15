@@ -4,6 +4,8 @@
 对应阶段：PROJECT_PHASES.md §S1（R-2）
 实现 commit：未提交（由用户决定何时 commit）
 
+> 测试数量说明：本报告中的 `324 passed` 是 R-2 当日历史快照；当前全量 pytest 以 `release/v1.0/test_report.md` 为准。
+
 ---
 
 ## 1. 自动化测试覆盖
@@ -18,7 +20,7 @@
 | `tests/test_auto_save.py`（新增 4 条） | +4 | auto_save_match / load / has / clear 往返、finished phase 保留 |
 | `tests/test_match_integration.py` | 16 | 进入比赛模式、第 2 盘先手切换（甲/乙 × 红/蓝）、sticky 我方布局、4:0 完成、超时判负、reset 清理、debug legacy 仍工作、auto-save 多盘恢复 |
 
-**总计新增 80 条 R-2 相关测试，全部通过**。全量 pytest `324 passed in 6.74s`，无回归。
+**总计新增 80 条 R-2 相关测试，全部通过**。R-2 当日历史快照：全量 pytest `324 passed in 6.74s`，无回归。当前全量 pytest 见 `release/v1.0/test_report.md`。
 
 ### 自动化 smoke（`scripts/r2_smoke.py`）
 

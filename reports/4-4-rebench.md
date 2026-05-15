@@ -1,5 +1,7 @@
 # 阶段 4.4 重跑（R-0 合规规则）
 
+> 历史报告（2026-05-11）。本文中 `greedy_risk` 作为竞赛主力或 GUI 默认引用的表述是当时上下文；当前默认 AI 已升级为旧 flat `rollout`。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 更新时间：2026-05-11
 关联：阶段 R-0；原报告 `reports/4-4-failure-analysis.md`。
 
@@ -24,7 +26,7 @@ R-0 合规修复后重跑 `ExpectimaxAI(depth=1)` vs `greedy_risk`，合并胜�
 ## 解读
 
 - **PROJECT_PHASES 主线调整建议中的猜想被证伪**：合规规则下吃自己子是合法走法，但 `depth=1` 的 ExpectimaxAI 没有从这个扩张的搜索空间中获得净收益。原 4-4-failure-analysis 中的根因分析（"风险项与 lookahead 的耦合错位"）仍然成立——evaluator 中 `expected_target_win_risk` / `distance_weighted_capture_risk` 为 1-ply 设计，在 expectimax 内部节点上语义错位。
-- **不在竞赛主力上使用**：决策不变。`build_ai("expectimax", ...)` 保留为实验入口；`gui/main_window.py` 仍只引用 `greedy_risk`。
+- **不在竞赛主力上使用**：决策不变。`build_ai("expectimax", ...)` 保留为实验入口；当前 GUI 默认不引用 expectimax。
 - **step time**：~4ms / 步，远低于赛事 4 分钟包干（n=200 平均每局 19 步 ≈ 76ms 总耗时）。性能不是当前 ExpectimaxAI 弱的原因，evaluator 错位才是。
 
 ## R-0-followup / 后续 Expectimax 实验入口

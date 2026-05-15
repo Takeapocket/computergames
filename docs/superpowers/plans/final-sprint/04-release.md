@@ -1,5 +1,7 @@
 # Task Group 04 - Release v1.0 And Final Verification
 
+> 历史执行计划。`release/v1.0` 已生成，当前 `default_ai/ai = rollout`，默认参数为旧 flat rollout，`promotion_report = reports/ai_promotion_decision.md`。本文中 `greedy_risk` 默认、`promotion_report: null` 等内容是执行前模板，不代表当前 release 状态。
+
 目标：冻结比赛版本，形成现场可读、可执行、可恢复、可解释的 release 材料。这个任务包必须做，即使 AI 实验全部跳过。
 
 ---

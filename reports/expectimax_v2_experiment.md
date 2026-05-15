@@ -1,11 +1,13 @@
 # ExpectimaxV2 Experiment
 
+> 历史 smoke 报告（2026-05-13）。本文中 `greedy_risk` 作为默认 AI 的表述是当时上下文；当前默认 AI 已升级为旧 flat `rollout`，`greedy_risk` 保留为应急回退。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 ## Candidate
 
 - kind: `expectimax_v2`
 - depth: 1
 - leaf risk: disabled (expected_risk_weight=0.0, expected_win_risk_weight=0.0)
-- default AI unchanged: `greedy_risk`
+- historical default AI unchanged: `greedy_risk`
 
 ## Smoke Commands
 
@@ -26,5 +28,5 @@ cd C:/tmp/computergames-ai-strengthening && PYTHONPATH=. python scripts/quick_be
 
 ## Decision
 
-- Default AI: keep `greedy_risk`
+- Historical default AI: keep `greedy_risk`
 - Promotion: not decided by smoke; run Task 6 promotion gate if smoke is stable and stronger than baseline

@@ -179,6 +179,16 @@ def test_build_ai_supports_greedy_risk():
     assert ai_version_signature(ai)["expected_win_risk_weight"] == ai.expected_win_risk_weight
 
 
+def test_build_ai_rollout_default_keeps_flat_release_baseline():
+    ai = build_ai("rollout", seed=1)
+    signature = ai_version_signature(ai)
+
+    assert ai.rollouts_per_move == 16
+    assert ai.close_sample_rollouts_per_move == 16
+    assert signature["rollouts_per_move"] == 16
+    assert signature["close_sample_rollouts_per_move"] == 16
+
+
 def test_build_ai_rollout_registers_signature_fields():
     ai = build_ai(
         "rollout",
@@ -187,6 +197,9 @@ def test_build_ai_rollout_registers_signature_fields():
         max_rollout_turns=9,
         max_step_time_ms=250,
         epsilon=0.2,
+        close_sample_margin=0.12,
+        close_sample_rollouts_per_move=11,
+        low_confidence_margin=0.07,
     )
     signature = ai_version_signature(ai)
 
@@ -195,11 +208,17 @@ def test_build_ai_rollout_registers_signature_fields():
     assert ai.max_rollout_turns == 9
     assert ai.max_step_time_ms == 250.0
     assert ai.epsilon == 0.2
+    assert ai.close_sample_margin == 0.12
+    assert ai.close_sample_rollouts_per_move == 11
+    assert ai.low_confidence_margin == 0.07
     assert signature["name"] == "rollout"
     assert signature["rollouts_per_move"] == 3
     assert signature["max_rollout_turns"] == 9
     assert signature["max_step_time_ms"] == 250.0
     assert signature["epsilon"] == 0.2
+    assert signature["close_sample_margin"] == 0.12
+    assert signature["close_sample_rollouts_per_move"] == 11
+    assert signature["low_confidence_margin"] == 0.07
 
 
 def test_build_ai_expectimax_v2_registers_signature_fields():

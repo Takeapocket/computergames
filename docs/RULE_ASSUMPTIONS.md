@@ -44,7 +44,7 @@
 
 - 旧：`core/rules.py:52-54` 中 `if occupant.player is piece.player: continue` 跳过本方棋子。
 - 修复后：删除该分支，统一捕获 occupant。
-- 验收：`tests/test_rules.py::test_piece_can_capture_own_piece`、`tests/test_game_state.py::test_apply_self_capture_marks_own_piece_dead` 通过；pytest 207 passed；4.1 / 4.2 / 4.4 bench 重跑后所有验收门槛通过（详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`）。
+- 历史验收（2026-05-11）：`tests/test_rules.py::test_piece_can_capture_own_piece`、`tests/test_game_state.py::test_apply_self_capture_marks_own_piece_dead` 通过；当日 pytest 207 passed；4.1 / 4.2 / 4.4 bench 重跑后所有验收门槛通过（详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`）。当前全量测试数量以 `release/v1.0/test_report.md` 为准。
 
 ### R-0 副作用 / R-0-followup
 

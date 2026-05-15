@@ -1,5 +1,7 @@
 # AI 能力提升设计
 
+> 历史设计稿（2026-05-13），其中“默认 AI 仍为 greedy_risk”等表述是当时上下文。当前默认 AI 已升级为旧 flat `rollout`；adaptive rollout 只是显式实验候选，不是 release 默认。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 日期：2026-05-13
 范围：封版后 AI 强化路线，参考 OpenSpiel / ewn-gym 思路，但保持本项目离线、可解释、可回滚。
 
@@ -88,12 +90,12 @@ A0 诊断与评测基线
 替换 GUI 默认 AI 或 release 默认参数前，候选必须满足：
 
 ```text
-candidate vs greedy_risk 双边合并胜率 >= 60%
+candidate vs current default 双边合并胜率 >= 60%
 Wilson 95% CI 下界 >= 52%
 每个方向至少 400 局，合并至少 800 局；若时间不足，最小可接受为双边各 200 局
 illegal_moves = 0
 crashes = 0
-timeouts = 0
+基于 bench 聚合的真实 timeouts = 0；历史 legacy timeout 字段不可单独作为晋升证据
 avg_step_time_ms < 1000
 max_step_time_ms < 5000
 报告写入 reports/

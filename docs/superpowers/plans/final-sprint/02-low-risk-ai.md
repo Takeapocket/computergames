@@ -1,6 +1,8 @@
 # Task Group 02 - Low-Risk AI Work
 
-目标：在不破坏默认稳定路径的前提下，做可验证、可回滚的 AI 增强。任何候选未过晋升门禁，都不能替换 `greedy_risk`。
+> 历史执行计划。本文中“不能替换 `greedy_risk`”是 2026-05-12 当时的默认基线；当前默认 AI 已升级为旧 flat `rollout`，`greedy_risk` 仅作为应急回退或辅助对手。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
+目标：在不破坏默认稳定路径的前提下，做可验证、可回滚的 AI 增强。历史上下文中的候选不能替换当时默认 `greedy_risk`；当前候选必须对 current default rollout 过门禁。
 
 ---
 

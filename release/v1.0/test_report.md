@@ -1,18 +1,22 @@
 # Test Report
 
-Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验）
+Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive rollout 候选复验）
 
 ## Commands
 
 | command | exit code | result |
 |---|---:|---|
-| `.venv/Scripts/python.exe -m pytest -q` | 0 | 428 passed, 50 skipped |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 495 passed in 11.68s |
+| `.venv/Scripts/python.exe -m pytest tests/test_default_ai_config.py tests/test_ai_basic.py tests/test_quick_bench_ci.py tests/test_bench_ai.py tests/test_ai_match.py tests/test_rollout_ai.py tests/test_rollout_stability.py tests/test_gui_logic.py -q` | 0 | 91 passed |
 | `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过；undo restored: True |
+| `.venv/Scripts/python.exe scripts/rollout_stability.py --runs 10 --seed 0` | 0 | 输出含 score / winrate / cutoffs / avg；固定 10-run 分布随机且受 deadline 影响，只说明候选接近、低置信可见 |
 | `.venv/Scripts/python.exe scripts/s2_rehearsal.py` | 0 | Total: 8/8 scenarios passed |
 | `python scripts/quick_bench.py --red greedy_risk --blue greedy --games 200 --seed 2026` | 0 | red_win_rate=0.58 |
 | `python scripts/quick_bench.py --red greedy --blue greedy_risk --games 200 --seed 2026` | 0 | blue_win_rate=0.535 |
 | `python scripts/quick_bench.py --red rollout --blue greedy_risk --games 400 --seed 2026` | 0 | red_win_rate=0.605 |
 | `python scripts/quick_bench.py --red greedy_risk --blue rollout --games 400 --seed 2026` | 0 | blue_win_rate=0.6475 |
+| `python scripts/quick_bench.py --red rollout --blue greedy_risk --red-kwargs ... --games 100 --seed 20260516` | 0 | adaptive rollout red_win_rate=0.77 |
+| `python scripts/quick_bench.py --red greedy_risk --blue rollout --blue-kwargs ... --games 100 --seed 20260516` | 0 | adaptive rollout blue_win_rate=0.78 |
 | `rg "import socket\|import urllib\|import requests" --glob "*.py"` | 1 | 无生产网络依赖 |
 | `rg "stuck_penalty\|STUCK_PIECE_PENALTY\|count_stuck_pieces" --glob "*.py"` | 1 | R-0 followup 清理完成 |
 
@@ -21,7 +25,7 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 ## pytest
 
 ```
-428 passed, 50 skipped
+495 passed in 11.68s
 ```
 
 0 failed / 0 errors。
@@ -125,11 +129,50 @@ report_paths:
   reports/greedy_risk_vs_rollout_blue.json
 ```
 
+### adaptive rollout 候选复验, 200 局, seed=20260516
+
+```text
+adaptive rollout red win rate:  77.00% (77 / 100), Wilson lower 67.85%
+adaptive rollout blue win rate: 78.00% (78 / 100), Wilson lower 68.93%
+combined win rate:              77.50% (155 / 200), Wilson lower 71.23%
+illegal_moves:                  0
+crashes:                        0
+timeouts:                       0（legacy report 字段；timeout telemetry 已在后续代码修复）
+average_step_time_ms:           158.23（较慢方向）
+max_step_time_ms:               500.75
+report_paths:
+  reports/bench_20260515_adaptive_rollout_red_vs_greedy_risk_100.json
+  reports/bench_20260515_greedy_risk_vs_adaptive_rollout_blue_100.json
+```
+
+固定局面稳定性审计见 `reports/adaptive_rollout_2026-05-15.md`。结论：adaptive rollout 可作为显式候选继续实验，并暴露候选 score / winrate / cutoffs / avg 与低置信提示；固定 10-run 分布随机且受 deadline 影响，不作为强弱结论；它未进入本 release 默认参数。
+
+### adaptive rollout vs old rollout, 800 局, seed=20260517
+
+```text
+adaptive rollout red win rate:  57.50% (230 / 400), Wilson lower 52.61%
+adaptive rollout blue win rate: 60.50% (242 / 400), Wilson lower 55.63%
+combined win rate:              59.00% (472 / 800), Wilson lower 55.56%
+illegal_moves:                  0
+crashes:                        0
+timeouts:                       0（legacy report 字段；timeout telemetry 已在后续代码修复）
+average_step_time_ms:           211.41（较慢方向）
+P95_step_time_ms:               500.27
+P99_step_time_ms:               500.44
+max_step_time_ms:               502.15
+report_paths:
+  reports/bench_20260515_adaptive_rollout_red_vs_old_rollout_400.json
+  reports/bench_20260515_old_rollout_red_vs_adaptive_rollout_blue_400.json
+```
+
+结论：adaptive rollout 直接对旧 rollout 通过候选门槛（合并胜率 >55%，Wilson lower >52%），但未达到更严格的“直接对当前默认合并 >=60%”封版晋升线。因此本 release 默认参数保持旧 flat rollout；adaptive 仅作为显式候选保留。
+
 ## Promotion decisions
 
 参见 `reports/ai_promotion_decision.md`：
 
 - **AI 默认**：`rollout` 晋升为 GUI/release 默认；`greedy_risk` 保留为应急回退。
+- **rollout 参数**：GUI/release 默认参数保持旧 flat rollout（16 rollout / move）。adaptive rollout 未过 60% 封版晋升线，不写入 release 默认参数。
 - **开局默认**：保持 `balanced_v1`，未做候选晋升。
 
 参数搜索 / 开局搜索 / pairwise tournament 流水线均已落地为 `scripts/param_sweep.py`、`scripts/search_openings.py`、`scripts/tournament.py`；本 release 未替换默认布局。

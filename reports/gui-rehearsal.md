@@ -5,6 +5,8 @@
 配套文件：`docs/MATCH_CHECKLIST.md`、`docs/EMERGENCY_GUIDE.md`、`scripts/s2_rehearsal.py`
 前置阶段：`reports/r2-rehearsal.md`（R-2 七盘制实现与单元测试）
 
+> 测试数量说明：本报告中的 `349 passed` 是 2026-05-12 S2 历史快照。当前全量 pytest 以 `release/v1.0/test_report.md` 为准：495 passed in 11.68s。
+
 ---
 
 ## 0. 与 r2-rehearsal.md 的关系
@@ -36,7 +38,7 @@
 349 passed in 13.54s
 ```
 
-349 passed = `r2-rehearsal.md` 报告的 324 基线 + 后续 24 条新增（含 R-3 / R-1 followup 等），再加 1 条 S2 review follow-up 回归测试。0 failed、0 error、0 skipped。
+349 passed = `r2-rehearsal.md` 报告的 324 基线 + 后续 24 条新增（含 R-3 / R-1 followup 等），再加 1 条 S2 review follow-up 回归测试。0 failed、0 error、0 skipped。本节为 2026-05-12 S2 历史快照；当前全量 pytest 见 `release/v1.0/test_report.md`。
 
 ### 1.2 基础冒烟
 
@@ -150,7 +152,7 @@ Total: 8/8 scenarios passed
 ## 3. 现有测试对 S2 回归项的覆盖
 
 `PROJECT_PHASES.md` §S2 列出"tests/test_main_window.py 补齐 R-2 后 GUI 状态回归"
-作为建议输出物。审计现有 349 条 pytest 后结论：**已实质覆盖，不需新增重复测试**。
+作为建议输出物。审计当时现有 349 条 pytest 后结论：**已实质覆盖，不需新增重复测试**。当前全量测试数量以 `release/v1.0/test_report.md` 为准。
 逐条对照：
 
 | 回归项 | 对应测试（文件:行号） |
@@ -291,7 +293,7 @@ S2 已完整闭环（headless 自动演练 + 真实 Tk GUI 手动表）：
 - ✅ `docs/MATCH_CHECKLIST.md` 落地（10 章，覆盖赛前 24h → 赛后归档）
 - ✅ `docs/EMERGENCY_GUIDE.md` 落地（10 章，覆盖崩溃 / 录入错误 / 超时 / 启动失败 / 网络 / 棋谱混乱）
 - ✅ `scripts/s2_rehearsal.py` 8/8 PASS
-- ✅ pytest 全量通过 / 0 failed
+- ✅ pytest 全量通过 / 0 failed（本报告为 S2 历史快照；当前全量数量见 `release/v1.0/test_report.md`）
 - ✅ 现有测试已实质覆盖 R-2 后 GUI 回归，不需新增 test_main_window.py case
 - ✅ `reports/gui-rehearsal.md` §4 真实 GUI 手动演练表 2026-05-13 操作员填表完成（21/21 正常）
 

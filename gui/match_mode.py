@@ -24,7 +24,13 @@ class MatchModePanel(tk.Frame):
         tk.Label(self, textvariable=self.current_player_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.phase_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.selected_pieces_var, anchor="w").pack(fill=tk.X)
-        tk.Label(self, textvariable=self.recommendation_var, anchor="w").pack(fill=tk.X)
+        tk.Label(
+            self,
+            textvariable=self.recommendation_var,
+            anchor="w",
+            justify=tk.LEFT,
+            wraplength=320,
+        ).pack(fill=tk.X)
         tk.Label(self, textvariable=self.record_status_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.can_undo_var, anchor="w").pack(fill=tk.X)
 

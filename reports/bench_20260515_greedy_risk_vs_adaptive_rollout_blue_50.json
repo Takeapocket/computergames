@@ -1,0 +1,63 @@
+{
+  "games": 50,
+  "red_wins": 15,
+  "blue_wins": 35,
+  "draws": 0,
+  "red_win_rate": 0.3,
+  "blue_win_rate": 0.7,
+  "draw_rate": 0.0,
+  "red_win_ci95": [
+    0.1910338908960936,
+    0.4375061227736339
+  ],
+  "blue_win_ci95": [
+    0.562493877226366,
+    0.8089661091039063
+  ],
+  "average_turns": 16.7,
+  "illegal_moves": 0,
+  "crashes": 0,
+  "timeouts": 0,
+  "average_step_time_ms": 151.2459879041535,
+  "max_step_time_ms": 500.5626000056509,
+  "schema_version": 2,
+  "generated_at": "2026-05-15T10:28:27",
+  "git_revision": "4b67dfb890bc0ff45d9b357b07ba4f3edee6c659",
+  "git_dirty": true,
+  "command": "python scripts/quick_bench.py --red greedy_risk --blue rollout --blue-kwargs {\"rollouts_per_move\":32,\"max_rollout_turns\":80,\"max_step_time_ms\":500.0,\"epsilon\":0.15,\"close_sample_margin\":0.08,\"close_sample_rollouts_per_move\":128,\"low_confidence_margin\":0.08} --games 50 --seed 20260515 --report-name bench_20260515_greedy_risk_vs_adaptive_rollout_blue_50",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "red_ai": "greedy_risk",
+  "blue_ai": "rollout",
+  "red_kwargs": {},
+  "blue_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 500.0,
+    "epsilon": 0.15,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 128,
+    "low_confidence_margin": 0.08
+  },
+  "ai_versions": {
+    "red": {
+      "name": "greedy_risk",
+      "randomize_ties": true,
+      "distance_weight": 1.0,
+      "material_weight": 10.0,
+      "expected_risk_weight": 3.0,
+      "expected_win_risk_weight": 500.0,
+      "self_capture_weight": 0.0
+    },
+    "blue": {
+      "name": "rollout",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 500.0,
+      "epsilon": 0.15
+    }
+  },
+  "seed": 20260515,
+  "max_turns": 200,
+  "wall_seconds": 126.322
+}

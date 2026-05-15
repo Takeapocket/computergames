@@ -41,6 +41,20 @@ DEFAULT_RECOMMENDER_KWARGS = {
 }
 
 
+def _format_rollout_diagnostic(diagnostic: object) -> str:
+    move = getattr(diagnostic, "move")
+    visits = int(getattr(diagnostic, "visits"))
+    score = float(getattr(diagnostic, "score", getattr(diagnostic, "winrate")))
+    winrate = float(getattr(diagnostic, "winrate"))
+    cutoffs = float(getattr(diagnostic, "cutoffs", 0.0))
+    avg = float(getattr(diagnostic, "avg"))
+    return (
+        f"{format_move_label(move, distinguish_self_capture=True)}\n"
+        f"visits={visits}, score={score:.2f}, winrate={winrate:.2f}, "
+        f"cutoffs={cutoffs:.0f}, avg={avg:.2f}"
+    )
+
+
 class MainWindow(tk.Frame):
     def __init__(
         self,
@@ -667,7 +681,24 @@ class MainWindow(tk.Frame):
         move = self._recommended_move()
         if move is None:
             return "当前骰子无合法走法"
-        return f"{DEFAULT_RECOMMENDER_KIND}：{format_move_label(move)}"
+
+        lines = [f"{DEFAULT_RECOMMENDER_KIND}：{format_move_label(move, distinguish_self_capture=True)}"]
+        if getattr(self._recommender, "last_low_confidence", False):
+            margin = getattr(self._recommender, "last_score_margin", None)
+            if margin is None:
+                lines.append("置信：低，候选差距过小")
+            else:
+                lines.append(f"置信：低，候选差距={float(margin):.2f}")
+        if getattr(self._recommender, "last_timed_out", False):
+            if getattr(self._recommender, "last_used_fallback", False):
+                lines.append("采样：超时，已使用 greedy_risk 回退")
+            else:
+                lines.append("采样：超时，使用已完成样本")
+        diagnostics = getattr(self._recommender, "last_diagnostics", [])
+        if diagnostics:
+            lines.append("rollout 候选：")
+            lines.extend(_format_rollout_diagnostic(diagnostic) for diagnostic in diagnostics)
+        return "\n".join(lines)
 
     def _recommended_move(self) -> Move | None:
         key = self._recommendation_key()

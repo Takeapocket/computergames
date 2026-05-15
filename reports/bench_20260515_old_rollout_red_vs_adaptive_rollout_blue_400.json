@@ -1,0 +1,75 @@
+{
+  "games": 400,
+  "red_wins": 158,
+  "blue_wins": 242,
+  "draws": 0,
+  "red_win_rate": 0.395,
+  "blue_win_rate": 0.605,
+  "draw_rate": 0.0,
+  "red_win_ci95": [
+    0.3483094055511242,
+    0.44368824897480874
+  ],
+  "blue_win_ci95": [
+    0.5563117510251911,
+    0.6516905944488758
+  ],
+  "average_turns": 16.93,
+  "illegal_moves": 0,
+  "crashes": 0,
+  "timeouts": 0,
+  "average_step_time_ms": 204.0253394269993,
+  "p95_step_time_ms": 500.2418000076432,
+  "p99_step_time_ms": 500.42409999878146,
+  "max_step_time_ms": 500.98710000747815,
+  "schema_version": 2,
+  "generated_at": "2026-05-15T11:47:40",
+  "git_revision": "4b67dfb890bc0ff45d9b357b07ba4f3edee6c659",
+  "git_dirty": true,
+  "command": "python scripts/quick_bench.py --red rollout --blue rollout --red-kwargs {\"rollouts_per_move\":16,\"max_rollout_turns\":80,\"max_step_time_ms\":500.0,\"epsilon\":0.15,\"close_sample_rollouts_per_move\":16} --blue-kwargs {\"rollouts_per_move\":32,\"max_rollout_turns\":80,\"max_step_time_ms\":500.0,\"epsilon\":0.15,\"close_sample_margin\":0.08,\"close_sample_rollouts_per_move\":128,\"low_confidence_margin\":0.08} --games 400 --seed 20260517 --report-name bench_20260515_old_rollout_red_vs_adaptive_rollout_blue_400",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "red_ai": "rollout",
+  "blue_ai": "rollout",
+  "red_kwargs": {
+    "rollouts_per_move": 16,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 500.0,
+    "epsilon": 0.15,
+    "close_sample_rollouts_per_move": 16
+  },
+  "blue_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 500.0,
+    "epsilon": 0.15,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 128,
+    "low_confidence_margin": 0.08
+  },
+  "ai_versions": {
+    "red": {
+      "name": "rollout",
+      "rollouts_per_move": 16,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 500.0,
+      "epsilon": 0.15,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 16,
+      "low_confidence_margin": 0.08
+    },
+    "blue": {
+      "name": "rollout",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 500.0,
+      "epsilon": 0.15,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 128,
+      "low_confidence_margin": 0.08
+    }
+  },
+  "seed": 20260517,
+  "max_turns": 200,
+  "wall_seconds": 1381.879
+}

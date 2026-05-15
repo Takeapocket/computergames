@@ -1,5 +1,7 @@
 # Task Group 00 - Context, Gates, And File Map
 
+> 历史执行上下文。当前默认 AI 是旧 flat `rollout`；新候选默认晋升基线为 current default rollout，`greedy_risk` 只作应急回退或辅助对手。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 本文件是收官冲刺的前置上下文。任何后续任务包开始前，先完成这里的检查。
 
 ---
@@ -22,7 +24,7 @@ Expected conclusion:
 
 ```text
 S2 真实 GUI 手动表仍是最近 P0
-默认 AI 是 greedy_risk
+历史上下文：当时默认 AI 是 greedy_risk；当前默认 AI 是旧 flat rollout
 Expectimax 是实验性，不能作为默认 AI
 比赛现场默认离线、不依赖统一平台
 ```
@@ -60,13 +62,13 @@ Failure policy:
 替换 GUI 默认 AI 或 release 默认 AI 前，候选必须满足：
 
 ```text
-candidate vs greedy_risk: red/blue each 200 games, total 400
+candidate vs current default old flat rollout: red/blue each 200 games, total 400
 candidate vs greedy: red/blue each 200 games, total 400
-candidate merged win rate vs greedy_risk > 55%
+candidate merged win rate vs current default > 55%
 Wilson 95% CI lower bound >= 50%
 illegal_moves = 0
 crashes = 0
-timeouts = 0
+real timeout telemetry = 0
 avg_step_time_ms < 1000
 max_step_time_ms < 5000
 report written to reports/
@@ -87,7 +89,8 @@ merged win rate > 53%
 Wilson 95% CI lower bound >= 50%
 illegal_moves = 0
 crashes = 0
-timeouts = 0
+real timeout telemetry = 0
+real timeout telemetry = 0
 layout appears in GUI OpeningPanel preset menu
 report written to reports/opening_report.md
 ```

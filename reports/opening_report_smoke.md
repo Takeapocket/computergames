@@ -1,5 +1,7 @@
 # Opening Search Report
 
+> 历史 smoke 报告（2026-05-12）。本报告使用当时的 `greedy_risk` 筛选开局；当前默认 AI 已升级为旧 flat `rollout`。新的默认布局候选必须在当前默认 AI 下重新验证，并使用真实 timeout telemetry。
+
 generated_at: 2026-05-12T20:51:09
 sample_size: 5
 games_per_train_opponent: 10
@@ -32,5 +34,5 @@ Validation: candidate(red) vs mirror(red) 镜像。
 - candidate vs current default 至少 400 总局，红蓝两侧覆盖
 - 合并胜率 > 53%
 - Wilson 95% CI 下界 >= 50%
-- illegal_moves = 0, crashes = 0, timeouts = 0
+- illegal_moves = 0, crashes = 0；本历史 smoke 报告中的 timeout 字段为 legacy，新的默认布局候选需使用真实 timeout telemetry = 0
 - 必须落地到 GUI OpeningPanel preset 才能成为默认；report 仅记录候选

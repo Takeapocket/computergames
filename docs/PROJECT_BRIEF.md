@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-13（S2/S3/S4 全部闭环，进入 release/v1.0 sign-off）
+更新时间：2026-05-15（code review follow-up 后同步默认 AI 参数和候选状态）
 
 ## 项目定位
 
@@ -8,7 +8,7 @@
 
 程序目标不是命令行工具，而是比赛现场可操作的软件：操作员录入骰子和对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
 
-## 当前阶段判断（2026-05-13，S2/S3/S4 全部闭环）
+## 当前阶段判断（2026-05-15，S2/S3/S4 全部闭环）
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
 - 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
@@ -20,10 +20,11 @@
 - 阶段 4.4：ExpectimaxAI 在 R-0 合规重跑后仍弱（合并 45.0%），保留为研究/实验代码。
 - **S3 完成（2026-05-12）**：`scripts/quick_bench.py` 新增 Wilson 95% CI；`scripts/tournament.py` pairwise matrix 落地；`stuck_penalty` 死代码清理完毕；`ai/self_capture.py`（默认关闭）/ `scripts/param_sweep.py` / `scripts/search_openings.py` 候选实验流水线建立。
 - **S4 已完成（2026-05-13）**：`release/v1.0/` 目录 README + config + default_params + known_limitations + test_report 已完整落地；`rollout` 已按 harness 门禁晋升为默认 AI，`greedy_risk` 保留为应急回退，默认布局保持 `balanced_v1`，决策见 `reports/ai_promotion_decision.md`。
+- **2026-05-15 code review follow-up 已完成**：默认 `rollout` 参数保持旧 flat release 形态（16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15）。adaptive rollout 仅作为显式实验候选；direct vs old rollout 800 局合并胜率 59.00%，未过 60% 默认晋升线，不写入 release 默认参数。`RolloutAI` 诊断现区分 score / winrate / cutoffs / avg；bench 脚本已聚合真实 `timeouts`。
 
 下一会话优先级：
-1. **release/v1.0 sign-off 与归档**：S2/S3/S4 已全部闭环，下一步是把 `release/v1.0` 当作正式提交物归档备份。
-2. 如时间允许：跑 `scripts/param_sweep.py` / `scripts/search_openings.py` 大样本，按门禁决定是否替换默认布局或继续优化 rollout 参数。
+1. **release/v1.0 归档与赛前核对**：sign-off 复验已记录；下一步是备份正式提交物和现场启动包。
+2. 如时间允许：跑 `scripts/param_sweep.py` / `scripts/search_openings.py` 大样本，按门禁决定是否替换默认布局或继续优化 rollout 参数；adaptive rollout 未过默认晋升线前不得写入 release 默认。
 3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。
 
 ## 当前技术栈
@@ -41,7 +42,7 @@
 - 合法走法生成（含吃本方棋子，R-0 已合规）。
 - 吃对方/本方子、胜负判断、走子和撤销。
 - 状态序列化和反序列化。
-- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐）、ExpectimaxAI（实验性）。
+- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为旧 flat rollout）、ExpectimaxAI（实验性）。
 - Tkinter GUI（含开局录入、骰子录入、推荐走法 by rollout）。
 - 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）。
 - 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
@@ -91,5 +92,5 @@
 详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
 
 1. **release/v1.0 归档**：把 release/v1.0 当作正式提交物备份；准备现场启动包。
-2. **可选**：跑大样本 `scripts/param_sweep.py` / `scripts/search_openings.py`，按门禁更新 `reports/ai_promotion_decision.md` 与 `release/v1.0/default_params.json`。
+2. **可选**：跑大样本 `scripts/param_sweep.py` / `scripts/search_openings.py`，按门禁更新 `reports/ai_promotion_decision.md` 与 `release/v1.0/default_params.json`。adaptive rollout 当前只是显式候选，不是 release 默认。
 3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。

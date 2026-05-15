@@ -18,7 +18,7 @@
 
 ## 1. 背景
 
-当前默认 AI 是 `rollout`。已有报告显示：`rollout` vs `greedy_risk` 双边 800 局合并胜率 62.62%，0 illegal / 0 crash / 0 timeout；`expectimax_v2` vs `greedy_risk` 合并胜率 46.25%，不能晋升。
+当前默认 AI 是旧 flat `rollout`。已有历史报告显示：`rollout` vs `greedy_risk` 双边 800 局合并胜率 62.62%，0 illegal / 0 crash；timeout 结论为当时报表字段，2026-05-15 后新候选需使用真实 timeout telemetry。`expectimax_v2` vs `greedy_risk` 合并胜率 46.25%，不能晋升。
 
 `rollout` 使用 flat Monte Carlo：对每个候选走法独立做 N 次随机模拟，不共享搜索树。这种方式简单稳定，但会把预算平均花到所有候选走法上，可能浪费在明显较差的分支。
 
@@ -276,7 +276,7 @@ max_step_time_ms < 1000ms
 ```
 mcts_eval_v1 vs greedy_risk 双边各 ≥ 200 局
 合并胜率 ≥ 55%
-illegal_moves = 0, crashes = 0, timeouts = 0
+illegal_moves = 0, crashes = 0, 基于 quick_bench.py / bench_ai.py 聚合的真实 timeouts = 0
 avg_step_time_ms ≤ 500ms
 max_step_time_ms ≤ 5000ms
 ```
@@ -287,7 +287,7 @@ max_step_time_ms ≤ 5000ms
 mcts_eval_v1 vs rollout 双边各 ≥ 400 局
 合并胜率 ≥ 55%
 Wilson 95% CI lower ≥ 52%
-illegal_moves = 0, crashes = 0, timeouts = 0
+illegal_moves = 0, crashes = 0, 基于 quick_bench.py / bench_ai.py 聚合的真实 timeouts = 0
 avg_step_time_ms ≤ 500ms
 max_step_time_ms ≤ 5000ms
 ```

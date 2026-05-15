@@ -1,5 +1,7 @@
 # Param Sweep Report
 
+> 历史 smoke 报告（2026-05-12）。本报告以当时的 `greedy_risk` 参数实验为上下文；当前默认 AI 已升级为旧 flat `rollout`。新的默认参数候选必须对 current default rollout 过门禁，并使用真实 timeout telemetry。
+
 generated_at: 2026-05-12T20:48:05
 sample_size: 3
 games_per_train: 10
@@ -29,5 +31,5 @@ Baseline = `greedy_risk` 默认权重；candidate = `greedy_risk` 透传被采�
 
 - candidate vs greedy_risk 双边各 200 局合并胜率 > 55%
 - Wilson 95% CI 下界 >= 50%
-- illegal_moves = 0, crashes = 0, timeouts = 0
+- illegal_moves = 0, crashes = 0；本历史 smoke 报告中的 timeout 字段为 legacy，新的默认参数候选需使用真实 timeout telemetry = 0
 - avg_step_time_ms < 1000, max_step_time_ms < 5000

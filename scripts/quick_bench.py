@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
 import time
@@ -35,6 +36,28 @@ def wilson_ci(wins: int, games: int, z: float = 1.96) -> tuple[float, float]:
     return max(0.0, center - margin), min(1.0, center + margin)
 
 
+def _percentile(values: list[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    if not 0.0 <= percentile <= 1.0:
+        raise ValueError("percentile must be between 0 and 1")
+    ordered = sorted(values)
+    rank = max(1, math.ceil(percentile * len(ordered)))
+    return ordered[rank - 1]
+
+
+def _parse_ai_kwargs(raw: str) -> dict:
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise argparse.ArgumentTypeError(f"invalid JSON: {exc.msg}") from exc
+    if not isinstance(payload, dict):
+        raise argparse.ArgumentTypeError("AI kwargs must be a JSON object")
+    return payload
+
+
 def _aggregate(results) -> dict:
     games = len(results)
     if games == 0:
@@ -44,6 +67,7 @@ def _aggregate(results) -> dict:
     total_turns = 0
     total_illegal = 0
     total_crashes = 0
+    total_timeouts = 0
     all_step_times: list[float] = []
 
     for r in results:
@@ -51,9 +75,12 @@ def _aggregate(results) -> dict:
         total_turns += r.turns
         total_illegal += r.illegal_moves
         total_crashes += r.crashes
+        total_timeouts += int(getattr(r, "timeouts", 0))
         all_step_times.extend(r.step_times_ms)
 
     avg_step = sum(all_step_times) / len(all_step_times) if all_step_times else 0.0
+    p95_step = _percentile(all_step_times, 0.95)
+    p99_step = _percentile(all_step_times, 0.99)
     max_step = max(all_step_times) if all_step_times else 0.0
 
     red_ci = wilson_ci(winners[Player.RED], games)
@@ -72,8 +99,10 @@ def _aggregate(results) -> dict:
         "average_turns": total_turns / games,
         "illegal_moves": total_illegal,
         "crashes": total_crashes,
-        "timeouts": 0,  # 阶段 4 还没引入单步时限
+        "timeouts": total_timeouts,
         "average_step_time_ms": avg_step,
+        "p95_step_time_ms": p95_step,
+        "p99_step_time_ms": p99_step,
         "max_step_time_ms": max_step,
     }
 
@@ -109,6 +138,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run N AI vs AI games and emit a JSON benchmark report (schema v2).")
     parser.add_argument("--red", required=True, help="Red AI kind")
     parser.add_argument("--blue", required=True, help="Blue AI kind")
+    parser.add_argument(
+        "--red-kwargs",
+        type=_parse_ai_kwargs,
+        default={},
+        help="JSON object with keyword arguments passed to the red AI constructor.",
+    )
+    parser.add_argument(
+        "--blue-kwargs",
+        type=_parse_ai_kwargs,
+        default={},
+        help="JSON object with keyword arguments passed to the blue AI constructor.",
+    )
     parser.add_argument("--games", type=int, default=100, help="Number of games to play")
     parser.add_argument("--seed", type=int, default=2026, help="Master seed; per-game seed = master*100000 + i")
     parser.add_argument("--max-turns", type=int, default=200, help="Per-game half-move cap; reaching it = draw")
@@ -156,8 +197,8 @@ def main(argv: list[str] | None = None) -> int:
         red_seed = per_game_seed * 3 + 1
         blue_seed = per_game_seed * 3 + 2
         dice_seed = per_game_seed * 3
-        red_ai = build_ai(args.red, seed=red_seed)
-        blue_ai = build_ai(args.blue, seed=blue_seed)
+        red_ai = build_ai(args.red, seed=red_seed, **args.red_kwargs)
+        blue_ai = build_ai(args.blue, seed=blue_seed, **args.blue_kwargs)
         if i == 0:
             red_signature = ai_version_signature(red_ai)
             blue_signature = ai_version_signature(blue_ai)
@@ -193,6 +234,8 @@ def main(argv: list[str] | None = None) -> int:
     summary.update({
         "red_ai": args.red,
         "blue_ai": args.blue,
+        "red_kwargs": args.red_kwargs,
+        "blue_kwargs": args.blue_kwargs,
         "ai_versions": {"red": red_signature or {"name": args.red}, "blue": blue_signature or {"name": args.blue}},
         "seed": args.seed,
         "max_turns": args.max_turns,

@@ -1,5 +1,7 @@
 # AI Strengthening Implementation Plan
 
+> 历史执行计划（2026-05-13）。计划中 `greedy_risk` 作为默认 AI 的表述是执行前上下文；当前默认 AI 已升级为旧 flat `rollout`，adaptive rollout 只是显式实验候选。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a data-driven AI strengthening pipeline that can improve beyond `greedy_risk` without breaking the stable offline competition GUI.
@@ -423,7 +425,7 @@ def promotion_gate_lines() -> list[str]:
         "- candidate layout vs current default layout 双边合并胜率 >= 55%",
         "- Wilson 95% CI 下界 >= 50%",
         "- 至少 3 个不同 seed 池复验",
-        "- illegal_moves = 0, crashes = 0, timeouts = 0",
+        "- illegal_moves = 0, crashes = 0, 基于 bench 聚合的真实 timeouts = 0",
         "- 保留均衡 / 速攻 / 防守三类候选，不声称最优布局",
         "- 必须落地到 GUI OpeningPanel preset 才能成为默认；report 仅记录候选",
     ]
@@ -535,7 +537,7 @@ def promotion_gate_lines() -> list[str]:
         "- candidate vs greedy_risk 双边合并胜率 >= 60%",
         "- Wilson 95% CI 下界 >= 52%",
         "- 每个方向至少 400 局，合并至少 800 局；若时间不足，最小可接受为双边各 200 局",
-        "- illegal_moves = 0, crashes = 0, timeouts = 0",
+        "- illegal_moves = 0, crashes = 0, 基于 bench 聚合的真实 timeouts = 0",
         "- avg_step_time_ms < 1000, max_step_time_ms < 5000",
         "- 报告写入 reports/",
     ]
@@ -890,7 +892,7 @@ Create `reports/rollout_viability.md`:
 
 ## Decision
 
-- Default AI: keep `greedy_risk`
+- Historical default AI: keep `greedy_risk`
 - Promotion: not decided by smoke; run Task 6 promotion gate if smoke is stable
 ```
 
@@ -1121,7 +1123,7 @@ Create `reports/expectimax_v2_experiment.md`:
 - kind: `expectimax_v2`
 - depth: 1
 - leaf risk: disabled
-- default AI unchanged: `greedy_risk`
+- historical default AI unchanged: `greedy_risk`
 
 ## Smoke Commands
 
@@ -1132,8 +1134,8 @@ Create `reports/expectimax_v2_experiment.md`:
 
 ## Decision
 
-- Default AI: keep `greedy_risk`
-- Promotion: not decided by smoke; run Task 6 promotion gate if smoke is stable and stronger than baseline
+- Historical default AI: keep `greedy_risk`
+- Promotion: not decided by smoke; run Task 6 promotion gate if smoke is stable and stronger than the then-current baseline
 ```
 
 ---
@@ -1147,9 +1149,9 @@ Create `reports/expectimax_v2_experiment.md`:
 - Modify: `gui/main_window.py` only if AI gate passes
 - Modify: `release/v1.0/default_params.json` or create `release/v1.1/default_params.json` only after gate
 
-**Goal:** Decide whether any candidate is promoted. The default outcome is to keep `greedy_risk`.
+**Goal:** Decide whether any candidate is promoted. Historical default outcome was to keep `greedy_risk`; current replacement work must compare against the current default rollout.
 
-- [ ] **Step 1: Run candidate vs baseline both directions**
+- [ ] **Step 1: Run candidate vs then-current baseline both directions**
 
 For a candidate AI kind such as `rollout` or `expectimax_v2`, run:
 
@@ -1193,7 +1195,7 @@ Date: 2026-05-13
 - Wilson 95% CI 下界 >= 52%
 - illegal_moves = 0
 - crashes = 0
-- timeouts = 0
+- 基于 bench 聚合的真实 timeouts = 0
 - avg_step_time_ms < 1000
 - max_step_time_ms < 5000
 

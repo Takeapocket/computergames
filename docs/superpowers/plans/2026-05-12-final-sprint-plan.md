@@ -1,5 +1,7 @@
 # 赛前收官冲刺 Implementation Plan
 
+> 历史执行计划（2026-05-12）。本文中的 `greedy_risk` 默认、候选对 `greedy_risk` 的门禁等内容是执行前上下文；当前默认 AI 已升级为旧 flat `rollout`，adaptive rollout 是显式实验候选而非 release 默认。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` or equivalent task-by-task execution.
 >
 > **Project override:** 未经用户明确要求，不执行 `git commit`、`git push`、`git reset --hard`。本计划使用“测试 + diff + 报告”作为 checkpoint。
@@ -64,7 +66,7 @@ Task Group 04  release/v1.0 封版与最终验证
 
 关键判断：
 
-- `greedy_risk` 是当前稳定参赛默认 AI。
+- 历史上下文：`greedy_risk` 是当时稳定参赛默认 AI；当前默认 AI 是旧 flat `rollout`。
 - S2 真实 GUI 手动表未填完前，不应把主线切到 AI 大改。
 - AI 可以优化，但必须被 harness 证明，不能凭单局或单 seed 决定。
 - Expectimax 和 Rollout 都是实验项，不得阻塞封版。
@@ -125,13 +127,13 @@ smoke_test exit code 0
 任何替换 GUI 默认 AI 或 release 默认 AI 的候选必须满足：
 
 ```text
-candidate vs greedy_risk: red/blue each 200 games, total 400
+candidate vs current default old flat rollout: red/blue each 200 games, total 400
 candidate vs greedy: red/blue each 200 games, total 400
-candidate merged win rate vs greedy_risk > 55%
+candidate merged win rate vs current default > 55%
 Wilson 95% CI lower bound >= 50%
 illegal_moves = 0
 crashes = 0
-timeouts = 0
+real timeout telemetry = 0
 avg_step_time_ms < 1000
 max_step_time_ms < 5000
 report written to reports/
@@ -152,7 +154,7 @@ merged win rate > 53%
 Wilson 95% CI lower bound >= 50%
 illegal_moves = 0
 crashes = 0
-timeouts = 0
+real timeout telemetry = 0
 layout appears in GUI OpeningPanel preset menu
 report written to reports/opening_report.md
 ```

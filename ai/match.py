@@ -138,6 +138,7 @@ class MatchResult:
     illegal_moves: int
     crashes: int
     record: "GameRecord | None"
+    timeouts: int = 0
     step_times_ms: list[float] = field(default_factory=list)
     termination_reason: TerminationReason | Literal[""] = ""
 
@@ -166,6 +167,16 @@ def _classify_winner_reason(state: GameState, winner: Player) -> TerminationReas
     return "winner_capture_all"
 
 
+def _step_timed_out(ai: "AIPlayer", elapsed_ms: float) -> bool:
+    limit = getattr(ai, "max_step_time_ms", None)
+    if limit is None:
+        return False
+    try:
+        return elapsed_ms > float(limit)
+    except (TypeError, ValueError):
+        return False
+
+
 def play_one_game(
     *,
     red_ai: "AIPlayer",
@@ -189,6 +200,7 @@ def play_one_game(
     record = GameRecord.from_state(state)
     illegal_moves = 0
     crashes = 0
+    timeouts = 0
     step_times_ms: list[float] = []
 
     while True:
@@ -200,6 +212,7 @@ def play_one_game(
                 illegal_moves=illegal_moves,
                 crashes=crashes,
                 record=record,
+                timeouts=timeouts,
                 step_times_ms=step_times_ms,
                 termination_reason=_classify_winner_reason(state, winner),
             )
@@ -211,6 +224,7 @@ def play_one_game(
                 illegal_moves=illegal_moves,
                 crashes=crashes,
                 record=record,
+                timeouts=timeouts,
                 step_times_ms=step_times_ms,
                 termination_reason="draw_max_turns",
             )
@@ -226,17 +240,22 @@ def play_one_game(
             crashes += 1
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             step_times_ms.append(elapsed_ms)
+            if _step_timed_out(ai, elapsed_ms):
+                timeouts += 1
             return MatchResult(
                 winner=active.opponent,
                 turns=len(record.steps),
                 illegal_moves=illegal_moves,
                 crashes=crashes,
                 record=record,
+                timeouts=timeouts,
                 step_times_ms=step_times_ms,
                 termination_reason="crash",
             )
         elapsed_ms = (time.perf_counter() - start) * 1000.0
         step_times_ms.append(elapsed_ms)
+        if _step_timed_out(ai, elapsed_ms):
+            timeouts += 1
 
         if move is None:
             return MatchResult(
@@ -245,6 +264,7 @@ def play_one_game(
                 illegal_moves=illegal_moves,
                 crashes=crashes,
                 record=record,
+                timeouts=timeouts,
                 step_times_ms=step_times_ms,
                 termination_reason="no_move",
             )
@@ -259,6 +279,7 @@ def play_one_game(
                 illegal_moves=illegal_moves,
                 crashes=crashes,
                 record=record,
+                timeouts=timeouts,
                 step_times_ms=step_times_ms,
                 termination_reason="illegal_move",
             )
@@ -369,6 +390,9 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "max_rollout_turns",
         "max_step_time_ms",
         "epsilon",
+        "close_sample_margin",
+        "close_sample_rollouts_per_move",
+        "low_confidence_margin",
         "c_uct",
         "scale",
         "max_iterations",

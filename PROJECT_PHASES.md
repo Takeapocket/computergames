@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-05-13（S2 真实 Tk GUI 手动表填写完成，S2/S3/S4 全部闭环）
+更新时间：2026-05-15（code review follow-up 后同步默认 AI 参数和候选状态）
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：离线 GUI 参赛程序
 
@@ -31,10 +31,11 @@
 | 崩溃自救 R-3 | 已完成 | `record/auto_save.py`、启动恢复、走子/悔棋自动保存已实现并有测试。 |
 | 七盘制 R-2 | 已完成 | `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已落地；R-2 review Critical+Important 修复已合并；甲乙身份选择、先手序列、盘内/整轮 auto-save 全链路打通。 |
 | S2 GUI 全流程演练 | 已完成 | `scripts/s2_rehearsal.py` 8/8 PASS；`docs/MATCH_CHECKLIST.md` + `docs/EMERGENCY_GUIDE.md` 落地；2026-05-13 操作员真实 Tk GUI 手动表填写完成（`reports/gui-rehearsal.md` §4，21/21 正常）。 |
-| 默认 AI | 已晋升 | `rollout` 作为当前默认参赛 AI；`greedy_risk` 保留为应急回退。`rollout` vs `greedy_risk` 双边 800 局合并胜率 62.62%，0 illegal / 0 crash / 0 timeout。 |
+| 默认 AI | 已晋升 | `rollout` 作为当前默认参赛 AI；`greedy_risk` 保留为应急回退。release 默认参数保持旧 flat rollout：16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15。`rollout` vs `greedy_risk` 双边 800 局合并胜率 62.62%。 |
+| Adaptive rollout | 实验候选 | 32 初采样 + close sample 到 128 + 低置信提示已实现为显式参数候选，但 direct vs old rollout 800 局合并胜率 59.00%，未达 60% 默认晋升线，不进入 `release/v1.0/default_params.json`。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**路线 B 务实混合推进（AI 参数优化+开局搜索+Expectimax 结构修复→封版）。**
+下一步主线：**release/v1.0 归档/赛前核对；比赛后再推进 AI 参数优化、开局搜索和 Expectimax 结构修复。**
 详细方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
 执行计划见：`docs/superpowers/plans/2026-05-12-final-sprint-plan.md`
 
@@ -193,8 +194,8 @@ GUI 不依赖网络。
 ```text
 pytest 通过。
 quick_bench 仍可复现 4.1/4.2 基线。
-所有 AI 对战报告包含 games、seed、胜率、非法走法、崩溃、超时、平均步时、最大步时。
-新增评估项必须 candidate vs baseline 胜率达标才进入默认 AI。
+所有 AI 对战报告包含 games、seed、胜率、非法走法、崩溃、真实 timeout telemetry、平均步时、最大步时。2026-05-15 前生成的部分历史报告 timeout 字段为 legacy 常量，不能单独作为新候选晋升证据。
+新增评估项必须直接对当前默认旧 flat `rollout` 胜率达标，才允许进入默认 AI。
 ```
 
 ---
@@ -235,7 +236,7 @@ docs/EMERGENCY_GUIDE.md
 pytest 全部通过。
 GUI 可离线启动。
 开局录入、计时、棋谱、auto_save、七盘制流程正常。
-默认 AI 为 greedy_risk 或经过 harness 证明更强且同样稳定的候选。
+当前默认 AI 为旧 flat `rollout`；`greedy_risk` 仅作为应急回退。后续候选必须直接对当前默认 `rollout` 过门禁后才可替换。
 无非法走法、无崩溃、无超时。
 有源码和可运行版本备份。
 ```
@@ -264,8 +265,8 @@ E5 depth=2/3：只在 E0-E4 数据正向后尝试，并加入单步时间上限�
 保留条件：
 
 ```text
-candidate vs baseline 合并胜率 > 55%。
-illegal_moves = 0，crashes = 0，timeouts = 0。
+candidate vs current default 合并胜率 > 55%。
+illegal_moves = 0，crashes = 0，基于 `quick_bench.py` / `bench_ai.py` 聚合的真实 timeouts = 0。2026-05-15 前 legacy timeout 字段不可单独作为晋升证据。
 平均单步耗时和最大单步耗时满足 4 分钟包干预算。
 报告写入 reports/，默认 AI 变更必须有复现命令。
 ```
@@ -293,7 +294,7 @@ RolloutAI 不改 core，只通过 GameState / legal_moves / apply_move 运行模
 
 ```text
 枚举或采样己方 720 种布局。
-对每个布局用 greedy_risk vs baseline 跑固定 seed 小样本。
+对每个布局用 current default rollout 跑固定 seed 小样本；`greedy_risk` 只作为辅助对手或应急回退基线。
 筛出候选后扩大样本量复验。
 保留均衡、速攻、防守三类候选，而不是声称“最优布局”。
 ```
@@ -335,7 +336,7 @@ rollout_count
 
 ```text
 固定 seed 池。
-candidate vs baseline 至少 200 局。
+candidate vs current default 至少 200 局。
 胜率未达标不进入默认配置。
 最终参数写入 release 配置并附报告。
 ```
@@ -409,4 +410,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**S2/S3/S4 全部闭环（2026-05-13）。`rollout` 已按 800 局 harness 门禁晋升为 GUI/release 默认 AI，`greedy_risk` 保留为应急回退。下一步：release/v1.0 归档准备 + 比赛后 Expectimax/开局库继续实验。**
+当前最近任务：**S2/S3/S4 全部闭环；2026-05-15 已完成 code review follow-up 和文档同步。`rollout` 已按 800 局 harness 门禁晋升为 GUI/release 默认 AI，默认参数保持旧 flat rollout；adaptive rollout 只是显式实验候选。下一步：release/v1.0 归档准备 + 比赛后 Expectimax/开局库/rollout 候选继续实验。**

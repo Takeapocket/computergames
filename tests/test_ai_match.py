@@ -149,6 +149,15 @@ class _NeverMoveAI:
         return None
 
 
+class _ImmediateDeadlineAI:
+    name = "deadline_bot"
+    max_step_time_ms = 0.0
+
+    def choose_move(self, state, dice):
+        legal = state.legal_moves(state.current_player, dice)
+        return legal[0] if legal else None
+
+
 def test_play_one_game_random_vs_random_terminates_with_winner_or_draw():
     red_ai = RandomAI(rng=random.Random(2026))
     blue_ai = RandomAI(rng=random.Random(2027))
@@ -229,6 +238,17 @@ def test_play_one_game_step_times_recorded():
     # 每个 turn 都有 step_time，包含最终那一步
     assert len(result.step_times_ms) == result.turns
     assert all(t >= 0.0 for t in result.step_times_ms)
+
+
+def test_play_one_game_counts_ai_step_deadline_timeouts():
+    result = play_one_game(
+        red_ai=_ImmediateDeadlineAI(),
+        blue_ai=_ImmediateDeadlineAI(),
+        dice_rng=random.Random(2028),
+        max_turns=1,
+    )
+
+    assert result.timeouts == 1
 
 
 from ai.match import build_ai

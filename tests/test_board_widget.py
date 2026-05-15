@@ -9,20 +9,13 @@ from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
 from gui.board_widget import BoardWidget
+from tests.tk_support import make_hidden_tk_root
 
 
 @pytest.fixture(scope="module")
 def _tk_root():
-    try:
-        root = tk.Tk()
-        root.withdraw()
-    except tk.TclError as exc:
-        pytest.skip(f"no Tk display available: {exc}")
+    root = make_hidden_tk_root()
     yield root
-    try:
-        root.destroy()
-    except tk.TclError:
-        pass
 
 
 @pytest.fixture

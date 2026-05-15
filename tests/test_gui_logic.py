@@ -1,6 +1,7 @@
 from core.move import Move
-from core.types import BOARD_SIZE, Player, Position
+from core.types import BOARD_SIZE, Piece, Player, Position
 from gui.app import create_default_state, format_move_label
+from gui.main_window import MainWindow
 from gui.timer_panel import format_seconds
 
 
@@ -54,6 +55,49 @@ def test_format_move_label_describes_capture_move():
     )
 
     assert format_move_label(move) == "蓝方 4: (3,3) -> (2,2) 吃子"
+
+
+def test_format_move_label_can_describe_self_capture():
+    move = Move(
+        player=Player.RED,
+        piece_id=5,
+        from_pos=Position(2, 1),
+        to_pos=Position(2, 2),
+        is_capture=True,
+        captured_piece=Piece(Player.RED, 2, Position(2, 2)),
+    )
+
+    assert format_move_label(move) == "红方 5: (2,1) -> (2,2) 吃子"
+    assert format_move_label(move, distinguish_self_capture=True) == "红方 5: (2,1) -> (2,2) 自吃"
+
+
+def test_recommendation_text_marks_low_confidence():
+    move = Move(
+        player=Player.RED,
+        piece_id=5,
+        from_pos=Position(2, 1),
+        to_pos=Position(2, 2),
+        is_capture=True,
+        captured_piece=Piece(Player.RED, 2, Position(2, 2)),
+    )
+
+    class FakeRecommender:
+        last_diagnostics = []
+        last_low_confidence = True
+        last_score_margin = 0.03
+
+    class FakeWindow:
+        _awaiting_dice = False
+        _recommender = FakeRecommender()
+
+        def _recommended_move(self):
+            return move
+
+    text = MainWindow._recommendation_text(FakeWindow(), None)
+
+    assert "rollout：红方 5: (2,1) -> (2,2) 自吃" in text
+    assert "置信：低" in text
+    assert "0.03" in text
 
 
 def test_format_seconds_rounds_up_to_be_kind_to_player():

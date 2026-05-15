@@ -1,6 +1,8 @@
 # Task Group 03 - Experimental AI Timeboxes
 
-目标：只在稳定性和低风险 AI 工作完成后，才用严格时间盒尝试 ExpectimaxV2 或 RolloutAI。任何实验未过晋升门禁，都不能替换默认 `greedy_risk`。
+> 历史执行计划。本文中“不能替换默认 `greedy_risk`”是 2026-05-12 当时的默认基线；当前默认 AI 已升级为旧 flat `rollout`，adaptive rollout 是显式实验候选而非 release 默认。当前事实以 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`release/v1.0/test_report.md` 为准。
+
+目标：只在稳定性和低风险 AI 工作完成后，才用严格时间盒尝试 ExpectimaxV2 或 RolloutAI。历史上下文中的实验不能替换当时默认 `greedy_risk`；当前实验候选必须对 current default rollout 过门禁。
 
 ---
 
