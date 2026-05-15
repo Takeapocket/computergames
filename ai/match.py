@@ -294,6 +294,10 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
     传入会抛 TypeError。
     """
     rng = random.Random(seed)
+
+    def _merged(defaults: dict[str, Any]) -> dict[str, Any]:
+        return {**defaults, **ai_kwargs}
+
     if kind == "random":
         if ai_kwargs:
             raise TypeError(f"random AI does not accept kwargs: {sorted(ai_kwargs)}")
@@ -319,6 +323,51 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
         from ai.rollout_ai import RolloutAI
 
         return RolloutAI(rng=rng, **ai_kwargs)
+    if kind == "rollout_32":
+        from ai.rollout_ai import RolloutAI
+
+        return RolloutAI(
+            rng=rng,
+            name="rollout_32",
+            **_merged({
+                "rollouts_per_move": 32,
+                "max_rollout_turns": 80,
+                "max_step_time_ms": 750.0,
+                "epsilon": 0.15,
+                "playout_policy": "greedy",
+                "cutoff_eval": "draw",
+            }),
+        )
+    if kind == "rollout_risk_playout":
+        from ai.rollout_ai import RolloutAI
+
+        return RolloutAI(
+            rng=rng,
+            name="rollout_risk_playout",
+            **_merged({
+                "rollouts_per_move": 32,
+                "max_rollout_turns": 80,
+                "max_step_time_ms": 750.0,
+                "epsilon": 0.10,
+                "playout_policy": "greedy_risk",
+                "cutoff_eval": "draw",
+            }),
+        )
+    if kind == "rollout_cutoff_eval":
+        from ai.rollout_ai import RolloutAI
+
+        return RolloutAI(
+            rng=rng,
+            name="rollout_cutoff_eval",
+            **_merged({
+                "rollouts_per_move": 32,
+                "max_rollout_turns": 80,
+                "max_step_time_ms": 750.0,
+                "epsilon": 0.10,
+                "playout_policy": "greedy_risk",
+                "cutoff_eval": "current",
+            }),
+        )
     if kind == "expectimax":
         from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
         from ai.expectimax_ai import ExpectimaxAI
@@ -393,6 +442,8 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "close_sample_margin",
         "close_sample_rollouts_per_move",
         "low_confidence_margin",
+        "playout_policy",
+        "cutoff_eval",
         "c_uct",
         "scale",
         "max_iterations",

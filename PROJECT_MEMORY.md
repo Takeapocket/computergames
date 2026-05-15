@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-15（code review follow-up 后文档同步；S2/S3/S4 全部闭环）
+更新时间：2026-05-15（P2 rollout 候选小样本后同步；S2/S3/S4 全部闭环）
 
 ## 当前结论
 
@@ -14,6 +14,8 @@
 - **2026-05-12 S2 headless 自动演练已完成**：`scripts/s2_rehearsal.py` 8 个 scenario 全 PASS（4:0 / 4:3 / 先手序列 / 超时判负 / 盘间恢复 / 盘中恢复 / 悔棋边界 / 整轮结束后行为）；落地 `docs/MATCH_CHECKLIST.md` 现场操作清单 + `docs/EMERGENCY_GUIDE.md` 应急手册；当日全量 pytest 已通过。详见 `reports/gui-rehearsal.md`。最新全量验证见 2026-05-15 Tk fixture follow-up 记录：495 passed in 11.68s。
 - **历史记录（2026-05-13，当日快照，非最新验证）**：收官冲刺 Task Group 01-02 + 04 已完成。S3（AI 低风险清理 + harness 工程化）落地 `scripts/quick_bench.py` Wilson CI、新增 `scripts/tournament.py` pairwise matrix、清理 R-0 followup `stuck_penalty` 准死代码（grep 无残留）；S4（封版）落地 `release/v1.0/` 全套文档（README + config + default_params + known_limitations + test_report）。AI / 开局候选流水线（`scripts/param_sweep.py` / `scripts/search_openings.py` / `ai/self_capture.py`）已建立。Review 后 codex 已修复 `param_sweep.py` 双边对战门禁 + `search_openings.py` 训练/验证对手对齐与 AI 对称化，并补回归测试。当日复验：371 pytest passed、smoke OK、s2_rehearsal 8/8 PASS、AI baseline 双向 200 局 `greedy_risk` 合并胜率 55.75%（CI 通过）、max_step 6.84ms。随后 `rollout` 以双边 800 局对 `greedy_risk` 合并胜率 62.62%、Wilson lower 59.22% 晋升为 GUI/release 默认 AI；`greedy_risk` 保留为应急回退。决策详见 `reports/ai_promotion_decision.md` 与 `release/v1.0/test_report.md`。**最新验证与 adaptive/timeout 结论以 2026-05-15 条目和 `release/v1.0/test_report.md` 为准。**
 - **2026-05-15 code review follow-up 已完成**：修复 adaptive rollout 误写默认参数的问题。当前 GUI/release 默认 AI 仍是 `rollout`，但默认参数保持旧 flat 形态：`rollouts_per_move=16`、`max_rollout_turns=80`、`max_step_time_ms=500.0`、`epsilon=0.15`，见 `gui/main_window.py` 与 `release/v1.0/default_params.json`。adaptive rollout（32 初采样、close sample 到 128、低置信提示）仅作为显式实验候选保留；其 direct vs old rollout 800 局合并胜率 59.00%，未达 60% 默认晋升线，不进入 release/v1.0 默认参数。`RolloutAI` 诊断现区分 `score / winrate / cutoffs / avg`；`quick_bench.py` / `bench_ai.py` 已开始聚合真实 `timeouts`，历史报告中的 legacy timeout 字段不可单独作为晋升证据。最近一次全量验证：`495 passed in 11.68s`，详见 `release/v1.0/test_report.md`。
+- **2026-05-15 P1 Rollout 根节点诊断收敛已完成**：新增 canonical `RootMoveStats` 与 `RolloutAI.last_root_stats`，`last_diagnostics` 保持兼容别名；GUI 推荐区优先读取 root stats，候选明细显示 visits、score、winrate、wins、losses、draws、avg 与低置信标记。默认 `rollout` 参数、`release/v1.0/default_params.json` 和 core 规则均未变更。验证：`scripts/smoke_test.py` 正常退出；全量 `pytest` 为 `496 passed in 11.29s`。
+- **2026-05-15 P2 rollout 候选小样本已完成**：新增 benchable AI kind：`rollout_32`、`rollout_risk_playout`、`rollout_cutoff_eval`；`RolloutAI` 支持 `playout_policy=greedy|greedy_risk` 与 `cutoff_eval=draw|current`，`ai_version_signature()` 和 `scripts/bench_ai.py` profile 已记录相关元数据。默认 `rollout`、GUI 默认推荐、`release/v1.0/default_params.json` 和 core 规则均未变更。三组 candidate vs 当前默认 `rollout` 双边各 100 局均未过门禁：`rollout_32` 54.5% 且 timeouts=4；`rollout_risk_playout` 57.0% 但 timeouts=10；`rollout_cutoff_eval` 57.5% 但 timeouts=11。报告见 `reports/p2_candidate_rollout_32_20260515.*`、`reports/p2_candidate_rollout_risk_playout_20260515.*`、`reports/p2_candidate_rollout_cutoff_eval_20260515.*`。实现验证：`pytest` 为 `501 passed in 10.16s`，`scripts/smoke_test.py` 正常退出。
 
 ## 已确认的比赛事实
 
@@ -81,8 +83,8 @@
 ## 下一次对话建议第一步
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
-2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 全部完成；下一步是 release/v1.0 归档准备和赛前最后核对。当前 release 默认参数是旧 flat `rollout`，不要把 adaptive rollout 当作默认。
-3. 比赛后再回到 Expectimax 主线（合并胜率 45.0% 弱于 baseline，需按 `reports/4-4-rebench.md` 方向实验）/ 开局库 / rollout 参数继续优化。
+2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 全部完成；AI 下一阶段 P1 / P2 均已完成。当前 release 默认参数仍是旧 flat `rollout`，不要把 adaptive rollout 或 P2 候选当作默认。
+3. 后续按 `docs/superpowers/specs/2026-05-15-ai-next-stage-roadmap-design.md` 顺序推进 P3 Zweistein-lite；若继续 P2 分支，应先降低 `rollout_risk_playout` / `rollout_cutoff_eval` 的真实 timeouts，再考虑 400+400 promotion。比赛后再回到 Expectimax 主线（合并胜率 45.0% 弱于 baseline，需按 `reports/4-4-rebench.md` 方向实验）。
 4. 如有时间，可跑大样本 `scripts/param_sweep.py` 或 `scripts/search_openings.py` 看是否产出能过门禁的候选。
 
 ## 待确认事项

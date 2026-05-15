@@ -100,6 +100,70 @@ def test_recommendation_text_marks_low_confidence():
     assert "0.03" in text
 
 
+def test_recommendation_text_prefers_root_stats_over_legacy_diagnostics():
+    move = Move(
+        player=Player.RED,
+        piece_id=5,
+        from_pos=Position(2, 1),
+        to_pos=Position(3, 1),
+        is_capture=False,
+    )
+    stale = Move(
+        player=Player.RED,
+        piece_id=6,
+        from_pos=Position(2, 0),
+        to_pos=Position(3, 0),
+        is_capture=False,
+    )
+
+    class FakeStats:
+        def __init__(self):
+            self.move = move
+            self.visits = 8
+            self.wins = 3.0
+            self.losses = 4.0
+            self.draws = 1.0
+            self.cutoffs = 1.0
+            self.score = 0.4375
+            self.winrate = 0.375
+            self.avg = -0.125
+            self.low_confidence = True
+
+    class StaleStats:
+        def __init__(self):
+            self.move = stale
+            self.visits = 1
+            self.wins = 1.0
+            self.losses = 0.0
+            self.draws = 0.0
+            self.cutoffs = 0.0
+            self.score = 1.0
+            self.winrate = 1.0
+            self.avg = 1.0
+
+    class FakeRecommender:
+        last_root_stats = [FakeStats()]
+        last_diagnostics = [StaleStats()]
+        last_low_confidence = False
+        last_timed_out = False
+
+    class FakeWindow:
+        _awaiting_dice = False
+        _recommender = FakeRecommender()
+
+        def _recommended_move(self):
+            return move
+
+    text = MainWindow._recommendation_text(FakeWindow(), None)
+
+    assert "红方 5: (2,1) -> (3,1)" in text
+    assert "红方 6: (2,0) -> (3,0)" not in text
+    assert "wins=3" in text
+    assert "losses=4" in text
+    assert "draws=1" in text
+    assert "置信=低" in text
+
+
 def test_format_seconds_rounds_up_to_be_kind_to_player():
     assert format_seconds(240) == "04:00"
     assert format_seconds(239.4) == "04:00"

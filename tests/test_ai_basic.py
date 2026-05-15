@@ -221,6 +221,50 @@ def test_build_ai_rollout_registers_signature_fields():
     assert signature["low_confidence_margin"] == 0.07
 
 
+def test_build_ai_rollout_candidates_register_expected_defaults():
+    cases = {
+        "rollout_32": {
+            "rollouts_per_move": 32,
+            "max_rollout_turns": 80,
+            "max_step_time_ms": 750.0,
+            "epsilon": 0.15,
+            "playout_policy": "greedy",
+            "cutoff_eval": "draw",
+        },
+        "rollout_risk_playout": {
+            "rollouts_per_move": 32,
+            "max_rollout_turns": 80,
+            "max_step_time_ms": 750.0,
+            "epsilon": 0.10,
+            "playout_policy": "greedy_risk",
+            "cutoff_eval": "draw",
+        },
+        "rollout_cutoff_eval": {
+            "rollouts_per_move": 32,
+            "max_rollout_turns": 80,
+            "max_step_time_ms": 750.0,
+            "epsilon": 0.10,
+            "playout_policy": "greedy_risk",
+            "cutoff_eval": "current",
+        },
+    }
+    for kind, expected in cases.items():
+        ai = build_ai(kind, seed=1)
+        signature = ai_version_signature(ai)
+
+        assert ai.name == kind
+        for key, value in expected.items():
+            assert getattr(ai, key) == value
+            assert signature[key] == value
+
+
+def test_build_ai_rollout_candidate_kwargs_can_override_defaults():
+    ai = build_ai("rollout_32", seed=1, rollouts_per_move=2, max_step_time_ms=20)
+
+    assert ai.rollouts_per_move == 2
+    assert ai.max_step_time_ms == 20.0
+
+
 def test_build_ai_expectimax_v2_registers_signature_fields():
     ai = build_ai("expectimax_v2", seed=1, depth=2, time_limit_ms=300, randomize_ties=False)
     signature = ai_version_signature(ai)

@@ -14,6 +14,7 @@
 已经具备：
 
 - `RolloutAI.last_diagnostics`：兼容性记录候选 move 的 visits / score / winrate / cutoffs / avg。
+- `RolloutAI.last_root_stats`：canonical root stats 记录候选 move 的 visits / wins / losses / draws / score / winrate / avg / low_confidence；`last_diagnostics` 保持兼容别名。
 - GUI 右侧推荐区：显示候选 rollout 明细，并能标记“置信：低”。
 - `scripts/rollout_stability.py`：固定局面重复推荐稳定性审计。
 - `scripts/quick_bench.py --red-kwargs/--blue-kwargs`：可以用 JSON kwargs 评测参数候选。
@@ -33,7 +34,6 @@
 
 还缺：
 
-- 统一的 `RolloutAI.last_root_stats` 数据结构，字段应直接包含 wins / losses / cutoffs / score，而不是只依赖兼容用的 `last_diagnostics`。
 - 可注册到 `build_ai()` 和 `bench_ai.py` profile 的 rollout 候选 kind。
 - 截断估值 evaluator，当前 rollout 遇到未终局仍把结果当 `None -> 0.5`，方差偏高。
 - Zweistein-lite 估值函数。
@@ -157,6 +157,8 @@ Wilson 95% lower >= 50%
 
 ## 7. 任务组 P1：Rollout 根节点诊断收敛
 
+状态：已完成（2026-05-15）。
+
 目标：解释怪棋，不先改棋力。
 
 设计：
@@ -213,7 +215,17 @@ visits=128, score=0.42, wins=51, losses=70, draws=7
 - 不改变默认 AI 参数。
 - `pytest`、`smoke_test.py` 通过。
 
+完成记录：
+
+- 新增 canonical `RootMoveStats` 与 `RolloutAI.last_root_stats`。
+- `last_diagnostics` 保持兼容别名。
+- GUI 优先读取 `last_root_stats`，候选明细显示 visits / score / winrate / wins / losses / draws / avg / 低置信标记。
+- 默认 `rollout` 参数、release 默认参数和 core 规则均未变更。
+- 验证：`scripts/smoke_test.py` 正常退出；全量 `pytest` 为 `496 passed in 11.29s`。
+
 ## 8. 任务组 P2：三个 rollout 候选小样本筛选
+
+状态：已完成实现与 candidate 小样本（2026-05-15）；三者均未过门禁，不晋升默认。
 
 目标：把 playout policy、截断估值和 rollout 数量变成可 bench 的候选。
 
@@ -293,6 +305,26 @@ promotion stage: opponent=rollout, games_per_side=400
 - 每个候选都有 JSON + MD 报告。
 - 候选不过门禁时不接 GUI 默认。
 - 至少保留一个最强候选进入 P3 组合验证。
+
+完成记录：
+
+| 候选 | 合并局数 | 胜率 | timeouts | 门禁 |
+|---|---:|---:|---:|---|
+| `rollout_32` | 200 | 54.5% | 4 | 失败：胜率低于 55%，timeouts > 0 |
+| `rollout_risk_playout` | 200 | 57.0% | 10 | 失败：timeouts > 0 |
+| `rollout_cutoff_eval` | 200 | 57.5% | 11 | 失败：timeouts > 0 |
+
+报告：
+
+- `reports/p2_candidate_rollout_32_20260515.json` / `.md`
+- `reports/p2_candidate_rollout_risk_playout_20260515.json` / `.md`
+- `reports/p2_candidate_rollout_cutoff_eval_20260515.json` / `.md`
+
+结论：
+
+- `rollout_risk_playout` 与 `rollout_cutoff_eval` 胜率有正向信号，但真实 timeout 门禁失败，不能进入默认 AI 或 promotion。
+- 后续若继续 P2 分支，应优先降低 step timeout（例如减少 rollout 数、降低 cutoff 深度或优化 playout），再重跑 candidate。
+- 默认 `rollout`、release 默认参数和 GUI 默认推荐均保持不变。
 
 ## 9. 任务组 P3：Zweistein-lite evaluator
 
@@ -431,8 +463,8 @@ B：防守，阻止我方下一手直接胜
 ## 12. 推荐执行顺序
 
 ```text
-P1 Rollout 根节点诊断收敛
-  -> P2 三个 rollout 候选小样本筛选
+P1 Rollout 根节点诊断收敛（已完成）
+  -> P2 三个 rollout 候选小样本筛选（已完成，未晋升）
   -> P3 Zweistein-lite evaluator
   -> P3b rollout_zweistein_cutoff + risk-aware playout 组合
   -> P4 MCTS opponent node 修复

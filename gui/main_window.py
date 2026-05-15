@@ -45,13 +45,17 @@ def _format_rollout_diagnostic(diagnostic: object) -> str:
     move = getattr(diagnostic, "move")
     visits = int(getattr(diagnostic, "visits"))
     score = float(getattr(diagnostic, "score", getattr(diagnostic, "winrate")))
-    winrate = float(getattr(diagnostic, "winrate"))
-    cutoffs = float(getattr(diagnostic, "cutoffs", 0.0))
-    avg = float(getattr(diagnostic, "avg"))
+    winrate = float(getattr(diagnostic, "winrate", score))
+    wins = float(getattr(diagnostic, "wins", winrate * visits))
+    draws = float(getattr(diagnostic, "draws", getattr(diagnostic, "cutoffs", 0.0)))
+    losses = float(getattr(diagnostic, "losses", max(0.0, visits - wins - draws)))
+    avg = float(getattr(diagnostic, "avg", 2 * score - 1))
+    confidence = ", 置信=低" if getattr(diagnostic, "low_confidence", False) else ""
     return (
         f"{format_move_label(move, distinguish_self_capture=True)}\n"
         f"visits={visits}, score={score:.2f}, winrate={winrate:.2f}, "
-        f"cutoffs={cutoffs:.0f}, avg={avg:.2f}"
+        f"wins={wins:.0f}, losses={losses:.0f}, draws={draws:.0f}, avg={avg:.2f}"
+        f"{confidence}"
     )
 
 
@@ -694,7 +698,9 @@ class MainWindow(tk.Frame):
                 lines.append("采样：超时，已使用 greedy_risk 回退")
             else:
                 lines.append("采样：超时，使用已完成样本")
-        diagnostics = getattr(self._recommender, "last_diagnostics", [])
+        diagnostics = getattr(self._recommender, "last_root_stats", None)
+        if diagnostics is None:
+            diagnostics = getattr(self._recommender, "last_diagnostics", [])
         if diagnostics:
             lines.append("rollout 候选：")
             lines.extend(_format_rollout_diagnostic(diagnostic) for diagnostic in diagnostics)

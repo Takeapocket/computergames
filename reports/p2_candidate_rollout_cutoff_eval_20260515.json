@@ -1,0 +1,108 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-15T16:56:33",
+  "git_revision": "bcba4a5f53cb838ba3aa0aa6cd086b050a0adc26",
+  "git_dirty": true,
+  "command": "python scripts/bench_ai.py --candidate rollout_cutoff_eval --stage candidate --report-name p2_candidate_rollout_cutoff_eval_20260515",
+  "python_version": "3.11.9",
+  "starting_layout_id": "default_no_stuck_corner_v1",
+  "experiment": "rollout_cutoff_eval_candidate",
+  "candidate": "rollout_cutoff_eval",
+  "candidate_kwargs": {},
+  "stage": "candidate",
+  "opponent": "rollout",
+  "opponent_kwargs": {},
+  "games_per_side": 100,
+  "red_direction": {
+    "label": "candidate_red_vs_rollout_blue",
+    "summary": {
+      "games": 100,
+      "candidate_wins": 63,
+      "opponent_wins": 37,
+      "draws": 0,
+      "candidate_win_rate": 0.63,
+      "candidate_win_ci95": [
+        0.5322034757513312,
+        0.7181778743049083
+      ],
+      "average_turns": 16.79,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 7,
+      "average_step_time_ms": 183.08640083377927,
+      "p95_step_time_ms": 482.51420000451617,
+      "p99_step_time_ms": 584.2181999905733,
+      "max_step_time_ms": 750.3390000056243
+    }
+  },
+  "blue_direction": {
+    "label": "rollout_red_vs_candidate_blue",
+    "summary": {
+      "games": 100,
+      "candidate_wins": 52,
+      "opponent_wins": 48,
+      "draws": 0,
+      "candidate_win_rate": 0.52,
+      "candidate_win_ci95": [
+        0.4231640509017654,
+        0.6153561567991945
+      ],
+      "average_turns": 16.8,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 4,
+      "average_step_time_ms": 180.14621458338902,
+      "p95_step_time_ms": 453.69599999685306,
+      "p99_step_time_ms": 590.4632000019774,
+      "max_step_time_ms": 750.3173000004608
+    }
+  },
+  "combined": {
+    "games": 200,
+    "candidate_wins": 115,
+    "candidate_win_rate": 0.575,
+    "candidate_win_ci95": [
+      0.5057080512046821,
+      0.6414650479075696
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 11,
+    "average_step_time_ms": 181.61630770858415,
+    "p95_step_time_ms": 482.51420000451617,
+    "p99_step_time_ms": 590.4632000019774,
+    "max_step_time_ms": 750.3390000056243
+  },
+  "gates_pass": false,
+  "gate_failures": [
+    "timeouts = 11（要求 = 0）"
+  ],
+  "ai_versions": {
+    "candidate": {
+      "name": "rollout_cutoff_eval",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "current"
+    },
+    "opponent": {
+      "name": "rollout",
+      "rollouts_per_move": 16,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 500.0,
+      "epsilon": 0.15,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 16,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy",
+      "cutoff_eval": "draw"
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 610.168
+}

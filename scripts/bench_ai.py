@@ -75,6 +75,18 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
         "candidate": {"opponent": "greedy_risk", "games_per_side": 200},
         "promotion": {"opponent": "rollout",     "games_per_side": 400},
     },
+    "rollout_32": {
+        "candidate": {"opponent": "rollout", "games_per_side": 100},
+        "promotion": {"opponent": "rollout", "games_per_side": 400},
+    },
+    "rollout_risk_playout": {
+        "candidate": {"opponent": "rollout", "games_per_side": 100},
+        "promotion": {"opponent": "rollout", "games_per_side": 400},
+    },
+    "rollout_cutoff_eval": {
+        "candidate": {"opponent": "rollout", "games_per_side": 100},
+        "promotion": {"opponent": "rollout", "games_per_side": 400},
+    },
     "rollout_tactical": {
         # 设计 §10.3：candidate vs rollout 等价于 MCTS 的 promotion，
         # 因此候选阶段直接套晋升级 Wilson 下界门禁，不另跑 promotion。

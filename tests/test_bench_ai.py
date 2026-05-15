@@ -28,6 +28,17 @@ def test_resolve_profile_returns_empty_dict_for_unknown_stage_of_known_candidate
     assert bench_ai._resolve_profile("rollout_tactical", "promotion") == {}
 
 
+def test_resolve_profile_returns_defaults_for_p2_rollout_candidates():
+    for kind in ("rollout_32", "rollout_risk_playout", "rollout_cutoff_eval"):
+        candidate = bench_ai._resolve_profile(kind, "candidate")
+        promotion = bench_ai._resolve_profile(kind, "promotion")
+
+        assert candidate["opponent"] == "rollout"
+        assert candidate["games_per_side"] == 100
+        assert promotion["opponent"] == "rollout"
+        assert promotion["games_per_side"] == 400
+
+
 def test_resolve_gates_for_mcts_promotion_matches_stage_gates():
     gates = bench_ai._resolve_gates("mcts_eval_v1", "promotion")
 
