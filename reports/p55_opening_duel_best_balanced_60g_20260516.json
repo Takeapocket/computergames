@@ -1,0 +1,153 @@
+{
+  "report_path": "reports/p55_opening_duel_best_balanced_60g_20260516.md",
+  "generated_at": "2026-05-16T18:38:30",
+  "argv": [
+    "--candidate-report",
+    "reports/p53_opening_seed3_validation2_20260516.json",
+    "--candidate-section",
+    "validation_top",
+    "--candidate-index",
+    "2",
+    "--baseline-layout",
+    "balanced_v1",
+    "--games-per-side",
+    "10",
+    "--seed-pool",
+    "23026,23027,23028",
+    "--max-turns",
+    "200",
+    "--output",
+    "reports/p55_opening_duel_best_balanced_60g_20260516.md",
+    "--json-output",
+    "reports/p55_opening_duel_best_balanced_60g_20260516.json"
+  ],
+  "candidate": {
+    "source_report": "reports/p53_opening_seed3_validation2_20260516.json",
+    "source_section": "validation_top",
+    "source_index": 2,
+    "style": "balanced",
+    "red_layout": {
+      "1": [
+        0,
+        0
+      ],
+      "2": [
+        1,
+        0
+      ],
+      "3": [
+        1,
+        1
+      ],
+      "4": [
+        2,
+        0
+      ],
+      "5": [
+        0,
+        2
+      ],
+      "6": [
+        0,
+        1
+      ]
+    },
+    "blue_layout": {
+      "1": [
+        4,
+        4
+      ],
+      "2": [
+        3,
+        4
+      ],
+      "3": [
+        3,
+        3
+      ],
+      "4": [
+        2,
+        4
+      ],
+      "5": [
+        4,
+        2
+      ],
+      "6": [
+        4,
+        3
+      ]
+    }
+  },
+  "baseline_layout_id": "balanced_v1",
+  "games_per_side": 10,
+  "seed_pool": [
+    23026,
+    23027,
+    23028
+  ],
+  "max_turns": 200,
+  "ai_kind": "rollout",
+  "ai_kwargs_source": "release/v1.0/default_params.json",
+  "ai_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "stats": {
+    "wins": 23,
+    "games": 60,
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "max_step_time_ms": 720.687099998031,
+    "avg_step_time_ms": 270.05552168772704,
+    "total_step_time_ms": 320015.79319995653,
+    "step_time_count": 1185,
+    "candidate_as_red": {
+      "wins": 13,
+      "games": 30,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.4756999999518,
+      "avg_step_time_ms": 267.45590851783743,
+      "total_step_time_ms": 156996.61829997058,
+      "step_time_count": 587
+    },
+    "candidate_as_blue": {
+      "wins": 10,
+      "games": 30,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.687099998031,
+      "avg_step_time_ms": 272.60731588626413,
+      "total_step_time_ms": 163019.17489998596,
+      "step_time_count": 598
+    },
+    "seed_count": 3,
+    "seeds": [
+      23026,
+      23027,
+      23028
+    ]
+  },
+  "candidate_win_rate": 0.38333333333333336,
+  "candidate_win_ci95": [
+    0.2708808958488824,
+    0.5098263545959686
+  ],
+  "decision": {
+    "promote_layout": false,
+    "reason": "60-game expansion failed: candidate scored 23/60 (38.3%), CI95 upper=51.0% < 55.0%; stop this candidate route; defaults unchanged."
+  },
+  "wall_seconds": 320.06
+}

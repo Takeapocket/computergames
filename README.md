@@ -10,7 +10,7 @@
 - 规则、GUI、棋谱、计时、七盘制比赛流程、崩溃自救、AI harness 均已闭环。
 - 当前默认参赛 AI 是 `rollout` kind + P3 promotion 显式参数：32 rollout / move、80 half-turn cutoff、750ms step deadline、epsilon 0.10、risk-aware playout、Zweistein cutoff、30ms deadline safety。
 - `greedy_risk` 保留为应急回退；`expectimax`、`expectimax_v2`、`mcts` 和其他 rollout/Zweistein 变体均为实验候选。
-- P5.0/P5.1/P5.2 只验证开局搜索 harness、分层候选和小规模 seed pool 流程，没有晋升默认布局。
+- P5.0/P5.1/P5.2/P5.3/P5.4/P5.5 只验证开局搜索 harness、分层候选、逐步扩大 seed pool / validation games、以及候选 vs 默认布局双边前置验证，没有晋升默认布局。
 
 ## 快速启动
 
@@ -56,7 +56,7 @@ GUI、core、record 或公共接口变更后，应运行完整 pytest。文档-o
 - GUI：开局录入、对方布局录入、骰子录入、合法走法执行、悔棋、AI 推荐、推荐候选诊断。
 - 比赛流程：单方 4 分钟包干计时、七盘制、甲乙身份、先手序列、比分推进、先胜 4 盘判定。
 - 棋谱与恢复：JSON 棋谱保存/加载、盘内 auto-save、整轮 auto-save、崩溃后恢复。
-- AI 与 harness：`quick_bench`、`bench_ai`、`tournament`、`param_sweep`、`search_openings`，报告写入 `reports/`。
+- AI 与 harness：`quick_bench`、`bench_ai`、`tournament`、`param_sweep`、`search_openings`、`compare_opening_layouts`，报告写入 `reports/`。
 
 ## 项目结构
 
@@ -69,7 +69,8 @@ gui/           Tkinter 离线 GUI：main_window / board_widget / control_panel /
 record/        JSON 棋谱、状态序列化、auto_save、match_record
 adapters/      统一平台/API 适配层预留，目前无正式实现
 scripts/       run_gui / smoke_test / quick_bench / bench_ai / tournament /
-               param_sweep / search_openings / s2_rehearsal
+               param_sweep / search_openings / compare_opening_layouts /
+               s2_rehearsal
 tests/         pytest 自动测试
 docs/          规则、项目摘要、现场操作清单、应急手册
 release/v1.0/  封版比赛产物
@@ -124,7 +125,7 @@ replays/       auto_save 与对战 replay
 - `PROJECT_MEMORY.md`：当前事实快照和历史决策
 - `release/v1.0/test_report.md`：封版测试和默认 AI 晋升依据
 - `reports/ai_promotion_decision.md`：默认 AI 决策记录
-- `reports/p52_opening_small_scale_gate_20260516.md`：最新 P5 开局搜索小规模门禁报告
+- `reports/p55_opening_duel_best_balanced_60g_20260516.md`：最新 P5 候选布局 vs 默认布局 60 局扩样报告
 
 ## 开发纪律
 

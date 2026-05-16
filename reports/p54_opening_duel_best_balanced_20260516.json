@@ -1,0 +1,153 @@
+{
+  "report_path": "reports/p54_opening_duel_best_balanced_20260516.md",
+  "generated_at": "2026-05-16T18:23:28",
+  "argv": [
+    "--candidate-report",
+    "reports/p53_opening_seed3_validation2_20260516.json",
+    "--candidate-section",
+    "validation_top",
+    "--candidate-index",
+    "2",
+    "--baseline-layout",
+    "balanced_v1",
+    "--games-per-side",
+    "4",
+    "--seed-pool",
+    "22026,22027,22028",
+    "--max-turns",
+    "200",
+    "--output",
+    "reports/p54_opening_duel_best_balanced_20260516.md",
+    "--json-output",
+    "reports/p54_opening_duel_best_balanced_20260516.json"
+  ],
+  "candidate": {
+    "source_report": "reports/p53_opening_seed3_validation2_20260516.json",
+    "source_section": "validation_top",
+    "source_index": 2,
+    "style": "balanced",
+    "red_layout": {
+      "1": [
+        0,
+        0
+      ],
+      "2": [
+        1,
+        0
+      ],
+      "3": [
+        1,
+        1
+      ],
+      "4": [
+        2,
+        0
+      ],
+      "5": [
+        0,
+        2
+      ],
+      "6": [
+        0,
+        1
+      ]
+    },
+    "blue_layout": {
+      "1": [
+        4,
+        4
+      ],
+      "2": [
+        3,
+        4
+      ],
+      "3": [
+        3,
+        3
+      ],
+      "4": [
+        2,
+        4
+      ],
+      "5": [
+        4,
+        2
+      ],
+      "6": [
+        4,
+        3
+      ]
+    }
+  },
+  "baseline_layout_id": "balanced_v1",
+  "games_per_side": 4,
+  "seed_pool": [
+    22026,
+    22027,
+    22028
+  ],
+  "max_turns": 200,
+  "ai_kind": "rollout",
+  "ai_kwargs_source": "release/v1.0/default_params.json",
+  "ai_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "stats": {
+    "wins": 14,
+    "games": 24,
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "max_step_time_ms": 720.6771000019216,
+    "avg_step_time_ms": 283.5496369862334,
+    "total_step_time_ms": 124194.74099997024,
+    "step_time_count": 438,
+    "candidate_as_red": {
+      "wins": 9,
+      "games": 12,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.3881000023102,
+      "avg_step_time_ms": 277.2796868543458,
+      "total_step_time_ms": 59060.57329997566,
+      "step_time_count": 213
+    },
+    "candidate_as_blue": {
+      "wins": 5,
+      "games": 12,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.6771000019216,
+      "avg_step_time_ms": 289.4851897777537,
+      "total_step_time_ms": 65134.16769999458,
+      "step_time_count": 225
+    },
+    "seed_count": 3,
+    "seeds": [
+      22026,
+      22027,
+      22028
+    ]
+  },
+  "candidate_win_rate": 0.5833333333333334,
+  "candidate_win_ci95": [
+    0.3883433764938864,
+    0.7553265275346177
+  ],
+  "decision": {
+    "promote_layout": false,
+    "reason": "This layout duel is a pre-check; promotion still requires the full layout gate."
+  },
+  "wall_seconds": 124.22
+}

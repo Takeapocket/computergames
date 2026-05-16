@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-16（P5.2 opening small-scale gate 后同步候选状态）
+更新时间：2026-05-16（P5.5 opening duel 60-game expansion 后同步候选状态）
 
 ## 项目定位
 
@@ -27,11 +27,14 @@
 - **2026-05-16 P5.0 opening entry guard 已完成**：`scripts/search_openings.py` 已改为使用当前 release 默认 `rollout` 显式 kwargs 评测布局候选，且统计真实 `timeouts`。仅跑小样本 smoke，生成 `reports/p5_opening_entry_guard_20260516.md` / `.json`；未改 GUI/release 默认布局。
 - **2026-05-16 P5.1 opening strata + seed pool 已完成**：`scripts/search_openings.py` 支持 stratified 候选分层和 seed-pool 聚合；P5.1 smoke 三类各 1 个候选、seed pool 2026/2027，validation 结果为 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。报告见 `reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`；样本不足以晋升布局，未改 GUI/release 默认布局。
 - **2026-05-16 P5.2 opening small-scale gate 已完成**：复用当前 release 默认 `rollout` 显式 kwargs，分层候选扩大到每类 2 个、seed pool 2026/2027，train 6 个候选结果为 5/8、4/8、3/8、3/8、3/8、2/8；validation top3 为 3/8、4/8、4/8，0 illegal/crash/timeout。报告见 `reports/p52_opening_small_scale_gate_20260516.md` / `.json`；仍不是布局晋升证据，未改 GUI/release 默认布局。
+- **2026-05-16 P5.3 opening seed3 validation2 gate 已完成**：继续使用当前 release 默认 `rollout` 显式 kwargs，分层候选保持每类 2 个，seed pool 扩到 2026/2027/2028，validation games 提高到每 opponent 2 局；train top3 均为 6/12，validation top3 为 10/24、10/24、11/24，0 illegal/crash/timeout。报告见 `reports/p53_opening_seed3_validation2_20260516.md` / `.json`；当前候选没有布局晋升信号，未改 GUI/release 默认布局。
+- **2026-05-16 P5.4 opening layout duel precheck 已完成**：新增 `scripts/compare_opening_layouts.py`，取 P5.3 validation 最好的 balanced 候选直接对当前默认 `balanced_v1` 做红蓝双边小样本验证。结果：合并 14/24 = 58.3%，Wilson CI [38.8%, 75.5%]；candidate as red 9/12，candidate as blue 5/12，0 illegal/crash/timeout。报告见 `reports/p54_opening_duel_best_balanced_20260516.md` / `.json`；这是前置正信号，但不足以晋升默认布局。
+- **2026-05-16 P5.5 opening duel 60-game expansion 已完成**：复用 P5.4 同一 balanced 候选，扩到 60 局双边复验。结果：合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；candidate as red 13/30，candidate as blue 10/30，0 illegal/crash/timeout。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`；P5.4 小样本正信号未复现，停止该候选晋升路线，未改 GUI/release 默认布局。
 
 下一会话优先级：
 1. **release/v1.0 归档与赛前核对**：sign-off 复验已记录；下一步是备份正式提交物和现场启动包。
 2. AI 研究若继续推进，当前默认基线已是 `rollout` kind + P3 promotion 显式参数；后续候选必须直接对这个配置过门禁。
-3. P5.2 已完成开局搜索小规模扩大样本门禁；后续 P5 候选仍必须直接对当前 release 默认 rollout kwargs 验证，且 P5.0/P5.1/P5.2 报告都不能作为默认布局晋升证据。
+3. P5.5 已完成同一候选的 60 局扩样复验；后续 P5 候选仍必须直接对当前 release 默认 rollout kwargs 验证，且 P5.0/P5.1/P5.2/P5.3/P5.4/P5.5 报告都不能作为默认布局晋升证据。
 
 ## 当前技术栈
 
@@ -98,5 +101,5 @@
 详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
 
 1. **release/v1.0 归档**：把 release/v1.0 当作正式提交物备份；准备现场启动包。
-2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数，P4.1 已停止 MCTS。下一步转 P5 开局/布局搜索；任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
+2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数，P4.1 已停止 MCTS，P5.5 已证明当前 balanced 候选小样本正信号不可复现。任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
 3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。

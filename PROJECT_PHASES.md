@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-05-16（P5.2 opening small-scale gate 后同步默认 AI 参数和开局搜索约束）
+更新时间：2026-05-16（P5.5 opening duel 60-game expansion 后同步默认 AI 参数和开局搜索约束）
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：离线 GUI 参赛程序
 
@@ -41,9 +41,12 @@
 | 开局搜索 P5.0 | entry guard 已完成，未晋升 | `scripts/search_openings.py` 已改为读取 `release/v1.0/default_params.json`，使用当前 release 默认 `rollout` 显式 kwargs 做双方 AI，不再用旧 `greedy_risk` self-play 作为主评测口径；stats 聚合真实 `timeouts`。小样本 smoke：`sample_size=5`、train/validation 每 opponent 各 2 局，validation top 两个布局为 5/8 和 6/8，0 illegal/crash/timeout。报告见 `reports/p5_opening_entry_guard_20260516.md` / `.json`。样本不足以晋升布局，未改 GUI/release 默认布局。 |
 | 开局搜索 P5.1 | 分层与 seed 池已完成，未晋升 | `scripts/search_openings.py` 支持 `candidate_mode=sample|stratified`、`per_style`、`seed_pool` 和 `json_output`；stratified 模式按 aggressive / balanced / defensive 分层选候选，seed pool 聚合跨 seed 对战 stats，JSON 固化 `train_rows` 与 `decision`。P5.1 smoke：三类各 1 个候选、train/validation 每 opponent 各 1 局、seed pool 2026/2027，validation 结果 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。报告见 `reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`。样本不足以晋升布局，未改 GUI/release 默认布局。 |
 | 开局搜索 P5.2 | 小规模扩大样本门禁已完成，未晋升 | 复用 P5.1 分层与 seed pool 流程，`--candidate-mode stratified --per-style 2 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027` 跑 6 个候选；train 结果 5/8、4/8、3/8、3/8、3/8、2/8，validation top3 为 3/8、4/8、4/8，0 illegal/crash/timeout。报告见 `reports/p52_opening_small_scale_gate_20260516.md` / `.json`。样本仍远小于布局晋升门禁，未改 GUI/release 默认布局。 |
+| 开局搜索 P5.3 | 3 seed + validation=2 门禁已完成，未晋升 | 复用 P5.2 分层流程，`--candidate-mode stratified --per-style 2 --games 1 --validation-games 2 --top-k 3 --seed-pool 2026,2027,2028` 跑 6 个候选；train top3 均为 6/12，validation top3 为 10/24、10/24、11/24，0 illegal/crash/timeout。报告见 `reports/p53_opening_seed3_validation2_20260516.md` / `.json`。结果没有布局晋升信号，未改 GUI/release 默认布局。 |
+| 开局搜索 P5.4 | 候选 vs 默认布局双边前置验证已完成，未晋升 | 新增 `scripts/compare_opening_layouts.py`，直接对 `balanced_v1` 做 candidate-as-red / candidate-as-blue 双边验证。取 P5.3 validation 最好的 balanced 候选，`--games-per-side 4 --seed-pool 22026,22027,22028`，合并 14/24 = 58.3%，Wilson CI [38.8%, 75.5%]；红方 9/12、蓝方 5/12，0 illegal/crash/timeout。报告见 `reports/p54_opening_duel_best_balanced_20260516.md` / `.json`。样本和 CI 不满足晋升门槛，未改 GUI/release 默认布局。 |
+| 开局搜索 P5.5 | 60 局扩样复验已完成，停止该候选晋升路线 | 复用 P5.4 同一 balanced 候选，`--games-per-side 10 --seed-pool 23026,23027,23028`，对当前默认 `balanced_v1` 做 60 局双边复验。结果合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；红方 13/30、蓝方 10/30，0 illegal/crash/timeout。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`。P5.4 小样本正信号未复现，未改 GUI/release 默认布局。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**release/v1.0 归档/赛前核对；P5.2 已完成 opening-search 小规模扩大样本门禁。若继续 P5，应先把 seed 池扩到至少 3 个并提高 validation games，仍不直接晋升布局；比赛后再推进 Expectimax 结构修复。**
+下一步主线：**release/v1.0 归档/赛前核对；P5.5 已完成同一候选 60 局扩样复验，P5.4 小样本正信号未复现。赛前不建议继续扩大该布局候选；若继续 P5，应换候选或转为赛后开局库研究。比赛后再推进 Expectimax 结构修复。**
 详细方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
 执行计划见：`docs/superpowers/plans/2026-05-12-final-sprint-plan.md`
 
@@ -289,7 +292,7 @@ P4 entry guard 约束（2026-05-16）：
 MCTS opponent DecisionNode 已修复为最小化 root-player 价值。
 `mcts_eval_v1` candidate/promotion profile 必须对当前 release 默认 `rollout` 显式 kwargs。
 裸 `opponent="rollout"` 只代表旧 flat rollout，不能作为 P4 晋升对手。
-P4.1 targeted fix 已完成，zweistein leaf probe 胜率 25.0%，低于 45% 停止线；停止 MCTS，转 P5。P5.0 entry guard 已完成：开局搜索主评测入口现在使用当前 release 默认 rollout 显式 kwargs，未晋升布局。P5.1 已完成分层候选与 seed 池 smoke。P5.2 已完成小规模扩大样本门禁，validation top3 为 3/8、4/8、4/8，未晋升布局。
+P4.1 targeted fix 已完成，zweistein leaf probe 胜率 25.0%，低于 45% 停止线；停止 MCTS，转 P5。P5.0 entry guard 已完成：开局搜索主评测入口现在使用当前 release 默认 rollout 显式 kwargs，未晋升布局。P5.1 已完成分层候选与 seed 池 smoke。P5.2 已完成小规模扩大样本门禁，validation top3 为 3/8、4/8、4/8。P5.3 已完成 3 seed / validation=2 门禁，validation top3 为 10/24、10/24、11/24。P5.4 已完成候选 vs 默认布局双边前置验证，合并 14/24、CI 下界 38.8%。P5.5 扩到 60 局后跌至 23/60、CI 下界 27.1%，停止该候选晋升路线。
 ```
 
 建议实现边界：
@@ -427,4 +430,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**S2/S3/S4 全部闭环；2026-05-16 已完成 P3 受控默认替换、P4/P4.1 MCTS targeted fix 与 probe、P5.0 opening-search entry guard、P5.1 分层候选与 seed 池 smoke、P5.2 小规模扩大样本门禁。`rollout` 仍是 GUI/release 默认 AI kind，但默认参数已改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集；`greedy_risk` 保留为应急回退。P5 后续只允许基于当前 release 默认 rollout kwargs 逐步扩大开局布局搜索，P5.0/P5.1/P5.2 都不是布局晋升证据。**
+当前最近任务：**S2/S3/S4 全部闭环；2026-05-16 已完成 P3 受控默认替换、P4/P4.1 MCTS targeted fix 与 probe、P5.0 opening-search entry guard、P5.1 分层候选与 seed 池 smoke、P5.2 小规模扩大样本门禁、P5.3 3 seed / validation=2 门禁、P5.4 候选 vs 默认布局双边前置验证、P5.5 60 局扩样复验。`rollout` 仍是 GUI/release 默认 AI kind，但默认参数已改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集；`greedy_risk` 保留为应急回退。P5 后续只允许基于当前 release 默认 rollout kwargs 验证，P5.0/P5.1/P5.2/P5.3/P5.4/P5.5 都不是布局晋升证据。**

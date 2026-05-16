@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-16（P5.2 opening small-scale gate 后同步；S2/S3/S4 全部闭环）
+更新时间：2026-05-16（P5.5 opening duel 60-game expansion 后同步；S2/S3/S4 全部闭环）
 
 ## 当前结论
 
@@ -26,6 +26,9 @@
 - **2026-05-16 P5.0 opening-search entry guard 已完成，未晋升布局**：`scripts/search_openings.py` 主评测入口已从旧 `greedy_risk` self-play 改为读取 `release/v1.0/default_params.json`，使用当前 release 默认 `kind="rollout"` + P3 promotion 显式 kwargs 作为双方 AI；stats 聚合新增真实 `timeouts`。小样本 smoke 仅跑 `sample_size=5`、train/validation 每 opponent 各 2 局，生成 `reports/p5_opening_entry_guard_20260516.md` / `.json`。结果只证明 P5 harness 入口正确：validation top 两个红方布局分别为 5/8 和 6/8，0 illegal/crash/timeout；样本远小于晋升门禁，未改 GUI 默认布局、未改 release 默认布局。
 - **2026-05-16 P5.1 opening strata + seed pool 已完成，未晋升布局**：`scripts/search_openings.py` 新增 `candidate_mode=sample|stratified`、`per_style`、`seed_pool`、`json_output`；stratified 模式按 aggressive / balanced / defensive 三类各取固定数量候选，seed pool 聚合跨 seed 对战 stats，并在报告中记录 `style`、`seed_count`、`seeds`、`train_rows`、`decision` 和真实 `timeouts`。P5.1 smoke：`candidate_mode=stratified --per-style 1 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027`，三类各 1 个候选，validation 结果为 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。报告见 `reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`。该样本只验证分层和 seed 池流程，未改 GUI/release 默认布局。
 - **2026-05-16 P5.2 opening small-scale gate 已完成，未晋升布局**：复用 P5.1 分层与 seed pool 流程，执行 `--candidate-mode stratified --per-style 2 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027`，共 6 个候选、train top 从 5/8 到 2/8，validation top3 分别为 3/8、4/8、4/8，`illegal_moves=0`、`crashes=0`、`timeouts=0`。报告见 `reports/p52_opening_small_scale_gate_20260516.md` / `.json`。该样本只证明扩大 smoke gate 仍可稳定运行，未达到晋升样本量或胜率门槛，未改 GUI/release 默认布局。
+- **2026-05-16 P5.3 opening seed3 validation2 gate 已完成，未晋升布局**：在 P5.2 基础上把 seed 池扩到 2026/2027/2028，并把 validation games 提高到每 opponent 2 局：`--candidate-mode stratified --per-style 2 --games 1 --validation-games 2 --top-k 3 --seed-pool 2026,2027,2028`。共 6 个候选，train top3 均为 6/12；validation top3 为 10/24、10/24、11/24，`illegal_moves=0`、`crashes=0`、`timeouts=0`。报告见 `reports/p53_opening_seed3_validation2_20260516.md` / `.json`。结果显示当前分层候选没有表现出默认布局晋升信号，GUI/release 默认布局不变。
+- **2026-05-16 P5.4 opening layout duel precheck 已完成，未晋升布局**：新增 `scripts/compare_opening_layouts.py`，用于把搜索候选直接对当前默认布局 `balanced_v1` 做红蓝双边小样本前置验证。取 P5.3 validation 表现最好的 balanced 候选（`validation_top[2]`，red=`1:00/2:10/3:11/4:20/5:02/6:01`），执行 `--games-per-side 4 --seed-pool 22026,22027,22028`，合并 14/24 = 58.3%，Wilson CI [38.8%, 75.5%]；candidate as red 9/12，candidate as blue 5/12，`illegal_moves=0`、`crashes=0`、`timeouts=0`。报告见 `reports/p54_opening_duel_best_balanced_20260516.md` / `.json`。这是前置正信号，但样本远小于晋升门槛且 CI 下界不足，GUI/release 默认布局不变。
+- **2026-05-16 P5.5 opening duel 60-game expansion 已完成，停止该候选晋升路线**：复用 P5.4 同一 balanced 候选，扩到 `--games-per-side 10 --seed-pool 23026,23027,23028`，直接对当前默认 `balanced_v1` 做 60 局双边复验。结果合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；candidate as red 13/30，candidate as blue 10/30，`illegal_moves=0`、`crashes=0`、`timeouts=0`。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`。P5.4 小样本正信号未能复现，该候选不进入正式晋升门禁，GUI/release 默认布局不变。
 
 ## 已确认的比赛事实
 
@@ -94,8 +97,8 @@
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
 2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 全部完成；AI 下一阶段 P1 / P2 / P2.5 / P3 均已完成。当前 GUI/release 默认是 `rollout` kind + P3 promotion 参数，不再是旧 flat rollout。
-3. P5.2 已完成 opening-search 小规模扩大样本门禁；下一步若继续 P5，应先决定是否把 seed 池扩到至少 3 个并提高 validation games，仍不得直接晋升布局。
-4. 任何默认布局变更仍必须直接对当前 release 默认 rollout kwargs 做门禁验证；P5.0/P5.1/P5.2 报告都不是晋升证据。
+3. P5.5 已完成同一候选的 60 局扩样双边复验；结果跌至 23/60、CI 下界 27.1%，停止该候选晋升路线。
+4. 任何默认布局变更仍必须直接对当前 release 默认 rollout kwargs 做正式门禁验证；P5.0/P5.1/P5.2/P5.3/P5.4/P5.5 报告都不是晋升证据。
 
 ## 待确认事项
 
