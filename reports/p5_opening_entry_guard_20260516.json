@@ -1,0 +1,79 @@
+{
+  "phase": "P5.0 opening entry guard",
+  "date": "2026-05-16",
+  "status": "entry_guard_passed_no_promotion",
+  "scope": {
+    "sample_size": 5,
+    "games_per_train_opponent": 2,
+    "validation_games_per_opponent": 2,
+    "top_k": 2,
+    "large_search": false,
+    "gui_default_layout_changed": false,
+    "release_default_layout_changed": false
+  },
+  "ai_config": {
+    "kind": "rollout",
+    "kwargs_source": "release/v1.0/default_params.json",
+    "kwargs": {
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0
+    }
+  },
+  "validation_top": [
+    {
+      "red_layout": {
+        "1": [0, 1],
+        "2": [2, 0],
+        "3": [0, 0],
+        "4": [1, 0],
+        "5": [1, 1],
+        "6": [0, 2]
+      },
+      "stats": {
+        "wins": 5,
+        "games": 8,
+        "win_rate": 0.625,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "avg_step_time_ms": 260.0624127274249,
+        "max_step_time_ms": 716.4923000018462
+      }
+    },
+    {
+      "red_layout": {
+        "1": [1, 0],
+        "2": [2, 0],
+        "3": [0, 2],
+        "4": [0, 1],
+        "5": [1, 1],
+        "6": [0, 0]
+      },
+      "stats": {
+        "wins": 6,
+        "games": 8,
+        "win_rate": 0.75,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "avg_step_time_ms": 319.81144852943544,
+        "max_step_time_ms": 720.3048000010313
+      }
+    }
+  ],
+  "decision": {
+    "promote_layout": false,
+    "reason": "P5.0 only verifies the opening-search harness baseline. The sample is intentionally too small for layout promotion."
+  },
+  "artifacts": {
+    "markdown_report": "reports/p5_opening_entry_guard_20260516.md"
+  }
+}

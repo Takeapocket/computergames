@@ -3,6 +3,12 @@
 日期：2026-05-13
 范围：在现有 AI 基础上新增一个 **实验性** MCTS 候选。Phase 1 只验证 UCT 树搜索、骰子随机节点建模和 root-player 视角回传；不替换默认 AI，不改变 release 配置。
 
+> 2026-05-16 entry guard 更新：当前 GUI/release 工作默认已不是旧 flat `rollout`，而是 `kind="rollout"` + P3 promotion 显式 kwargs（32 rollout / move、risk-aware playout、Zweistein cutoff、30ms deadline safety）。P4 的 `mcts_eval_v1` candidate/promotion profile 必须对这个当前 release 默认配置；裸 `opponent="rollout"` 不能作为 P4 晋升对手。
+>
+> 2026-05-16 candidate probe 更新：`mcts_eval_v1` 对当前 release 默认 rollout 的两组小样本均未过 candidate 门禁。`time_limit_ms=200` 双边 25+25 合并胜率 30.0%；默认 `time_limit_ms=500` 双边 10+10 合并胜率 30.0%；两者均 0 illegal/crash/timeout，但强度不足，不进入正式 200+200 candidate 或 promotion。
+>
+> 2026-05-16 P4.1 targeted fix 更新：新增最小真实局面测试验证 opponent DecisionNode 选择对 `root_player` 最差的应手；`MCTSAI` leaf 支持 `current|zweistein` evaluator。`mcts_eval_v1(leaf_evaluator=zweistein)` 双边 10+10 对当前 release 默认 rollout 胜率 25.0%，0 illegal/crash/timeout，低于 45% 停止线；停止 MCTS，转 P5。
+
 ## 0. 路线定位
 
 当前比赛版本已经具备稳定 GUI、七盘制流程、auto-save、release/v1.0 和默认 `rollout` AI。下一阶段 AI 提升的优先级不是“引入更高级算法”，而是用 harness 证明候选确实强于当前默认版本。
@@ -18,7 +24,7 @@
 
 ## 1. 背景
 
-当前默认 AI 是旧 flat `rollout`。已有历史报告显示：`rollout` vs `greedy_risk` 双边 800 局合并胜率 62.62%，0 illegal / 0 crash；timeout 结论为当时报表字段，2026-05-15 后新候选需使用真实 timeout telemetry。`expectimax_v2` vs `greedy_risk` 合并胜率 46.25%，不能晋升。
+历史背景：2026-05-13 本设计起草时默认 AI 是旧 flat `rollout`。2026-05-16 P3 已受控替换为 `kind="rollout"` + P3 promotion 显式 kwargs；后续 P4 候选必须对当前 release 默认配置复验。旧 flat `rollout` vs `greedy_risk` 的历史胜率只能作为背景，不再是 P4 晋升基线。
 
 `rollout` 使用 flat Monte Carlo：对每个候选走法独立做 N 次随机模拟，不共享搜索树。这种方式简单稳定，但会把预算平均花到所有候选走法上，可能浪费在明显较差的分支。
 
@@ -33,7 +39,7 @@ MCTS 通过维护共享搜索树解决这个问题，把计算资源集中到最
 3. 叶节点用现有 `evaluate()` 估值，不做 rollout。
 4. 统一 `root_player` 视角回传，避免视角翻转 bug。
 5. 先用 smoke 验证稳定性，再用 harness 判断是否值得扩大样本。
-6. 晋升候选必须对 `rollout` 有统计优势；只打赢 `greedy_risk` 不足以替换默认 AI。
+6. 晋升候选必须对当前 release 默认 `rollout` 显式 kwargs 有统计优势；只打赢 `greedy_risk` 或旧 flat `rollout` 不足以替换默认 AI。
 
 ## 3. 非目标
 
@@ -98,8 +104,8 @@ return root.children 中 visit_count 最大的 Move
 ```
 while leaf 已完全展开:
     if leaf is DecisionNode:
-        # UCT: 按每个 Move 对应 ChanceNode 的聚合统计选最大分支
-        move, chance = max(leaf.children.items(), key=uct_score)
+        # UCT: root-player 节点最大化 root-player value；opponent 节点最小化 root-player value
+        move, chance = select_by_turn_aware_uct(leaf, root_player)
         在 state 上 apply 对应的 move
         leaf = chance
     elif leaf is ChanceNode:
@@ -129,6 +135,7 @@ def normalize(raw: float) -> float:
 `math.tanh` 把任意实数压到 (-1, 1)，天然适合 UCT 的 exploitation 项。
 
 evaluate 的 `perspective` 参数始终传 `root_player`，保证回传值含义一致。
+因为回传值始终是 `root_player` 视角，DecisionNode 选择必须区分行动方：`node.player is root_player` 时最大化 exploitation；`node.player is root_player.opponent` 时最小化 exploitation。探索项仍为正，未访问子节点仍优先探索。
 
 ### backprop(path, value)
 
@@ -245,7 +252,7 @@ MCTS 的核心优势：把 RolloutAI 浪费在"差候选走法"上的模拟时�
 | 风险 | 缓解 |
 |------|------|
 | 骰子节点写歪（当成决策节点用 UCT） | 代码 review 显式区分 DecisionNode 和 ChanceNode，ChanceNode 不用 UCT |
-| 回传视角错误 | 全部用 root_player 视角，`evaluate(state, root_player)`，不加 risk 项 |
+| 回传视角错误 | 全部用 root_player 视角，`evaluate(state, root_player)`，不加 risk 项；opponent DecisionNode 选择时最小化 root-player value |
 | evaluator 值域不归一 | `tanh(raw / SCALE)`；如果 bench 发现 SCALE 不当，作为第二优先级调 |
 | 耗时超标 | `time_limit_ms` 硬截止，超时返回当前 visit_count 最多的 child |
 | 胜率不如 `rollout` | 保留为实验代码，不进入 GUI/release 默认 |
@@ -274,7 +281,7 @@ max_step_time_ms < 1000ms
 候选阶段：
 
 ```
-mcts_eval_v1 vs greedy_risk 双边各 ≥ 200 局
+mcts_eval_v1 vs current release default rollout kwargs 双边各 ≥ 200 局
 合并胜率 ≥ 55%
 illegal_moves = 0, crashes = 0, 基于 quick_bench.py / bench_ai.py 聚合的真实 timeouts = 0
 avg_step_time_ms ≤ 500ms
@@ -284,7 +291,7 @@ max_step_time_ms ≤ 5000ms
 晋升阶段：
 
 ```
-mcts_eval_v1 vs rollout 双边各 ≥ 400 局
+mcts_eval_v1 vs current release default rollout kwargs 双边各 ≥ 400 局
 合并胜率 ≥ 55%
 Wilson 95% CI lower ≥ 52%
 illegal_moves = 0, crashes = 0, 基于 quick_bench.py / bench_ai.py 聚合的真实 timeouts = 0
@@ -295,8 +302,7 @@ max_step_time_ms ≤ 5000ms
 ### 对比基线
 
 ```
-mcts_eval_v1 vs greedy_risk (red/blue)
-mcts_eval_v1 vs rollout (red/blue)
+mcts_eval_v1 vs current release default rollout kwargs (red/blue)
 mcts_eval_v1 vs greedy (smoke)
 ```
 

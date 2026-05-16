@@ -1,0 +1,469 @@
+{
+  "report_path": "reports/p52_opening_small_scale_gate_20260516.md",
+  "generated_at": "2026-05-16T17:13:25",
+  "argv": [
+    "--candidate-mode",
+    "stratified",
+    "--per-style",
+    "2",
+    "--games",
+    "1",
+    "--validation-games",
+    "1",
+    "--top-k",
+    "3",
+    "--seed-pool",
+    "2026,2027",
+    "--output",
+    "reports/p52_opening_small_scale_gate_20260516.md",
+    "--json-output",
+    "reports/p52_opening_small_scale_gate_20260516.json"
+  ],
+  "seed": 2026,
+  "sample_size": 100,
+  "candidate_mode": "stratified",
+  "per_style": 2,
+  "candidate_count": 6,
+  "games": 1,
+  "validation_games": 1,
+  "games_per_train_opponent": 1,
+  "validation_games_per_opponent": 1,
+  "top_k": 3,
+  "max_turns": 200,
+  "seed_pool": [
+    2026,
+    2027
+  ],
+  "validation_seed_pool": [
+    12026,
+    12027
+  ],
+  "ai_kind": "rollout",
+  "ai_kwargs_source": "release/v1.0/default_params.json",
+  "ai_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "train_rows": [
+    {
+      "style": "aggressive",
+      "red_layout": {
+        "1": [
+          2,
+          0
+        ],
+        "2": [
+          1,
+          1
+        ],
+        "3": [
+          0,
+          2
+        ],
+        "4": [
+          0,
+          0
+        ],
+        "5": [
+          1,
+          0
+        ],
+        "6": [
+          0,
+          1
+        ]
+      },
+      "stats": {
+        "wins": 5,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 668.8357000020915,
+        "avg_step_time_ms": 265.4815291925447,
+        "total_step_time_ms": 42742.5261999997,
+        "step_time_count": 161,
+        "seed_count": 2,
+        "seeds": [
+          2026,
+          2027
+        ]
+      }
+    },
+    {
+      "style": "defensive",
+      "red_layout": {
+        "1": [
+          0,
+          0
+        ],
+        "2": [
+          1,
+          0
+        ],
+        "3": [
+          0,
+          1
+        ],
+        "4": [
+          2,
+          0
+        ],
+        "5": [
+          1,
+          1
+        ],
+        "6": [
+          0,
+          2
+        ]
+      },
+      "stats": {
+        "wins": 4,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 720.3602000008686,
+        "avg_step_time_ms": 267.683916666758,
+        "total_step_time_ms": 38546.48400001315,
+        "step_time_count": 144,
+        "seed_count": 2,
+        "seeds": [
+          2026,
+          2027
+        ]
+      }
+    },
+    {
+      "style": "aggressive",
+      "red_layout": {
+        "1": [
+          0,
+          2
+        ],
+        "2": [
+          2,
+          0
+        ],
+        "3": [
+          1,
+          1
+        ],
+        "4": [
+          1,
+          0
+        ],
+        "5": [
+          0,
+          0
+        ],
+        "6": [
+          0,
+          1
+        ]
+      },
+      "stats": {
+        "wins": 3,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 720.0677000000724,
+        "avg_step_time_ms": 276.7914478260892,
+        "total_step_time_ms": 44563.423100000364,
+        "step_time_count": 161,
+        "seed_count": 2,
+        "seeds": [
+          2026,
+          2027
+        ]
+      }
+    },
+    {
+      "style": "balanced",
+      "red_layout": {
+        "1": [
+          0,
+          0
+        ],
+        "2": [
+          1,
+          0
+        ],
+        "3": [
+          1,
+          1
+        ],
+        "4": [
+          2,
+          0
+        ],
+        "5": [
+          0,
+          2
+        ],
+        "6": [
+          0,
+          1
+        ]
+      },
+      "stats": {
+        "wins": 3,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 720.361600000615,
+        "avg_step_time_ms": 285.5731836879134,
+        "total_step_time_ms": 40265.81889999579,
+        "step_time_count": 141,
+        "seed_count": 2,
+        "seeds": [
+          2026,
+          2027
+        ]
+      }
+    },
+    {
+      "style": "defensive",
+      "red_layout": {
+        "1": [
+          1,
+          0
+        ],
+        "2": [
+          0,
+          1
+        ],
+        "3": [
+          0,
+          0
+        ],
+        "4": [
+          2,
+          0
+        ],
+        "5": [
+          0,
+          2
+        ],
+        "6": [
+          1,
+          1
+        ]
+      },
+      "stats": {
+        "wins": 3,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 555.0316999979259,
+        "avg_step_time_ms": 257.8460390068358,
+        "total_step_time_ms": 36356.291499963845,
+        "step_time_count": 141,
+        "seed_count": 2,
+        "seeds": [
+          2026,
+          2027
+        ]
+      }
+    },
+    {
+      "style": "balanced",
+      "red_layout": {
+        "1": [
+          1,
+          1
+        ],
+        "2": [
+          0,
+          1
+        ],
+        "3": [
+          2,
+          0
+        ],
+        "4": [
+          1,
+          0
+        ],
+        "5": [
+          0,
+          2
+        ],
+        "6": [
+          0,
+          0
+        ]
+      },
+      "stats": {
+        "wins": 2,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 720.2932000000146,
+        "avg_step_time_ms": 262.7181521738353,
+        "total_step_time_ms": 36255.10499998927,
+        "step_time_count": 138,
+        "seed_count": 2,
+        "seeds": [
+          2026,
+          2027
+        ]
+      }
+    }
+  ],
+  "validation_top": [
+    {
+      "style": "aggressive",
+      "red_layout": {
+        "1": [
+          2,
+          0
+        ],
+        "2": [
+          1,
+          1
+        ],
+        "3": [
+          0,
+          2
+        ],
+        "4": [
+          0,
+          0
+        ],
+        "5": [
+          1,
+          0
+        ],
+        "6": [
+          0,
+          1
+        ]
+      },
+      "stats": {
+        "wins": 3,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 720.2256999989913,
+        "avg_step_time_ms": 252.31664792892263,
+        "total_step_time_ms": 42641.51349998792,
+        "step_time_count": 169,
+        "seed_count": 2,
+        "seeds": [
+          12026,
+          12027
+        ]
+      }
+    },
+    {
+      "style": "defensive",
+      "red_layout": {
+        "1": [
+          0,
+          0
+        ],
+        "2": [
+          1,
+          0
+        ],
+        "3": [
+          0,
+          1
+        ],
+        "4": [
+          2,
+          0
+        ],
+        "5": [
+          1,
+          1
+        ],
+        "6": [
+          0,
+          2
+        ]
+      },
+      "stats": {
+        "wins": 4,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 720.3164000020479,
+        "avg_step_time_ms": 267.45044423084136,
+        "total_step_time_ms": 41722.26930001125,
+        "step_time_count": 156,
+        "seed_count": 2,
+        "seeds": [
+          12026,
+          12027
+        ]
+      }
+    },
+    {
+      "style": "aggressive",
+      "red_layout": {
+        "1": [
+          0,
+          2
+        ],
+        "2": [
+          2,
+          0
+        ],
+        "3": [
+          1,
+          1
+        ],
+        "4": [
+          1,
+          0
+        ],
+        "5": [
+          0,
+          0
+        ],
+        "6": [
+          0,
+          1
+        ]
+      },
+      "stats": {
+        "wins": 4,
+        "games": 8,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "max_step_time_ms": 604.5908999985841,
+        "avg_step_time_ms": 259.9507018748682,
+        "total_step_time_ms": 41592.11229997891,
+        "step_time_count": 160,
+        "seed_count": 2,
+        "seeds": [
+          12026,
+          12027
+        ]
+      }
+    }
+  ],
+  "decision": {
+    "promote_layout": false,
+    "reason": "This opening-search sample gate is intentionally too small for layout promotion."
+  },
+  "wall_seconds": 364.74
+}

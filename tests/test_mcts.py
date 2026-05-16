@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import random
 
-from ai.match import build_ai, default_starting_state
-from ai.mcts import MCTSAI, mcts_choose_move
+import pytest
+
+from ai.match import ai_version_signature, build_ai, default_starting_state
+from ai.mcts import ChanceNode, DecisionNode, MCTSAI, mcts_choose_move
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
@@ -150,6 +152,97 @@ def test_mcts_root_visit_counts_match_iteration_count():
     assert ai.last_max_depth >= 1
 
 
+def test_mcts_opponent_decision_node_minimizes_root_player_value():
+    """对手节点必须按 root 视角的低分支选招，而不是合作式最大化。"""
+    ai = MCTSAI(c_uct=0.0, rng=random.Random(0))
+    opponent_node = DecisionNode(player=Player.BLUE, dice=1, visit_count=20)
+    good_for_root = Move(
+        player=Player.BLUE,
+        piece_id=1,
+        from_pos=Position(3, 3),
+        to_pos=Position(2, 3),
+    )
+    bad_for_root = Move(
+        player=Player.BLUE,
+        piece_id=2,
+        from_pos=Position(3, 4),
+        to_pos=Position(2, 4),
+    )
+    opponent_node.children[(1, good_for_root.from_pos, good_for_root.to_pos)] = ChanceNode(
+        parent_move=good_for_root,
+        visit_count=10,
+        total_value=8.0,
+    )
+    opponent_node.children[(2, bad_for_root.from_pos, bad_for_root.to_pos)] = ChanceNode(
+        parent_move=bad_for_root,
+        visit_count=10,
+        total_value=-6.0,
+    )
+
+    move, _ = ai._select_uct_child(opponent_node, root_player=Player.RED)
+
+    assert move == bad_for_root
+
+
+def test_mcts_opponent_decision_node_chooses_worst_legal_reply_from_minimal_state():
+    """最小真实局面：蓝方应选择对红方最差的直接到角应手。"""
+    state = GameState.from_layout(
+        red={1: Position(2, 2)},
+        blue={1: Position(1, 1)},
+        current_player=Player.BLUE,
+    )
+    legal = state.legal_moves(Player.BLUE, 1)
+    assert {move.to_pos for move in legal} == {
+        Position(0, 1),
+        Position(1, 0),
+        Position(0, 0),
+    }
+
+    opponent_node = DecisionNode(player=Player.BLUE, dice=1, visit_count=30)
+    for move in legal:
+        sim = GameState.deserialize(state.serialize())
+        sim.apply_move(move, dice=1)
+        q = -1.0 if sim.get_winner() is Player.BLUE else 0.25
+        opponent_node.children[(move.piece_id, move.from_pos, move.to_pos)] = ChanceNode(
+            parent_move=move,
+            visit_count=10,
+            total_value=q * 10,
+        )
+
+    ai = MCTSAI(c_uct=0.0, rng=random.Random(0))
+    move, _ = ai._select_uct_child(opponent_node, root_player=Player.RED)
+
+    assert move.to_pos == Position(0, 0)
+
+
+def test_mcts_leaf_evaluator_zweistein_uses_zweistein_score(monkeypatch):
+    calls: list[Player] = []
+
+    def fake_zweistein_score(state: GameState, perspective: Player) -> float:
+        calls.append(perspective)
+        return 42.0
+
+    monkeypatch.setattr("ai.mcts.zweistein_lite_score", fake_zweistein_score)
+    state = default_starting_state()
+    ai = MCTSAI(
+        max_iterations=1,
+        time_limit_ms=10_000.0,
+        leaf_evaluator="zweistein",
+        rng=random.Random(2),
+    )
+
+    move = ai.choose_move(state, 1)
+
+    assert move in state.legal_moves(Player.RED, 1)
+    assert calls == [Player.RED]
+    assert ai.leaf_evaluator == "zweistein"
+
+
+def test_mcts_leaf_evaluator_rejects_unknown_name():
+    with pytest.raises(ValueError, match="unknown leaf_evaluator"):
+        MCTSAI(leaf_evaluator="not-real")
+
+
 def test_mcts_choose_move_function_equivalent_to_class():
     state = default_starting_state()
     a = MCTSAI(time_limit_ms=10_000.0, max_iterations=32, rng=random.Random(8))
@@ -182,12 +275,15 @@ def test_build_ai_mcts_eval_v1_accepts_kwargs():
         c_uct=1.0,
         scale=50.0,
         max_iterations=10,
+        leaf_evaluator="zweistein",
     )
     assert isinstance(ai, MCTSAI)
     assert ai.time_limit_ms == 123.0
     assert ai.c_uct == 1.0
     assert ai.scale == 50.0
     assert ai.max_iterations == 10
+    assert ai.leaf_evaluator == "zweistein"
+    assert ai_version_signature(ai)["leaf_evaluator"] == "zweistein"
 
 
 def test_mcts_returns_legal_move_for_every_dice_from_default_state():

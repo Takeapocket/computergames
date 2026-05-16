@@ -1,0 +1,46 @@
+{
+  "phase": "P4.1 targeted fix",
+  "date": "2026-05-16",
+  "status": "mcts_stopped_move_to_p5",
+  "scope": {
+    "large_benchmark": false,
+    "gui_default_changed": false,
+    "release_default_changed": false
+  },
+  "targeted_fix": {
+    "opponent_decision_node": "verified with a minimal real GameState; opponent node chooses the reply that is worst for root_player",
+    "leaf_evaluator": "MCTSAI now supports leaf_evaluator=current|zweistein; default remains current"
+  },
+  "probe": {
+    "report": "reports/p41_probe_mcts_zweistein_vs_release_default_20260516.json",
+    "candidate": "mcts_eval_v1",
+    "candidate_kwargs": {
+      "leaf_evaluator": "zweistein"
+    },
+    "opponent": "rollout",
+    "opponent_kwargs_source": "release/v1.0/default_params.json",
+    "games_per_side": 10,
+    "combined_games": 20,
+    "candidate_wins": 5,
+    "candidate_win_rate": 0.25,
+    "candidate_win_ci95": [
+      0.11186005278940309,
+      0.4687050099580636
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_step_time_ms": 348.9297879606317,
+    "max_step_time_ms": 720.2075000004697,
+    "avg_iterations": 11988.9,
+    "max_depth": 11,
+    "gate_failures": [
+      "candidate_win_rate = 25.0%（要求 >= 55.0%）"
+    ]
+  },
+  "decision": {
+    "stop_mcts": true,
+    "move_to_p5": true,
+    "reason": "P4.1 zweistein leaf probe scored 25.0%, below the user-defined 45% stop threshold."
+  }
+}

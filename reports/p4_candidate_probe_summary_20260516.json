@@ -1,0 +1,77 @@
+{
+  "phase": "P4 candidate probe",
+  "date": "2026-05-16",
+  "status": "candidate_probe_failed",
+  "baseline": {
+    "kind": "rollout",
+    "source": "release/v1.0/default_params.json",
+    "kwargs": {
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0
+    }
+  },
+  "probes": [
+    {
+      "report": "reports/p4_candidate_probe_mcts_eval_v1_vs_release_default_20260516.json",
+      "candidate_kwargs": {
+        "time_limit_ms": 200
+      },
+      "games_per_side": 25,
+      "combined_games": 50,
+      "candidate_wins": 15,
+      "candidate_win_rate": 0.3,
+      "candidate_win_ci95": [
+        0.1910338908960936,
+        0.4375061227736339
+      ],
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 214.5034719850479,
+      "max_step_time_ms": 720.3675000000658,
+      "avg_iterations": 5121.74,
+      "max_depth": 11,
+      "gates_pass": false,
+      "gate_failures": [
+        "candidate_win_rate = 30.0%（要求 >= 55.0%）"
+      ]
+    },
+    {
+      "report": "reports/p4_candidate_probe_mcts_eval_v1_default_vs_release_default_20260516.json",
+      "candidate_kwargs": {},
+      "games_per_side": 10,
+      "combined_games": 20,
+      "candidate_wins": 6,
+      "candidate_win_rate": 0.3,
+      "candidate_win_ci95": [
+        0.14547527396899385,
+        0.5189767762289793
+      ],
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 351.4224120216148,
+      "max_step_time_ms": 719.7410000007949,
+      "avg_iterations": 13868.3,
+      "max_depth": 11,
+      "gates_pass": false,
+      "gate_failures": [
+        "candidate_win_rate = 30.0%（要求 >= 55.0%）"
+      ]
+    }
+  ],
+  "decision": {
+    "run_official_candidate_200_per_side": false,
+    "enter_promotion_discussion": false,
+    "change_gui_or_release_default": false,
+    "reason": "Both small probes scored 30.0% against the current release default rollout kwargs. Stability was clean, but strength was far below the candidate gate."
+  }
+}

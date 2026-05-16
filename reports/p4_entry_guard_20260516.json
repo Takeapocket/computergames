@@ -1,0 +1,90 @@
+{
+  "phase": "P4 entry guard",
+  "date": "2026-05-16",
+  "status": "entry_guard_passed",
+  "scope": {
+    "large_mcts_benchmark": false,
+    "gui_default_changed": false,
+    "release_default_changed": false,
+    "release_config_changed": false
+  },
+  "current_release_default_opponent": {
+    "kind": "rollout",
+    "source": "release/v1.0/default_params.json",
+    "kwargs": {
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0
+    }
+  },
+  "changes": [
+    "MCTS DecisionNode selection now maximizes root-player value only on root-player turns and minimizes it on opponent turns.",
+    "scripts/bench_ai.py loads release/v1.0/default_params.json and injects those kwargs for mcts_eval_v1 candidate/promotion rollout opponents.",
+    "mcts_eval_v1 candidate/promotion profile no longer uses old flat rollout or greedy_risk as the promotion path baseline.",
+    "quick_bench already supports explicit --red-kwargs / --blue-kwargs and was smoke-verified with the release default rollout kwargs."
+  ],
+  "guard_policy": {
+    "p4_candidate_baseline": "current GUI/release working default AI",
+    "naked_opponent_rollout_allowed_for_p4_candidate_or_promotion": false,
+    "promotion_discussion_requires": [
+      "candidate benchmarks directly against current release default rollout kwargs",
+      "candidate_win_rate >= 55%",
+      "Wilson lower >= 52% for promotion",
+      "illegal_moves = 0",
+      "crashes = 0",
+      "timeouts = 0",
+      "average_step_time_ms <= 500",
+      "max_step_time_ms <= 5000"
+    ]
+  },
+  "entry_checks": [
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_mcts.py::test_mcts_opponent_decision_node_minimizes_root_player_value -q",
+      "exit_code": 0,
+      "result": "1 passed"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_bench_ai.py::test_resolve_profile_uses_release_default_rollout_kwargs_for_mcts_p4 tests/test_bench_ai.py::test_merge_profile_kwargs_can_use_opponent_kwargs -q",
+      "exit_code": 0,
+      "result": "2 passed"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_mcts.py -q",
+      "exit_code": 0,
+      "result": "15 passed"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_bench_ai.py -q",
+      "exit_code": 0,
+      "result": "33 passed"
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest -q",
+      "exit_code": 0,
+      "result": "523 passed in 10.91s"
+    },
+    {
+      "command": ".venv/Scripts/python.exe scripts/smoke_test.py",
+      "exit_code": 0,
+      "result": "smoke completed; undo restored: True"
+    },
+    {
+      "command": ".venv/Scripts/python.exe scripts/bench_ai.py --candidate mcts_eval_v1 --stage candidate --games-per-side 1 --max-turns 8 --candidate-arg max_iterations=1 --candidate-arg time_limit_ms=5 --no-save-report",
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "result": "CLI ran with release default rollout opponent kwargs; gate failed only because 2-game entry smoke was not a strength benchmark."
+    },
+    {
+      "command": ".venv/Scripts/python.exe scripts/quick_bench.py --red mcts_eval_v1 --blue rollout --red-kwargs <small mcts kwargs> --blue-kwargs <release default rollout kwargs> --games 1 --max-turns 8 --no-save-report",
+      "exit_code": 0,
+      "result": "quick_bench accepted explicit release default rollout kwargs and produced ai_versions.blue with cutoff_eval=zweistein and deadline_safety_ms=30.0."
+    }
+  ]
+}

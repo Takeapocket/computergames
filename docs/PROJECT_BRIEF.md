@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-16（P3 受控默认替换后同步候选状态）
+更新时间：2026-05-16（P5.2 opening small-scale gate 后同步候选状态）
 
 ## 项目定位
 
@@ -8,7 +8,7 @@
 
 程序目标不是命令行工具，而是比赛现场可操作的软件：操作员录入骰子和对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
 
-## 当前阶段判断（2026-05-15，S2/S3/S4 全部闭环）
+## 当前阶段判断（2026-05-16，S2/S3/S4 全部闭环）
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
 - 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
@@ -23,11 +23,15 @@
 - **2026-05-15 code review follow-up 已完成**：当时默认 `rollout` 参数保持旧 flat release 形态（16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15）。该默认参数已被 2026-05-16 P3 受控默认替换 supersede；当前以 `gui/main_window.py` 与 `release/v1.0/default_params.json` 为准。adaptive rollout 仅作为显式实验候选；direct vs old rollout 800 局合并胜率 59.00%，未过 60% 默认晋升线。`RolloutAI` 诊断现区分 score / winrate / cutoffs / avg；bench 脚本已聚合真实 `timeouts`。
 - **2026-05-15 P1 / P2 / P2.5 已完成**：`RolloutAI.last_root_stats` 成为 canonical 诊断接口；新增 `rollout_32`、`rollout_risk_playout`、`rollout_cutoff_eval` 三个 benchable 候选。P2 三者均未过门禁；P2.5 只给 `rollout_risk_playout` / `rollout_cutoff_eval` 的 bench profile 注入 `deadline_safety_ms=30.0`，其中仅 `rollout_cutoff_eval` 以 57.0% 胜率、0 timeout 标记为 survivor。默认 AI 和 release 配置不变。
 - **2026-05-15 P3 Zweistein-lite promotion 已通过，2026-05-16 已受控替换默认**：新增 `zweistein_lite_score()` 与 `greedy_zweistein`、`rollout_zweistein_cutoff`、`expectimax_zweistein_d1` 实验 kind。`rollout_zweistein_cutoff` vs 当前默认旧 flat `rollout` 的 candidate 双边 100+100 合并胜率 58.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`；promotion 双边 400+400 合并胜率 56.75%，Wilson lower 53.29%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，working-baseline promotion 门禁通过。用户已批准替换 GUI/release 工作默认；实现仍使用 `kind="rollout"` + 显式 P3 kwargs，不依赖 `rollout_zweistein_cutoff` factory。
+- **2026-05-16 P4/P4.1 已停止，转 P5**：修复 / 验证 `MCTSAI` opponent DecisionNode 语义；对手节点现在按 root-player 视角最小化，避免把对手当合作方。P4.1 新增最小真实局面测试，并让 MCTS leaf 支持 `current|zweistein` evaluator，默认仍为 `current`。`mcts_eval_v1(leaf_evaluator=zweistein)` 对当前 release 默认 rollout kwargs 双边 10+10，合并胜率 25.0%，0 illegal/crash/timeout，低于用户指定 45% 停止线。未跑正式 200+200 candidate，未改 GUI/release 默认；下一步转 P5。
+- **2026-05-16 P5.0 opening entry guard 已完成**：`scripts/search_openings.py` 已改为使用当前 release 默认 `rollout` 显式 kwargs 评测布局候选，且统计真实 `timeouts`。仅跑小样本 smoke，生成 `reports/p5_opening_entry_guard_20260516.md` / `.json`；未改 GUI/release 默认布局。
+- **2026-05-16 P5.1 opening strata + seed pool 已完成**：`scripts/search_openings.py` 支持 stratified 候选分层和 seed-pool 聚合；P5.1 smoke 三类各 1 个候选、seed pool 2026/2027，validation 结果为 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。报告见 `reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`；样本不足以晋升布局，未改 GUI/release 默认布局。
+- **2026-05-16 P5.2 opening small-scale gate 已完成**：复用当前 release 默认 `rollout` 显式 kwargs，分层候选扩大到每类 2 个、seed pool 2026/2027，train 6 个候选结果为 5/8、4/8、3/8、3/8、3/8、2/8；validation top3 为 3/8、4/8、4/8，0 illegal/crash/timeout。报告见 `reports/p52_opening_small_scale_gate_20260516.md` / `.json`；仍不是布局晋升证据，未改 GUI/release 默认布局。
 
 下一会话优先级：
 1. **release/v1.0 归档与赛前核对**：sign-off 复验已记录；下一步是备份正式提交物和现场启动包。
-2. AI 研究若继续推进，当前默认基线已是 `rollout` kind + P3 promotion 显式参数；后续候选必须直接对这个配置过门禁。不要自动进入 P4，除非用户明确要求。
-3. P4 MCTS opponent node 只在用户明确授权后启动；比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。
+2. AI 研究若继续推进，当前默认基线已是 `rollout` kind + P3 promotion 显式参数；后续候选必须直接对这个配置过门禁。
+3. P5.2 已完成开局搜索小规模扩大样本门禁；后续 P5 候选仍必须直接对当前 release 默认 rollout kwargs 验证，且 P5.0/P5.1/P5.2 报告都不能作为默认布局晋升证据。
 
 ## 当前技术栈
 
@@ -44,7 +48,7 @@
 - 合法走法生成（含吃本方棋子，R-0 已合规）。
 - 吃对方/本方子、胜负判断、走子和撤销。
 - 状态序列化和反序列化。
-- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P3 promotion 显式 kwargs）、P2/P3 rollout/Zweistein 显式实验候选、ExpectimaxAI（实验性）。
+- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P3 promotion 显式 kwargs）、P2/P3 rollout/Zweistein 显式实验候选、MCTSAI（实验性，P4.1 已停止，不进入 promotion）、ExpectimaxAI（实验性）。
 - Tkinter GUI（含开局录入、骰子录入、推荐走法 by rollout）。
 - 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）。
 - 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
@@ -94,5 +98,5 @@
 详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
 
 1. **release/v1.0 归档**：把 release/v1.0 当作正式提交物备份；准备现场启动包。
-2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数。后续如进入 P4 MCTS opponent node，必须先明确用户授权；任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
+2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数，P4.1 已停止 MCTS。下一步转 P5 开局/布局搜索；任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
 3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。

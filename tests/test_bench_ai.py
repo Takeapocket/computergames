@@ -20,6 +20,45 @@ def test_resolve_profile_returns_defaults_for_known_candidate_stage():
     assert profile["games_per_side"] == 400
 
 
+def test_resolve_profile_uses_release_default_rollout_kwargs_for_mcts_p4():
+    expected = bench_ai.RELEASE_DEFAULT_ROLLOUT_KWARGS
+
+    for stage, games_per_side in (("candidate", 200), ("promotion", 400)):
+        profile = bench_ai._resolve_profile("mcts_eval_v1", stage)
+
+        assert profile["opponent"] == "rollout"
+        assert profile["opponent_kwargs"] == expected
+        assert profile["games_per_side"] == games_per_side
+
+
+@pytest.mark.parametrize(
+    "override_args",
+    [
+        ["--opponent", "greedy"],
+        ["--opponent", "rollout", "--opponent-arg", "rollouts_per_move=1"],
+    ],
+)
+def test_main_rejects_p4_candidate_without_release_default_rollout_opponent(
+    override_args,
+    monkeypatch,
+):
+    def fail_run_direction(**kwargs):
+        raise AssertionError("P4 guard should reject before running games")
+
+    monkeypatch.setattr(bench_ai, "_run_direction", fail_run_direction)
+
+    with pytest.raises(SystemExit) as excinfo:
+        bench_ai.main([
+            "--candidate", "mcts_eval_v1",
+            "--stage", "candidate",
+            "--games-per-side", "1",
+            "--no-save-report",
+            *override_args,
+        ])
+
+    assert excinfo.value.code == 2
+
+
 def test_resolve_profile_returns_empty_dict_for_unknown_candidate():
     assert bench_ai._resolve_profile("unknown_candidate", "smoke") == {}
 
@@ -71,6 +110,16 @@ def test_merge_profile_kwargs_keeps_cli_override():
     assert bench_ai._merge_profile_kwargs(profile, explicit) == {
         "deadline_safety_ms": 5.0,
         "rollouts_per_move": 32,
+    }
+
+
+def test_merge_profile_kwargs_can_use_opponent_kwargs():
+    profile = {"opponent_kwargs": {"rollouts_per_move": 32, "epsilon": 0.1}}
+    explicit = {"epsilon": 0.2}
+
+    assert bench_ai._merge_profile_kwargs(profile, explicit, key="opponent_kwargs") == {
+        "rollouts_per_move": 32,
+        "epsilon": 0.2,
     }
 
 

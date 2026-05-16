@@ -20,6 +20,7 @@ import time
 from dataclasses import dataclass, field
 
 from ai.evaluator import evaluate
+from ai.zweistein import zweistein_lite_score
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
@@ -84,10 +85,16 @@ def _normalize(raw: float, scale: float) -> float:
     return math.tanh(raw / scale)
 
 
-def _uct_score(child: ChanceNode, parent_visits: int, c: float) -> float:
+def _uct_score(
+    child: ChanceNode,
+    parent_visits: int,
+    c: float,
+    *,
+    exploitation_sign: float = 1.0,
+) -> float:
     if child.visit_count == 0:
         return float("inf")
-    exploitation = child.q
+    exploitation = exploitation_sign * child.q
     exploration = c * math.sqrt(math.log(max(parent_visits, 1)) / child.visit_count)
     return exploitation + exploration
 
@@ -109,7 +116,10 @@ class MCTSAI:
         max_iterations: int | None = None,
         rng: random.Random | None = None,
         name: str = "mcts_eval_v1",
+        leaf_evaluator: str = "current",
     ) -> None:
+        if leaf_evaluator not in {"current", "zweistein"}:
+            raise ValueError(f"unknown leaf_evaluator: {leaf_evaluator!r}")
         self.time_limit_ms = float(time_limit_ms)
         self.c_uct = float(c_uct)
         self.scale = float(scale)
@@ -118,6 +128,7 @@ class MCTSAI:
         )
         self._rng = rng or random.Random()
         self.name = name
+        self.leaf_evaluator = leaf_evaluator
         # 报告字段：最近一次 choose_move 的统计，bench 可读取作为 avg_iterations/max_depth 输入。
         self.last_iterations: int = 0
         self.last_max_depth: int = 0
@@ -218,16 +229,11 @@ class MCTSAI:
                         if terminal is not None:
                             value = WIN_VALUE if terminal is root_player else -WIN_VALUE
                         else:
-                            raw = evaluate(
-                                state,
-                                perspective=root_player,
-                                expected_risk_weight=0.0,
-                                expected_win_risk_weight=0.0,
-                            )
+                            raw = self._leaf_score(state, root_player)
                             value = _normalize(raw, self.scale)
                         break
 
-                    move, chance = self._select_uct_child(node)
+                    move, chance = self._select_uct_child(node, root_player=root_player)
                     state.apply_move(move, dice=node.dice)
                     path.append(chance)
                     node = chance
@@ -253,18 +259,39 @@ class MCTSAI:
             n.total_value += value
         return depth
 
-    def _select_uct_child(self, node: DecisionNode) -> tuple[Move, "ChanceNode"]:
+    def _select_uct_child(
+        self,
+        node: DecisionNode,
+        *,
+        root_player: Player,
+    ) -> tuple[Move, "ChanceNode"]:
         parent_visits = node.visit_count if node.visit_count > 0 else 1
         c = self.c_uct
+        exploitation_sign = 1.0 if node.player is root_player else -1.0
         best_chance: ChanceNode | None = None
         best_score = float("-inf")
         for chance in node.children.values():
-            score = _uct_score(chance, parent_visits, c)
+            score = _uct_score(
+                chance,
+                parent_visits,
+                c,
+                exploitation_sign=exploitation_sign,
+            )
             if score > best_score:
                 best_score = score
                 best_chance = chance
         assert best_chance is not None
         return best_chance.parent_move, best_chance
+
+    def _leaf_score(self, state: GameState, perspective: Player) -> float:
+        if self.leaf_evaluator == "zweistein":
+            return zweistein_lite_score(state, perspective)
+        return evaluate(
+            state,
+            perspective=perspective,
+            expected_risk_weight=0.0,
+            expected_win_risk_weight=0.0,
+        )
 
 
 def mcts_choose_move(
@@ -276,6 +303,7 @@ def mcts_choose_move(
     scale: float = DEFAULT_SCALE,
     max_iterations: int | None = None,
     rng: random.Random | None = None,
+    leaf_evaluator: str = "current",
 ) -> Move | None:
     """便捷函数：在 ``state`` 给定 ``dice`` 时返回 MCTS 选出的 Move。"""
     ai = MCTSAI(
@@ -284,5 +312,6 @@ def mcts_choose_move(
         scale=scale,
         max_iterations=max_iterations,
         rng=rng,
+        leaf_evaluator=leaf_evaluator,
     )
     return ai.choose_move(state, dice)

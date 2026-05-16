@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-05-16（P3 受控默认替换后同步默认 AI 参数和候选状态）
+更新时间：2026-05-16（P5.2 opening small-scale gate 后同步默认 AI 参数和开局搜索约束）
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：离线 GUI 参赛程序
 
@@ -37,9 +37,13 @@
 | Rollout 候选 P2 | 已完成，未晋升 | 已注册 `rollout_32` / `rollout_risk_playout` / `rollout_cutoff_eval` 并生成 candidate 报告。三者均未过门禁：`rollout_32` 胜率 54.5% 且 timeouts=4；`rollout_risk_playout` 胜率 57.0% 但 timeouts=10；`rollout_cutoff_eval` 胜率 57.5% 但 timeouts=11。默认 AI 和 release 配置不变。 |
 | Rollout deadline safety P2.5 | 已完成，1 个 survivor | `RolloutAI.deadline_safety_ms` 默认 0.0，不改变旧 rollout；P2.5 profile 仅给 `rollout_risk_playout` / `rollout_cutoff_eval` 传 30.0。复验只跑这两个候选，各双边 100+100、对手 rollout。`rollout_cutoff_eval` 胜率 57.0% 且 timeouts=0，标记为 P2.5 survives；`rollout_risk_playout` 胜率 58.5% 但总 timeouts=1，未过总门禁。默认 GUI/release 不变。 |
 | Zweistein-lite P3 | promotion 通过，已替换工作默认 | 新增 `zweistein_lite_score()`，注册 `greedy_zweistein` / `rollout_zweistein_cutoff` / `expectimax_zweistein_d1`。`rollout_zweistein_cutoff` candidate vs rollout 双边 100+100：胜率 58.0%，timeouts=0；promotion vs old rollout 双边 400+400：胜率 56.75%，Wilson lower 53.29%，timeouts=0。2026-05-16 已按用户批准受控替换为 GUI/release 工作默认，但实现仍使用 `kind="rollout"` + 显式 kwargs。 |
+| MCTS P4/P4.1 | 已停止，转 P5 | P4 修复/验证 opponent DecisionNode 语义：root-player 节点最大化 root 价值，对手节点最小化 root 价值；`bench_ai.py` 的 `mcts_eval_v1` candidate/promotion profile 已改为对当前 release 默认 rollout kwargs。P4.1 进一步补最小真实局面测试，并给 `MCTSAI` 增加 `leaf_evaluator=current|zweistein`。P4.1 probe：`mcts_eval_v1(leaf_evaluator=zweistein)` 对当前 release 默认 rollout，双边 10+10 胜率 25.0%，0 illegal/crash/timeout；因 <45% 停止线，不扩样、不 promotion，下一步转 P5。报告见 `reports/p41_targeted_fix_summary_20260516.md`。 |
+| 开局搜索 P5.0 | entry guard 已完成，未晋升 | `scripts/search_openings.py` 已改为读取 `release/v1.0/default_params.json`，使用当前 release 默认 `rollout` 显式 kwargs 做双方 AI，不再用旧 `greedy_risk` self-play 作为主评测口径；stats 聚合真实 `timeouts`。小样本 smoke：`sample_size=5`、train/validation 每 opponent 各 2 局，validation top 两个布局为 5/8 和 6/8，0 illegal/crash/timeout。报告见 `reports/p5_opening_entry_guard_20260516.md` / `.json`。样本不足以晋升布局，未改 GUI/release 默认布局。 |
+| 开局搜索 P5.1 | 分层与 seed 池已完成，未晋升 | `scripts/search_openings.py` 支持 `candidate_mode=sample|stratified`、`per_style`、`seed_pool` 和 `json_output`；stratified 模式按 aggressive / balanced / defensive 分层选候选，seed pool 聚合跨 seed 对战 stats，JSON 固化 `train_rows` 与 `decision`。P5.1 smoke：三类各 1 个候选、train/validation 每 opponent 各 1 局、seed pool 2026/2027，validation 结果 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。报告见 `reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`。样本不足以晋升布局，未改 GUI/release 默认布局。 |
+| 开局搜索 P5.2 | 小规模扩大样本门禁已完成，未晋升 | 复用 P5.1 分层与 seed pool 流程，`--candidate-mode stratified --per-style 2 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027` 跑 6 个候选；train 结果 5/8、4/8、3/8、3/8、3/8、2/8，validation top3 为 3/8、4/8、4/8，0 illegal/crash/timeout。报告见 `reports/p52_opening_small_scale_gate_20260516.md` / `.json`。样本仍远小于布局晋升门禁，未改 GUI/release 默认布局。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**release/v1.0 归档/赛前核对；P3 promotion 参数已受控替换为 GUI/release 工作默认。不要自动进入 P4；只有用户明确要求时再进入 MCTS opponent node -> P5 开局搜索。比赛后再推进 Expectimax 结构修复。**
+下一步主线：**release/v1.0 归档/赛前核对；P5.2 已完成 opening-search 小规模扩大样本门禁。若继续 P5，应先把 seed 池扩到至少 3 个并提高 validation games，仍不直接晋升布局；比赛后再推进 Expectimax 结构修复。**
 详细方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
 执行计划见：`docs/superpowers/plans/2026-05-12-final-sprint-plan.md`
 
@@ -279,13 +283,22 @@ illegal_moves = 0，crashes = 0，基于 `quick_bench.py` / `bench_ai.py` 聚合
 
 外部参考：ewn-gym 的 `MctsAgent` 使用每个候选走法后的随机 rollout 统计胜率，结构简单但不是完整 UCT。当前项目已采用轻量 `RolloutAI` 作为默认推荐 AI，后续只做参数和性能复验，不引入完整 MCTS 框架。
 
+P4 entry guard 约束（2026-05-16）：
+
+```text
+MCTS opponent DecisionNode 已修复为最小化 root-player 价值。
+`mcts_eval_v1` candidate/promotion profile 必须对当前 release 默认 `rollout` 显式 kwargs。
+裸 `opponent="rollout"` 只代表旧 flat rollout，不能作为 P4 晋升对手。
+P4.1 targeted fix 已完成，zweistein leaf probe 胜率 25.0%，低于 45% 停止线；停止 MCTS，转 P5。P5.0 entry guard 已完成：开局搜索主评测入口现在使用当前 release 默认 rollout 显式 kwargs，未晋升布局。P5.1 已完成分层候选与 seed 池 smoke。P5.2 已完成小规模扩大样本门禁，validation top3 为 3/8、4/8、4/8，未晋升布局。
+```
+
 建议实现边界：
 
 ```text
 RolloutAI 不改 core，只通过 GameState / legal_moves / apply_move 运行模拟。
 每个合法走法 rollout N 次，按胜率选。
 必须支持时间上限和 greedy fallback。
-继续用 random/greedy/greedy_risk 做批量复验；默认变更必须保留报告。
+greedy / greedy_risk 只能做 smoke 或辅助诊断；候选和晋升基线必须是 current release default rollout kwargs。默认变更必须保留报告。
 ```
 
 不做事项：短期不引入 Gymnasium、Stable-Baselines3、AlphaZero 或神经网络训练。
@@ -414,4 +427,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**S2/S3/S4 全部闭环；2026-05-16 已完成 P3 受控默认替换。`rollout` 仍是 GUI/release 默认 AI kind，但默认参数已改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集；`greedy_risk` 保留为应急回退。下一步：release/v1.0 归档与赛前核对；不要自动进入 P4，除非用户明确要求。**
+当前最近任务：**S2/S3/S4 全部闭环；2026-05-16 已完成 P3 受控默认替换、P4/P4.1 MCTS targeted fix 与 probe、P5.0 opening-search entry guard、P5.1 分层候选与 seed 池 smoke、P5.2 小规模扩大样本门禁。`rollout` 仍是 GUI/release 默认 AI kind，但默认参数已改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集；`greedy_risk` 保留为应急回退。P5 后续只允许基于当前 release 默认 rollout kwargs 逐步扩大开局布局搜索，P5.0/P5.1/P5.2 都不是布局晋升证据。**

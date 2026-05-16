@@ -488,6 +488,8 @@ B：防守，阻止我方下一手直接胜
 
 ## 12. 任务组 P5：开局搜索
 
+状态：P5.0 entry guard、P5.1 strata/seed-pool smoke 与 P5.2 small-scale gate 已完成（2026-05-16）；未晋升布局。
+
 目标：等 AI 策略稳定后再搜开局，避免旧策略布局失效。
 
 前置条件：
@@ -521,6 +523,31 @@ B：防守，阻止我方下一手直接胜
 - 不把单一布局称为最优。
 - GUI 默认布局变更必须有独立报告。
 
+P5.0 完成记录：
+
+- `scripts/search_openings.py` 主评测入口不再使用旧 `greedy_risk` self-play。
+- 脚本读取 `release/v1.0/default_params.json`，校验 `ai == "rollout"`，剔除 metadata 后把当前 release 默认 rollout kwargs 传给红蓝双方 AI。
+- stats 聚合真实 `timeouts`，报告中记录 `ai_kind`、`ai_kwargs_source` 和完整 kwargs。
+- 小样本 smoke：`sample_size=5`、train/validation 每 opponent 各 2 局，validation top 两个红方布局分别为 5/8 和 6/8，0 illegal/crash/timeout。
+- 报告：`reports/p5_opening_entry_guard_20260516.md` / `.json`。
+- 结论：entry guard 通过；样本不足以晋升布局，GUI/release 默认布局不变。
+
+P5.1 完成记录：
+
+- `scripts/search_openings.py` 支持 `candidate_mode=sample|stratified`；stratified 模式按 aggressive / balanced / defensive 三类各取 `per_style` 个候选。
+- 支持 `seed_pool` 聚合跨 seed stats，并在 Markdown / JSON 报告中记录 `style`、`seed_count`、`seeds`、`candidate_count`、`train_rows`、`decision` 和真实 `timeouts`。
+- 小样本 smoke：`--candidate-mode stratified --per-style 1 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027`。三类各 1 个候选，validation 结果 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。
+- 报告：`reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`。
+- 结论：分层和 seed 池流程通过；样本不足以晋升布局，GUI/release 默认布局不变。
+
+P5.2 完成记录：
+
+- 复用 P5.1 分层与 seed pool 流程，只扩大到 smoke 级别：`--candidate-mode stratified --per-style 2 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027`。
+- 训练集共 6 个候选，结果依次为 5/8、4/8、3/8、3/8、3/8、2/8；validation top3 为 3/8、4/8、4/8。
+- 全部 train / validation stats 均为 `illegal_moves=0`、`crashes=0`、`timeouts=0`，当前 release 默认 rollout kwargs 已记录在报告中。
+- 报告：`reports/p52_opening_small_scale_gate_20260516.md` / `.json`。
+- 结论：P5.2 仅证明小规模扩大样本门禁可运行；样本仍远小于布局晋升门禁，GUI/release 默认布局不变。
+
 ## 13. 推荐执行顺序
 
 ```text
@@ -530,7 +557,9 @@ P1 Rollout 根节点诊断收敛（已完成）
   -> P3 Zweistein-lite evaluator（已完成 candidate，rollout_zweistein_cutoff 通过）
   -> P3 promotion（可选：rollout_zweistein_cutoff 400+400）
   -> P4 MCTS opponent node 修复
-  -> P5 开局搜索
+  -> P5.0 开局搜索 entry guard（已完成）
+  -> P5.1 开局候选分层与 seed 池 smoke（已完成）
+  -> P5.2 小规模扩大样本门禁（已完成，未晋升）
 ```
 
 优先级：

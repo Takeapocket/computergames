@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-16（P3 受控默认替换后同步；S2/S3/S4 全部闭环）
+更新时间：2026-05-16（P5.2 opening small-scale gate 后同步；S2/S3/S4 全部闭环）
 
 ## 当前结论
 
@@ -20,6 +20,12 @@
 - **2026-05-15 P3 Zweistein-lite 已完成基础实现与 candidate 小样本**：新增 `ai/zweistein.py` 的 `zweistein_lite_score()`，特征包括终局、推进、子力、期望机动性、被吃风险和直接到角风险；新增 `greedy_zweistein`、`rollout_zweistein_cutoff`、`expectimax_zweistein_d1` 三个实验 kind。`RolloutAI.cutoff_eval` 支持 `zweistein`；`ExpectimaxAI` 支持 `leaf_evaluator=current|zweistein`；`ai_version_signature()` 记录 `leaf_evaluator`；`bench_ai.py` 为 `rollout_zweistein_cutoff` candidate/promotion profile 注入 `deadline_safety_ms=30.0`。P3 小样本：`rollout_zweistein_cutoff` vs `rollout` 双边 100+100，合并胜率 58.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，candidate 门禁通过。报告见 `reports/p3_candidate_rollout_zweistein_cutoff_20260515.*`。该 candidate 结论已被后续 promotion 和 2026-05-16 默认替换决策 supersede。
 - **2026-05-15 P3 promotion 已通过**：按用户要求未进入 P4，先用 `scripts/bench_ai.py --candidate rollout_zweistein_cutoff --stage promotion --report-name p3_promotion_rollout_zweistein_cutoff_20260515` 复验。对手保持 old flat `rollout`，双边 400+400，结果：800 局、454 胜、合并胜率 56.75%，Wilson lower 53.29%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，平均步时 175.75ms，最大步时 720.69ms，promotion 门禁通过。报告见 `reports/p3_promotion_rollout_zweistein_cutoff_20260515.json` / `.md`；该 promotion 已在 2026-05-16 转为正式默认替换 decision。
 - **2026-05-16 P3 受控默认替换已完成**：用户明确批准将 P3 promotion 已通过的 `rollout_zweistein_cutoff` 提升为 GUI/release 工作默认 AI。实现上保持 `DEFAULT_RECOMMENDER_KIND = "rollout"`，并从 `reports/p3_promotion_rollout_zweistein_cutoff_20260515.json` 的 `ai_versions.candidate` 复制完整参数到 `DEFAULT_RECOMMENDER_KWARGS` 和 `release/v1.0/default_params.json`：32 rollout / move、80 half-turn cutoff、750ms step deadline、epsilon 0.10、close sample 32、playout_policy=`greedy_risk`、cutoff_eval=`zweistein`、deadline_safety_ms=30.0。`release/v1.0/test_report.md` 已追加 P3 promotion 结果和替换说明，`reports/ai_promotion_decision.md` 已改为正式 decision。`greedy_risk` 仍是应急回退；未进入 P4，未改 MCTS，未额外调参。
+- **2026-05-16 P4 entry guard 已完成**：只修复 / 验证 MCTS opponent DecisionNode 语义，不跑大样本。`MCTSAI` 在 root-player 决策节点继续最大化 root 价值，在 opponent 决策节点改为最小化 root 价值；回传仍统一为 root-player 视角。`scripts/bench_ai.py` 现在从 `release/v1.0/default_params.json` 读取当前 release 默认 rollout kwargs，并给 `mcts_eval_v1` candidate/promotion profile 注入这些 opponent kwargs；P4 candidate/promotion 不允许用裸 `opponent="rollout"` 作为晋升基线。`quick_bench.py` 已用显式 `--blue-kwargs` 做 1 局入口验证。报告见 `reports/p4_entry_guard_20260516.md` / `.json`。未修改 GUI、`release/v1.0/default_params.json` 或 `release/v1.0/config.json`。
+- **2026-05-16 P4 MCTS candidate probe 已完成，未晋升**：按 P4 guard 后约束，候选只对当前 release 默认 rollout kwargs 评测。`mcts_eval_v1(time_limit_ms=200)` 双边 25+25：合并胜率 30.0%，Wilson CI [19.1%, 43.8%]，0 illegal/crash/timeout，avg 214.5ms，max 720.4ms；默认 `mcts_eval_v1(time_limit_ms=500)` 双边 10+10：合并胜率 30.0%，Wilson CI [14.5%, 51.9%]，0 illegal/crash/timeout，avg 351.4ms，max 719.7ms。两组均因胜率远低于 55% candidate 门禁失败，不扩大到 200+200，不进入 promotion discussion。报告见 `reports/p4_candidate_probe_summary_20260516.md` / `.json` 及两份 bench 自动报告。
+- **2026-05-16 P4.1 targeted fix 已完成，停止 MCTS 转 P5**：新增最小真实局面测试，证明 opponent DecisionNode 会选择对 `root_player` 最差的应手；`MCTSAI` 新增 `leaf_evaluator=current|zweistein`，默认仍为 `current`，显式 `zweistein` 会走 `zweistein_lite_score()` 且签名记录 `leaf_evaluator`。P4.1 小样本 probe：`mcts_eval_v1(leaf_evaluator=zweistein)` vs 当前 release 默认 rollout kwargs，双边 10+10，合并胜率 25.0%，Wilson CI [11.2%, 46.9%]，0 illegal/crash/timeout，avg 348.9ms，max 720.2ms。因胜率 <45%，按用户规则停止 MCTS，不进入扩样或 promotion，下一步转 P5。报告见 `reports/p41_targeted_fix_summary_20260516.md` / `.json`。
+- **2026-05-16 P5.0 opening-search entry guard 已完成，未晋升布局**：`scripts/search_openings.py` 主评测入口已从旧 `greedy_risk` self-play 改为读取 `release/v1.0/default_params.json`，使用当前 release 默认 `kind="rollout"` + P3 promotion 显式 kwargs 作为双方 AI；stats 聚合新增真实 `timeouts`。小样本 smoke 仅跑 `sample_size=5`、train/validation 每 opponent 各 2 局，生成 `reports/p5_opening_entry_guard_20260516.md` / `.json`。结果只证明 P5 harness 入口正确：validation top 两个红方布局分别为 5/8 和 6/8，0 illegal/crash/timeout；样本远小于晋升门禁，未改 GUI 默认布局、未改 release 默认布局。
+- **2026-05-16 P5.1 opening strata + seed pool 已完成，未晋升布局**：`scripts/search_openings.py` 新增 `candidate_mode=sample|stratified`、`per_style`、`seed_pool`、`json_output`；stratified 模式按 aggressive / balanced / defensive 三类各取固定数量候选，seed pool 聚合跨 seed 对战 stats，并在报告中记录 `style`、`seed_count`、`seeds`、`train_rows`、`decision` 和真实 `timeouts`。P5.1 smoke：`candidate_mode=stratified --per-style 1 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027`，三类各 1 个候选，validation 结果为 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。报告见 `reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`。该样本只验证分层和 seed 池流程，未改 GUI/release 默认布局。
+- **2026-05-16 P5.2 opening small-scale gate 已完成，未晋升布局**：复用 P5.1 分层与 seed pool 流程，执行 `--candidate-mode stratified --per-style 2 --games 1 --validation-games 1 --top-k 3 --seed-pool 2026,2027`，共 6 个候选、train top 从 5/8 到 2/8，validation top3 分别为 3/8、4/8、4/8，`illegal_moves=0`、`crashes=0`、`timeouts=0`。报告见 `reports/p52_opening_small_scale_gate_20260516.md` / `.json`。该样本只证明扩大 smoke gate 仍可稳定运行，未达到晋升样本量或胜率门槛，未改 GUI/release 默认布局。
 
 ## 已确认的比赛事实
 
@@ -88,8 +94,8 @@
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
 2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 全部完成；AI 下一阶段 P1 / P2 / P2.5 / P3 均已完成。当前 GUI/release 默认是 `rollout` kind + P3 promotion 参数，不再是旧 flat rollout。
-3. P3 promotion survivor `rollout_zweistein_cutoff` 已于 2026-05-16 受控替换为工作默认；如需回退，使用 `greedy_risk` 或恢复旧 flat rollout 参数。后续不要默认进入 P4，除非用户明确要求；比赛后再回到 Expectimax 主线（合并胜率 45.0% 弱于 baseline，需按 `reports/4-4-rebench.md` 方向实验）。
-4. 如有时间，可跑大样本 `scripts/param_sweep.py` 或 `scripts/search_openings.py` 看是否产出能过门禁的候选。
+3. P5.2 已完成 opening-search 小规模扩大样本门禁；下一步若继续 P5，应先决定是否把 seed 池扩到至少 3 个并提高 validation games，仍不得直接晋升布局。
+4. 任何默认布局变更仍必须直接对当前 release 默认 rollout kwargs 做门禁验证；P5.0/P5.1/P5.2 报告都不是晋升证据。
 
 ## 待确认事项
 

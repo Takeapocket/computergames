@@ -41,6 +41,17 @@ from scripts._bench_meta import build_provenance
 from scripts.quick_bench import _percentile, wilson_ci
 
 
+def _load_release_default_rollout_kwargs() -> dict:
+    data = json.loads((ROOT / "release" / "v1.0" / "default_params.json").read_text(encoding="utf-8"))
+    if data.get("ai") != "rollout":
+        raise ValueError("release/v1.0/default_params.json must use ai='rollout' for P4 baselines")
+    metadata_keys = {"ai", "fallback_ai", "promotion_report"}
+    return {key: value for key, value in data.items() if key not in metadata_keys}
+
+
+RELEASE_DEFAULT_ROLLOUT_KWARGS = _load_release_default_rollout_kwargs()
+
+
 # 门禁运算符：name → (op, threshold)。op ∈ {"eq", "lt", "le", "ge"}
 STAGE_GATES: dict[str, dict] = {
     "smoke": {
@@ -72,8 +83,16 @@ STAGE_GATES: dict[str, dict] = {
 CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
     "mcts_eval_v1": {
         "smoke":     {"opponent": "greedy",      "games_per_side": 50},
-        "candidate": {"opponent": "greedy_risk", "games_per_side": 200},
-        "promotion": {"opponent": "rollout",     "games_per_side": 400},
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "games_per_side": 200,
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "games_per_side": 400,
+        },
     },
     "rollout_32": {
         "candidate": {"opponent": "rollout", "games_per_side": 100},
@@ -146,8 +165,13 @@ def _make_ai(seed: int, *, kind: str, ai_kwargs: dict | None):
     return build_ai(kind, seed=seed, **(ai_kwargs or {}))
 
 
-def _merge_profile_kwargs(profile: dict, explicit_kwargs: dict) -> dict:
-    return {**profile.get("candidate_kwargs", {}), **explicit_kwargs}
+def _merge_profile_kwargs(
+    profile: dict,
+    explicit_kwargs: dict,
+    *,
+    key: str = "candidate_kwargs",
+) -> dict:
+    return {**profile.get(key, {}), **explicit_kwargs}
 
 
 def _candidate_telemetry(ai) -> dict[str, int]:
@@ -364,6 +388,14 @@ def _resolve_gates(candidate_kind: str, stage: str) -> dict:
     return gates
 
 
+def _is_p4_candidate_stage(candidate_kind: str, stage: str) -> bool:
+    return candidate_kind == "mcts_eval_v1" and stage in {"candidate", "promotion"}
+
+
+def _is_release_default_rollout_opponent(opponent_kind: str, opponent_kwargs: dict) -> bool:
+    return opponent_kind == "rollout" and opponent_kwargs == RELEASE_DEFAULT_ROLLOUT_KWARGS
+
+
 def _write_markdown(
     md_path: Path,
     *,
@@ -576,7 +608,22 @@ def main(argv: list[str] | None = None) -> int:
 
     candidate_kwargs = _parse_kv(args.candidate_arg, parser, "--candidate-arg")
     candidate_kwargs = _merge_profile_kwargs(profile, candidate_kwargs)
-    opponent_kwargs = _parse_kv(args.opponent_arg, parser, "--opponent-arg")
+    explicit_opponent_kwargs = _parse_kv(args.opponent_arg, parser, "--opponent-arg")
+    opponent_profile = profile if opponent_kind == profile.get("opponent") else {}
+    opponent_kwargs = _merge_profile_kwargs(
+        opponent_profile,
+        explicit_opponent_kwargs,
+        key="opponent_kwargs",
+    )
+    if _is_p4_candidate_stage(args.candidate, args.stage) and not _is_release_default_rollout_opponent(
+        opponent_kind,
+        opponent_kwargs,
+    ):
+        parser.error(
+            "P4 mcts_eval_v1 candidate/promotion requires opponent=rollout with current "
+            "release default rollout kwargs; use the built-in profile or pass the exact "
+            "release/v1.0/default_params.json kwargs explicitly."
+        )
     gates = _resolve_gates(args.candidate, args.stage)
 
     start = time.perf_counter()
