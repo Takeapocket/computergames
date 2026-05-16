@@ -1,14 +1,16 @@
 # Test Report
 
-Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive rollout 候选复验）
+Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive/P3 候选复验）/ 2026-05-16（P3 受控默认替换复验）
 
 ## Commands
 
 | command | exit code | result |
 |---|---:|---|
 | `.venv/Scripts/python.exe -m pytest -q` | 0 | 495 passed in 11.68s |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 520 passed in 10.51s（2026-05-16 P3 默认替换后） |
 | `.venv/Scripts/python.exe -m pytest tests/test_default_ai_config.py tests/test_ai_basic.py tests/test_quick_bench_ci.py tests/test_bench_ai.py tests/test_ai_match.py tests/test_rollout_ai.py tests/test_rollout_stability.py tests/test_gui_logic.py -q` | 0 | 91 passed |
 | `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过；undo restored: True |
+| hidden Tk `MainWindow` smoke with temporary auto-save paths | 0 | default recommender kind=`rollout`, cutoff_eval=`zweistein`, deadline_safety_ms=`30.0` |
 | `.venv/Scripts/python.exe scripts/rollout_stability.py --runs 10 --seed 0` | 0 | 输出含 score / winrate / cutoffs / avg；固定 10-run 分布随机且受 deadline 影响，只说明候选接近、低置信可见 |
 | `.venv/Scripts/python.exe scripts/s2_rehearsal.py` | 0 | Total: 8/8 scenarios passed |
 | `python scripts/quick_bench.py --red greedy_risk --blue greedy --games 200 --seed 2026` | 0 | red_win_rate=0.58 |
@@ -25,6 +27,10 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 ## pytest
 
 ```
+2026-05-16 P3 default replacement verification:
+520 passed in 10.51s
+
+2026-05-15 sign-off snapshot:
 495 passed in 11.68s
 ```
 
@@ -165,14 +171,48 @@ report_paths:
   reports/bench_20260515_old_rollout_red_vs_adaptive_rollout_blue_400.json
 ```
 
-结论：adaptive rollout 直接对旧 rollout 通过候选门槛（合并胜率 >55%，Wilson lower >52%），但未达到更严格的“直接对当前默认合并 >=60%”封版晋升线。因此本 release 默认参数保持旧 flat rollout；adaptive 仅作为显式候选保留。
+结论（2026-05-15 adaptive 复验当时）：adaptive rollout 直接对旧 rollout 通过候选门槛（合并胜率 >55%，Wilson lower >52%），但未达到更严格的“直接对当前默认合并 >=60%”封版晋升线，因此当时未写入 release 默认参数。该默认参数结论已被 2026-05-16 P3 受控默认替换 supersede；adaptive 仍仅作为显式候选保留。
+
+### P3 rollout_zweistein_cutoff promotion vs old rollout, 800 局, seed=2026
+
+```text
+rollout_zweistein_cutoff red win rate:  60.00% (240 / 400), Wilson lower 55.13%
+rollout_zweistein_cutoff blue win rate: 53.50% (214 / 400), Wilson lower 48.60%
+combined win rate:                      56.75% (454 / 800), Wilson lower 53.29%
+illegal_moves:                          0
+crashes:                                0
+timeouts:                               0
+average_step_time_ms:                   175.75
+max_step_time_ms:                       720.69
+report_path:                            reports/p3_promotion_rollout_zweistein_cutoff_20260515.json
+```
+
+受控默认替换说明（2026-05-16）：
+
+- GUI/release 工作默认 AI 仍使用 `build_ai("rollout", **kwargs)`，不依赖 `rollout_zweistein_cutoff` factory 的隐藏默认。
+- `release/v1.0/default_params.json` 与 `gui/main_window.py::DEFAULT_RECOMMENDER_KWARGS` 保持一致：
+
+```json
+{
+  "rollouts_per_move": 32,
+  "max_rollout_turns": 80,
+  "max_step_time_ms": 750.0,
+  "epsilon": 0.1,
+  "close_sample_margin": 0.08,
+  "close_sample_rollouts_per_move": 32,
+  "low_confidence_margin": 0.08,
+  "playout_policy": "greedy_risk",
+  "cutoff_eval": "zweistein",
+  "deadline_safety_ms": 30.0
+}
+```
 
 ## Promotion decisions
 
 参见 `reports/ai_promotion_decision.md`：
 
 - **AI 默认**：`rollout` 晋升为 GUI/release 默认；`greedy_risk` 保留为应急回退。
-- **rollout 参数**：GUI/release 默认参数保持旧 flat rollout（16 rollout / move）。adaptive rollout 未过 60% 封版晋升线，不写入 release 默认参数。
+- **rollout 参数**：2026-05-16 受控默认替换后，GUI/release 默认参数改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集，但实现上仍使用 `kind="rollout"` + 显式 kwargs；`greedy_risk` 保留为应急回退。
 - **开局默认**：保持 `balanced_v1`，未做候选晋升。
 
 参数搜索 / 开局搜索 / pairwise tournament 流水线均已落地为 `scripts/param_sweep.py`、`scripts/search_openings.py`、`scripts/tournament.py`；本 release 未替换默认布局。

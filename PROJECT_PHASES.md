@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-05-15（P3 Zweistein-lite candidate 后同步默认 AI 参数和候选状态）
+更新时间：2026-05-16（P3 受控默认替换后同步默认 AI 参数和候选状态）
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：离线 GUI 参赛程序
 
@@ -31,15 +31,15 @@
 | 崩溃自救 R-3 | 已完成 | `record/auto_save.py`、启动恢复、走子/悔棋自动保存已实现并有测试。 |
 | 七盘制 R-2 | 已完成 | `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已落地；R-2 review Critical+Important 修复已合并；甲乙身份选择、先手序列、盘内/整轮 auto-save 全链路打通。 |
 | S2 GUI 全流程演练 | 已完成 | `scripts/s2_rehearsal.py` 8/8 PASS；`docs/MATCH_CHECKLIST.md` + `docs/EMERGENCY_GUIDE.md` 落地；2026-05-13 操作员真实 Tk GUI 手动表填写完成（`reports/gui-rehearsal.md` §4，21/21 正常）。 |
-| 默认 AI | 已晋升 | `rollout` 作为当前默认参赛 AI；`greedy_risk` 保留为应急回退。release 默认参数保持旧 flat rollout：16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15。`rollout` vs `greedy_risk` 双边 800 局合并胜率 62.62%。 |
+| 默认 AI | 已晋升 | `rollout` 作为当前默认参赛 AI；`greedy_risk` 保留为应急回退。2026-05-16 起 release 默认参数为 P3 promotion 通过的显式 rollout kwargs：32 rollout / move、80 half-turn cutoff、750ms step deadline、epsilon 0.10、risk-aware playout、Zweistein cutoff、30ms deadline safety。 |
 | Adaptive rollout | 实验候选 | 32 初采样 + close sample 到 128 + 低置信提示已实现为显式参数候选，但 direct vs old rollout 800 局合并胜率 59.00%，未达 60% 默认晋升线，不进入 `release/v1.0/default_params.json`。 |
 | Rollout 根节点诊断 P1 | 已完成 | `RolloutAI.last_root_stats` + `RootMoveStats` 已成为 canonical 诊断接口，`last_diagnostics` 保持兼容；GUI 优先显示 root stats，并展示 visits / score / winrate / wins / losses / draws / avg / 低置信标记。默认 AI 参数和 release 配置未变。 |
 | Rollout 候选 P2 | 已完成，未晋升 | 已注册 `rollout_32` / `rollout_risk_playout` / `rollout_cutoff_eval` 并生成 candidate 报告。三者均未过门禁：`rollout_32` 胜率 54.5% 且 timeouts=4；`rollout_risk_playout` 胜率 57.0% 但 timeouts=10；`rollout_cutoff_eval` 胜率 57.5% 但 timeouts=11。默认 AI 和 release 配置不变。 |
 | Rollout deadline safety P2.5 | 已完成，1 个 survivor | `RolloutAI.deadline_safety_ms` 默认 0.0，不改变旧 rollout；P2.5 profile 仅给 `rollout_risk_playout` / `rollout_cutoff_eval` 传 30.0。复验只跑这两个候选，各双边 100+100、对手 rollout。`rollout_cutoff_eval` 胜率 57.0% 且 timeouts=0，标记为 P2.5 survives；`rollout_risk_playout` 胜率 58.5% 但总 timeouts=1，未过总门禁。默认 GUI/release 不变。 |
-| Zweistein-lite P3 | 已完成 candidate，未晋升 | 新增 `zweistein_lite_score()`，注册 `greedy_zweistein` / `rollout_zweistein_cutoff` / `expectimax_zweistein_d1`。`rollout_zweistein_cutoff` candidate vs rollout 双边 100+100：胜率 58.0%，timeouts=0，candidate 门禁通过。尚未跑 400+400 promotion，默认 GUI/release 不变。 |
+| Zweistein-lite P3 | promotion 通过，已替换工作默认 | 新增 `zweistein_lite_score()`，注册 `greedy_zweistein` / `rollout_zweistein_cutoff` / `expectimax_zweistein_d1`。`rollout_zweistein_cutoff` candidate vs rollout 双边 100+100：胜率 58.0%，timeouts=0；promotion vs old rollout 双边 400+400：胜率 56.75%，Wilson lower 53.29%，timeouts=0。2026-05-16 已按用户批准受控替换为 GUI/release 工作默认，但实现仍使用 `kind="rollout"` + 显式 kwargs。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**release/v1.0 归档/赛前核对；AI 研究可先决定是否给 `rollout_zweistein_cutoff` 跑 400+400 promotion，或按路线进入 P4 MCTS opponent node -> P5 开局搜索。P3 candidate 仅作为后续验证候选，不改 GUI/release 默认。比赛后再推进 Expectimax 结构修复。**
+下一步主线：**release/v1.0 归档/赛前核对；P3 promotion 参数已受控替换为 GUI/release 工作默认。不要自动进入 P4；只有用户明确要求时再进入 MCTS opponent node -> P5 开局搜索。比赛后再推进 Expectimax 结构修复。**
 详细方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
 执行计划见：`docs/superpowers/plans/2026-05-12-final-sprint-plan.md`
 
@@ -199,7 +199,7 @@ GUI 不依赖网络。
 pytest 通过。
 quick_bench 仍可复现 4.1/4.2 基线。
 所有 AI 对战报告包含 games、seed、胜率、非法走法、崩溃、真实 timeout telemetry、平均步时、最大步时。2026-05-15 前生成的部分历史报告 timeout 字段为 legacy 常量，不能单独作为新候选晋升证据。
-新增评估项必须直接对当前默认旧 flat `rollout` 胜率达标，才允许进入默认 AI。
+新增评估项必须直接对当前 GUI/release 默认 `rollout` 配置（P3 promotion 显式 kwargs）胜率达标，才允许进入默认 AI。
 ```
 
 ---
@@ -240,7 +240,7 @@ docs/EMERGENCY_GUIDE.md
 pytest 全部通过。
 GUI 可离线启动。
 开局录入、计时、棋谱、auto_save、七盘制流程正常。
-当前默认 AI 为旧 flat `rollout`；`greedy_risk` 仅作为应急回退。后续候选必须直接对当前默认 `rollout` 过门禁后才可替换。
+当前默认 AI 为 `rollout` kind + P3 promotion 显式参数；`greedy_risk` 仅作为应急回退。后续候选必须直接对当前默认 `rollout` 配置过门禁后才可替换。
 无非法走法、无崩溃、无超时。
 有源码和可运行版本备份。
 ```
@@ -414,4 +414,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**S2/S3/S4 全部闭环；2026-05-15 已完成 code review follow-up、P1 Rollout 根节点诊断收敛、P2 rollout 候选小样本筛选、P2.5 deadline safety 复验、P3 Zweistein-lite candidate 小样本和文档同步。`rollout` 已按 800 局 harness 门禁晋升为 GUI/release 默认 AI，默认参数保持旧 flat rollout；adaptive rollout 与 P2/P2.5/P3 候选均只是显式实验候选。下一步：决定是否跑 `rollout_zweistein_cutoff` promotion，或进入 P4 MCTS opponent node。**
+当前最近任务：**S2/S3/S4 全部闭环；2026-05-16 已完成 P3 受控默认替换。`rollout` 仍是 GUI/release 默认 AI kind，但默认参数已改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集；`greedy_risk` 保留为应急回退。下一步：release/v1.0 归档与赛前核对；不要自动进入 P4，除非用户明确要求。**

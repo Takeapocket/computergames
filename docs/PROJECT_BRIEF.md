@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-15（P3 Zweistein-lite candidate 后同步候选状态）
+更新时间：2026-05-16（P3 受控默认替换后同步候选状态）
 
 ## 项目定位
 
@@ -20,14 +20,14 @@
 - 阶段 4.4：ExpectimaxAI 在 R-0 合规重跑后仍弱（合并 45.0%），保留为研究/实验代码。
 - **S3 完成（2026-05-12）**：`scripts/quick_bench.py` 新增 Wilson 95% CI；`scripts/tournament.py` pairwise matrix 落地；`stuck_penalty` 死代码清理完毕；`ai/self_capture.py`（默认关闭）/ `scripts/param_sweep.py` / `scripts/search_openings.py` 候选实验流水线建立。
 - **S4 已完成（2026-05-13）**：`release/v1.0/` 目录 README + config + default_params + known_limitations + test_report 已完整落地；`rollout` 已按 harness 门禁晋升为默认 AI，`greedy_risk` 保留为应急回退，默认布局保持 `balanced_v1`，决策见 `reports/ai_promotion_decision.md`。
-- **2026-05-15 code review follow-up 已完成**：默认 `rollout` 参数保持旧 flat release 形态（16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15）。adaptive rollout 仅作为显式实验候选；direct vs old rollout 800 局合并胜率 59.00%，未过 60% 默认晋升线，不写入 release 默认参数。`RolloutAI` 诊断现区分 score / winrate / cutoffs / avg；bench 脚本已聚合真实 `timeouts`。
+- **2026-05-15 code review follow-up 已完成**：当时默认 `rollout` 参数保持旧 flat release 形态（16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15）。该默认参数已被 2026-05-16 P3 受控默认替换 supersede；当前以 `gui/main_window.py` 与 `release/v1.0/default_params.json` 为准。adaptive rollout 仅作为显式实验候选；direct vs old rollout 800 局合并胜率 59.00%，未过 60% 默认晋升线。`RolloutAI` 诊断现区分 score / winrate / cutoffs / avg；bench 脚本已聚合真实 `timeouts`。
 - **2026-05-15 P1 / P2 / P2.5 已完成**：`RolloutAI.last_root_stats` 成为 canonical 诊断接口；新增 `rollout_32`、`rollout_risk_playout`、`rollout_cutoff_eval` 三个 benchable 候选。P2 三者均未过门禁；P2.5 只给 `rollout_risk_playout` / `rollout_cutoff_eval` 的 bench profile 注入 `deadline_safety_ms=30.0`，其中仅 `rollout_cutoff_eval` 以 57.0% 胜率、0 timeout 标记为 survivor。默认 AI 和 release 配置不变。
-- **2026-05-15 P3 Zweistein-lite candidate 已完成**：新增 `zweistein_lite_score()` 与 `greedy_zweistein`、`rollout_zweistein_cutoff`、`expectimax_zweistein_d1` 实验 kind。`rollout_zweistein_cutoff` vs 当前默认 `rollout` 双边 100+100 合并胜率 58.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，candidate 门禁通过；尚未跑 400+400 promotion，不能视为默认晋升。
+- **2026-05-15 P3 Zweistein-lite promotion 已通过，2026-05-16 已受控替换默认**：新增 `zweistein_lite_score()` 与 `greedy_zweistein`、`rollout_zweistein_cutoff`、`expectimax_zweistein_d1` 实验 kind。`rollout_zweistein_cutoff` vs 当前默认旧 flat `rollout` 的 candidate 双边 100+100 合并胜率 58.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`；promotion 双边 400+400 合并胜率 56.75%，Wilson lower 53.29%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，working-baseline promotion 门禁通过。用户已批准替换 GUI/release 工作默认；实现仍使用 `kind="rollout"` + 显式 P3 kwargs，不依赖 `rollout_zweistein_cutoff` factory。
 
 下一会话优先级：
 1. **release/v1.0 归档与赛前核对**：sign-off 复验已记录；下一步是备份正式提交物和现场启动包。
-2. AI 研究若继续推进，优先决定是否给 `rollout_zweistein_cutoff` 跑 400+400 promotion；未过 promotion 前不得写入 GUI/release 默认。
-3. 若暂不扩大 P3 样本，则按路线进入 P4 MCTS opponent node；比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。
+2. AI 研究若继续推进，当前默认基线已是 `rollout` kind + P3 promotion 显式参数；后续候选必须直接对这个配置过门禁。不要自动进入 P4，除非用户明确要求。
+3. P4 MCTS opponent node 只在用户明确授权后启动；比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。
 
 ## 当前技术栈
 
@@ -44,7 +44,7 @@
 - 合法走法生成（含吃本方棋子，R-0 已合规）。
 - 吃对方/本方子、胜负判断、走子和撤销。
 - 状态序列化和反序列化。
-- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为旧 flat rollout）、P2/P3 rollout/Zweistein 显式实验候选、ExpectimaxAI（实验性）。
+- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P3 promotion 显式 kwargs）、P2/P3 rollout/Zweistein 显式实验候选、ExpectimaxAI（实验性）。
 - Tkinter GUI（含开局录入、骰子录入、推荐走法 by rollout）。
 - 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）。
 - 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
@@ -94,5 +94,5 @@
 详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
 
 1. **release/v1.0 归档**：把 release/v1.0 当作正式提交物备份；准备现场启动包。
-2. **可选 AI 研究**：给 `rollout_zweistein_cutoff` 跑 400+400 promotion，或进入 P4 MCTS opponent node。任何默认变更仍必须直接对当前默认 `rollout` 过门禁。
+2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数。后续如进入 P4 MCTS opponent node，必须先明确用户授权；任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
 3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。

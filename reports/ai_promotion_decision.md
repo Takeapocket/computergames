@@ -78,6 +78,66 @@ Implementation:
 - `reports/expectimax_v2_vs_greedy_risk_red.json`
 - `reports/greedy_risk_vs_expectimax_v2_blue.json`
 
+## 2026-05-16 P3 Promotion Decision: rollout_zweistein_cutoff
+
+Status: approved for GUI/release working default replacement on 2026-05-16. The implementation intentionally keeps `kind="rollout"` and copies the candidate parameters explicitly into GUI/release config instead of relying on the `rollout_zweistein_cutoff` factory shortcut.
+
+Command:
+
+```powershell
+& ".venv/Scripts/python.exe" "scripts/bench_ai.py" --candidate rollout_zweistein_cutoff --stage promotion --report-name p3_promotion_rollout_zweistein_cutoff_20260515
+```
+
+Candidate signature:
+
+```json
+{
+  "name": "rollout_zweistein_cutoff",
+  "rollouts_per_move": 32,
+  "max_rollout_turns": 80,
+  "max_step_time_ms": 750.0,
+  "epsilon": 0.1,
+  "close_sample_margin": 0.08,
+  "close_sample_rollouts_per_move": 32,
+  "low_confidence_margin": 0.08,
+  "playout_policy": "greedy_risk",
+  "cutoff_eval": "zweistein",
+  "deadline_safety_ms": 30.0
+}
+```
+
+Comparison:
+
+| candidate | comparison | games | candidate wins | win rate | Wilson lower | illegal | crashes | real timeouts | avg ms | max ms |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| **rollout_zweistein_cutoff** | vs old flat rollout | **800** | **454** | **56.75%** | **53.29%** | **0** | **0** | **0** | **175.75** | **720.69** |
+
+Working-baseline promotion gate:
+
+| gate | threshold | actual | pass |
+|---|---:|---:|---|
+| combined win rate | >= 55% | 56.75% | PASS |
+| Wilson 95% CI lower | >= 52% | 53.29% | PASS |
+| illegal_moves | = 0 | 0 | PASS |
+| crashes | = 0 | 0 | PASS |
+| real timeout telemetry | = 0 | 0 | PASS |
+| average_step_time_ms | <= 500 | 175.75 | PASS |
+| max_step_time_ms | <= 5000 | 720.69 | PASS |
+
+Decision:
+
+- `rollout_zweistein_cutoff` passes the P3 working-baseline promotion gate against the current old flat `rollout`.
+- Replace the GUI/release working default with `kind="rollout"` plus the explicit candidate kwargs listed above.
+- `gui/main_window.py::DEFAULT_RECOMMENDER_KIND` remains `"rollout"`.
+- `gui/main_window.py::DEFAULT_RECOMMENDER_KWARGS` and `release/v1.0/default_params.json` are updated to match the candidate signature.
+- `release/v1.0/config.json` does not need a semantic change because its default AI kind is still `rollout`.
+- `greedy_risk` remains the emergency fallback.
+
+Traceability:
+
+- `reports/p3_promotion_rollout_zweistein_cutoff_20260515.json`
+- `reports/p3_promotion_rollout_zweistein_cutoff_20260515.md`
+
 ## 2026-05-15 Adaptive Rollout Parameter Follow-up
 
 The GUI/release default AI kind remains `rollout`. The adaptive parameters below were evaluated after the fixed-position self-capture audit, but they are not promoted into `release/v1.0/default_params.json` because the direct comparison against the old rollout default did not clear the stricter 60% default-promotion target.
