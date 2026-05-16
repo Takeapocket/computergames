@@ -7,10 +7,16 @@ import gui.main_window as main_window
 def test_gui_default_recommender_is_rollout():
     assert main_window.DEFAULT_RECOMMENDER_KIND == "rollout"
     assert main_window.DEFAULT_RECOMMENDER_KWARGS == {
-        "rollouts_per_move": 16,
+        "rollouts_per_move": 32,
         "max_rollout_turns": 80,
-        "max_step_time_ms": 500.0,
-        "epsilon": 0.15,
+        "max_step_time_ms": 750.0,
+        "epsilon": 0.1,
+        "close_sample_margin": 0.08,
+        "close_sample_rollouts_per_move": 32,
+        "low_confidence_margin": 0.08,
+        "playout_policy": "greedy_risk",
+        "cutoff_eval": "zweistein",
+        "deadline_safety_ms": 30.0,
     }
 
 

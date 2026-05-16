@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序
 
-面向 2026 年辽宁省大学生计算机博弈大赛校内选拔赛的离线 Tkinter GUI 参赛程序。规则、GUI、棋谱、计时、七盘制比赛流程、崩溃自救、AI harness 已全部闭环；默认参赛 AI 为旧 flat 参数的 `rollout`，`greedy_risk` 作为应急回退。比赛版本已封版至 `release/v1.0/`。
+面向 2026 年辽宁省大学生计算机博弈大赛校内选拔赛的离线 Tkinter GUI 参赛程序。规则、GUI、棋谱、计时、七盘制比赛流程、崩溃自救、AI harness 已全部闭环；默认参赛 AI 为 `rollout` kind + P3 promotion 参数（Zweistein cutoff / risk-aware playout），`greedy_risk` 作为应急回退。比赛版本已封版至 `release/v1.0/`。
 
 项目不依赖网络、不假定统一平台/API；如赛前 QQ 群发布统一平台协议，再在 `adapters/` 增加适配层，不修改 `core/` 规则语义。
 
@@ -31,8 +31,8 @@ replays/     auto_save 与对战 replay
 - Tkinter GUI：开局录入（预设 `balanced_v1` / `aggressive_v1` / `defensive_v1` 或自定义、可录入对方布局）、骰子录入、合法走法执行、悔棋、AI 推荐显示。
 - JSON 棋谱保存/加载；单方 4 分钟包干计时；盘内/盘间 auto_save 自动恢复。
 - 七盘制比赛模式：甲乙身份、先手序列（甲方 1/4/5，乙方 2/3/6/7）、比分推进、先胜 4 盘判本轮胜方。
-- AI 体系：`random` / `greedy` / `greedy_risk`（回退）/ `rollout`（**默认**，release 参数为 16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15）/ `expectimax` 与 `expectimax_v2`（实验性）/ `mcts`（实验性）/ `tactical`（战术封装）。
-- P2/P2.5/P3 的 rollout / Zweistein 候选仅为显式实验候选，详见 `PROJECT_PHASES.md`，未进入 `release/v1.0` 默认配置。
+- AI 体系：`random` / `greedy` / `greedy_risk`（回退）/ `rollout`（**默认**，release 参数为 32 rollout / move、80 half-turn cutoff、750ms step deadline、epsilon 0.10、risk-aware playout、Zweistein cutoff、30ms deadline safety）/ `expectimax` 与 `expectimax_v2`（实验性）/ `mcts`（实验性）/ `tactical`（战术封装）。
+- P2/P2.5/P3 的其他 rollout / Zweistein 候选仅为显式实验候选，详见 `PROJECT_PHASES.md`；当前进入 `release/v1.0` 默认配置的是 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集，实现上仍使用 `kind="rollout"` + 显式 kwargs。
 - adaptive rollout（32 初采样、close sample 到 128、低置信提示）是显式实验候选，不是 `release/v1.0` 默认参数；直接对旧 rollout 的 800 局合并胜率为 59.00%，未过 60% 默认晋升线。
 - Harness：`quick_bench`（Wilson CI）、`tournament`（pairwise matrix）、`param_sweep`、`search_openings`，slim JSON 报告默认入库。
 - `release/v1.0/` 已冻结比赛版本，含运行指引、参数、已知限制和 800 局双边晋升数据测试报告。
