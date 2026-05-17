@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-17（P8 threat defense audit 后同步）
+更新时间：2026-05-17（P9 Zweistein-DP chance-aware evaluation 后同步）
 
 ## 当前结论
 
@@ -32,6 +32,7 @@
 - **2026-05-17 P6 robustness lock 已完成**：新增 `tests/test_release_consistency.py` 锁定 GUI/release 默认 AI、fallback 与 `balanced_v1` 默认布局；新增 `scripts/preflight_check.py`，成功时输出 `READY FOR MATCH`。GUI 推荐兜底链已固定为 current default rollout -> `greedy_risk` -> 第一条合法步 -> 无合法步，并在推荐文本区标出来源。损坏 `auto_save.json` / `auto_save_match.json` 启动时会自动清理，不再阻塞 GUI。`scripts/timing_budget_probe.py` 120 样本结果：`illegal_recommendations=0`、`exceptions=0`、`p99_ms≈641`、`max_ms≈720`，1 个 timeout/fallback 样本已列入报告。报告见 `reports/p6_timing_budget_probe_20260516.md` / `.json`。release 默认 AI、默认布局和 core 规则未变。
 - **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：新增 `scripts/analyze_rollout_failures.py`。P7.0 对当前 release 默认 rollout vs `greedy_risk` 跑 120 局：87 胜 / 33 负，`illegal_moves=0`、`crashes=0`、`timeouts=0`；失败桶为 `missed_direct_win=0`、`allowed_direct_loss=63`、`low_confidence_loss=145`、`timeout_or_fallback=4`、`bad_self_capture=33`。因此 P7.1 direct-win guard 不成立；P7.2 `rollout_adaptive_close_sample` 作为显式实验候选注册并在 `balanced_v1` 布局 bench，双边 100+100 合并胜率 50.0%，未达 55% candidate 门槛，不进入默认。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。最新验证：576 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 - **2026-05-17 P8 threat defense audit 已完成**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。审计结果：`audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。报告见 `reports/p8_threat_defense_audit_20260517.md` / `.json`。默认 AI、默认布局、core 规则和 release 配置未变。`rollout_threat_rerank` 未实现，因为审计 gate 不支持：低置信 threat-reducing ratio 0.012 < 0.250，低置信 top-k 命中 ratio 0.500 < 0.600；未过门禁不得晋升。最新验证：590 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
+- **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：P9.0 已实现 `ai/zweistein_dp.py` 概率估值表并通过测试；DP 表尺寸为 `15625 x 20`，`PDF_VAL` / `CDF_VAL` 均为 15625 行。P9.1 `rollout_zweistein_dp_cutoff` 已作为显式候选评测，双边 100+100 合并胜率 45.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛；P9.2 `rollout_exact_opp1_zdp` 已作为显式候选评测，双边 100+100 合并胜率 51.5%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛，且低于 P9.3 TT / move ordering 启动线 52%，因此 P9.3 不启动。全量验证通过，`scripts/preflight_check.py` 输出 `READY FOR MATCH`。GUI/release 默认 AI、默认布局、core 规则均未变。
 
 ## 已确认的比赛事实
 
@@ -99,8 +100,8 @@
 ## 下一次对话建议第一步
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
-2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 / P6 / P7 全部闭环；当前 GUI/release 默认仍是 `rollout` kind + P3 promotion 参数，不是旧 flat rollout。
-3. P7.2 adaptive close-sample candidate 已跑完但未过门禁；没有用户明确批准前不得进入 GUI/release 默认。
+2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 / P6 / P7 / P8 / P9 全部闭环；当前 GUI/release 默认仍是 `rollout` kind + P3 promotion 参数，不是旧 flat rollout。
+3. P7.2 adaptive close-sample candidate 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动；没有用户明确批准前不得进入 GUI/release 默认。
 4. P5.5 opening 候选晋升路线已停止；任何默认布局变更仍必须直接对当前 release 默认 rollout kwargs 做正式门禁验证。
 5. 下一步优先赛前冻结、现场启动包核对和 QQ 群/老师附件对齐；只修现场风险 bug，不继续默认 AI/布局调参。
 

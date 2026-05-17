@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-17（P8 threat defense audit 后同步）
+更新时间：2026-05-17（P9 Zweistein-DP chance-aware evaluation 后同步）
 
 ## 项目定位
 
@@ -8,7 +8,7 @@
 
 程序目标不是命令行工具，而是比赛现场可操作的软件：操作员录入骰子和对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
 
-## 当前阶段判断（2026-05-17，P6/P7/P8 已闭环）
+## 当前阶段判断（2026-05-17，P6/P7/P8/P9 已闭环）
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
 - 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
@@ -33,10 +33,11 @@
 - **2026-05-17 P6 robustness lock 已完成**：`tests/test_release_consistency.py` 锁定 release/GUI 默认 AI、fallback 与 `balanced_v1`；`scripts/preflight_check.py` 可一条命令跑 pytest、smoke、S2 rehearsal，并以 `READY FOR MATCH` 作为成功结论。GUI 推荐兜底链已实现为 default rollout -> `greedy_risk` -> 第一条合法步 -> 无合法步；损坏 auto-save 启动清理已覆盖。P6.4 timing probe 120 样本：0 illegal、0 exception、p99≈641ms、max≈720ms，1 个 timeout/fallback 样本已列入报告。
 - **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：P7.0 默认 rollout vs `greedy_risk` 120 局为 87 胜 / 33 负，0 illegal/crash/timeout；`missed_direct_win=0`，所以 P7.1 direct-win guard 不成立。P7.2 `rollout_adaptive_close_sample` 已注册为显式实验候选，双边 100+100 在 `balanced_v1` 布局对当前 release 默认 rollout 合并胜率 50.0%，未过 55% candidate 门槛，不能默认启用。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。
 - **2026-05-17 P8 threat defense audit 已完成，候选未实现**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。120 局审计得到 `audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。gate 不支持 `rollout_threat_rerank`，因此未实现候选；默认 AI、默认布局、core 规则和 release 配置未变。
+- **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：新增 `ai/zweistein_dp.py` 概率估值表和 `rollout_zweistein_dp_cutoff` / `rollout_exact_opp1_zdp` 显式候选。P9.0 smoke 显示 DP 表尺寸为 `15625 x 20`，测试通过；P9.1 双边 candidate 合并胜率 45.0%，未过 55% candidate 门槛；P9.2 双边 candidate 合并胜率 51.5%，未过 55% candidate 门槛，且低于 P9.3 启动线 52%，因此不启动 TT / move ordering。默认 AI、默认布局、core 规则和 release 配置均未变。
 
 下一会话优先级：
 1. **赛前冻结与现场启动包核对**：使用 `scripts/preflight_check.py` 作为赛前总检查，成功必须输出 `READY FOR MATCH`。
-2. 默认 AI 仍是 `rollout` kind + P3 promotion 显式参数；P7.2 未过门禁，P8 gate 也不支持 `rollout_threat_rerank`，不得默认启用。
+2. 默认 AI 仍是 `rollout` kind + P3 promotion 显式参数；P7.2 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动。赛前不得默认启用这些实验候选。
 3. 默认布局仍是 `balanced_v1`；P5.5 失败候选和 P5.0-P5.4 报告都不是晋升证据。
 
 ## 当前技术栈
