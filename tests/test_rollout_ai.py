@@ -58,6 +58,18 @@ def test_rollout_ai_cutoff_eval_zweistein_uses_zweistein_score(monkeypatch):
     assert ai._cutoff_score(state, Player.RED) == 0.5
 
 
+def test_rollout_ai_cutoff_eval_zweistein_dp_preserves_probability(monkeypatch):
+    state = default_starting_state()
+    monkeypatch.setattr(
+        "ai.rollout_ai.zweistein_dp_win_prob",
+        lambda state, perspective: 0.63,
+        raising=False,
+    )
+    ai = RolloutAI(cutoff_eval="zweistein_dp", rng=random.Random(1))
+
+    assert ai._cutoff_score(state, Player.RED) == 0.63
+
+
 def test_rollout_ai_records_candidate_diagnostics():
     state = GameState.from_layout(
         red={

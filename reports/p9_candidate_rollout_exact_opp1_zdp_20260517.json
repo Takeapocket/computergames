@@ -1,0 +1,137 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-17T17:19:35",
+  "git_revision": "92a170dee8f6269ef6a962001f5ff7283f55995e",
+  "git_dirty": true,
+  "command": "python scripts/bench_ai.py --candidate rollout_exact_opp1_zdp --stage candidate --report-name p9_candidate_rollout_exact_opp1_zdp_20260517",
+  "python_version": "3.11.9",
+  "starting_layout_id": "balanced_v1",
+  "experiment": "rollout_exact_opp1_zdp_candidate",
+  "candidate": "rollout_exact_opp1_zdp",
+  "candidate_kwargs": {},
+  "stage": "candidate",
+  "opponent": "rollout",
+  "opponent_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "games_per_side": 100,
+  "red_direction": {
+    "label": "candidate_red_vs_rollout_blue",
+    "summary": {
+      "games": 100,
+      "candidate_wins": 56,
+      "opponent_wins": 44,
+      "draws": 0,
+      "candidate_win_rate": 0.56,
+      "candidate_win_ci95": [
+        0.4622792771125631,
+        0.6532813459903167
+      ],
+      "average_turns": 18.08,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 296.8221013827051,
+      "p95_step_time_ms": 598.0950999983179,
+      "p99_step_time_ms": 721.9308999992791,
+      "max_step_time_ms": 722.9834999998275,
+      "fire_considered": 100,
+      "fire_passthrough_no_change": 95,
+      "fire_applied": 5
+    }
+  },
+  "blue_direction": {
+    "label": "rollout_red_vs_candidate_blue",
+    "summary": {
+      "games": 100,
+      "candidate_wins": 47,
+      "opponent_wins": 53,
+      "draws": 0,
+      "candidate_win_rate": 0.47,
+      "candidate_win_ci95": [
+        0.3751065198210374,
+        0.5671131686275227
+      ],
+      "average_turns": 18.39,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 282.52957591078336,
+      "p95_step_time_ms": 586.9148999991012,
+      "p99_step_time_ms": 720.336700000189,
+      "max_step_time_ms": 723.2352999999421,
+      "fire_considered": 100,
+      "fire_passthrough_no_change": 96,
+      "fire_applied": 4
+    }
+  },
+  "combined": {
+    "games": 200,
+    "candidate_wins": 103,
+    "candidate_win_rate": 0.515,
+    "candidate_win_ci95": [
+      0.44610724474630287,
+      0.5833273750761476
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_step_time_ms": 289.67583864674424,
+    "p95_step_time_ms": 598.0950999983179,
+    "p99_step_time_ms": 721.9308999992791,
+    "max_step_time_ms": 723.2352999999421,
+    "fire_passthrough_no_change": 191,
+    "fire_applied": 9,
+    "fire_considered": 200
+  },
+  "gates_pass": false,
+  "gate_failures": [
+    "candidate_win_rate = 51.5%（要求 ≥ 55.0%）"
+  ],
+  "ai_versions": {
+    "candidate": {
+      "name": "rollout_exact_opp1_zdp",
+      "base": {
+        "name": "rollout",
+        "rollouts_per_move": 32,
+        "max_rollout_turns": 80,
+        "max_step_time_ms": 750.0,
+        "epsilon": 0.1,
+        "close_sample_margin": 0.08,
+        "close_sample_rollouts_per_move": 32,
+        "low_confidence_margin": 0.08,
+        "playout_policy": "greedy_risk",
+        "cutoff_eval": "zweistein",
+        "deadline_safety_ms": 30.0
+      },
+      "top_k": 3,
+      "exact_mix": 0.35,
+      "min_time_remaining_ms": 20.0,
+      "max_step_time_ms": 750.0
+    },
+    "opponent": {
+      "name": "rollout",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 1056.356
+}

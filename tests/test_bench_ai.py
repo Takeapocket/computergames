@@ -48,6 +48,20 @@ def test_rollout_adaptive_close_sample_profile_resolves_balanced_layout() -> Non
 
 
 @pytest.mark.parametrize(
+    "kind",
+    ["rollout_zweistein_dp_cutoff", "rollout_exact_opp1_zdp"],
+)
+def test_p9_profiles_use_release_default_rollout_opponent_and_balanced_layout(kind) -> None:
+    for stage, games_per_side in (("candidate", 100), ("promotion", 400)):
+        profile = bench_ai.CANDIDATE_PROFILES[kind][stage]
+
+        assert profile["opponent"] == "rollout"
+        assert profile["opponent_kwargs"] == bench_ai.RELEASE_DEFAULT_ROLLOUT_KWARGS
+        assert profile["starting_layout"] == "balanced_v1"
+        assert profile["games_per_side"] == games_per_side
+
+
+@pytest.mark.parametrize(
     "override_args",
     [
         ["--opponent", "greedy"],

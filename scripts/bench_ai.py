@@ -148,6 +148,34 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
             "games_per_side": 400,
         },
     },
+    "rollout_zweistein_dp_cutoff": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 100,
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 400,
+        },
+    },
+    "rollout_exact_opp1_zdp": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 100,
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 400,
+        },
+    },
 }
 
 OP_LABEL = {"eq": "=", "lt": "<", "le": "≤", "ge": "≥"}

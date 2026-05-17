@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT, evaluate
 from ai.greedy_ai import GreedyAI
 from ai.zweistein import zweistein_lite_score
+from ai.zweistein_dp import zweistein_dp_win_prob
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player
@@ -117,7 +118,7 @@ class RolloutAI:
     ) -> None:
         if playout_policy not in {"greedy", "greedy_risk"}:
             raise ValueError(f"unknown playout_policy: {playout_policy!r}")
-        if cutoff_eval not in {"draw", "current", "zweistein"}:
+        if cutoff_eval not in {"draw", "current", "zweistein", "zweistein_dp"}:
             raise ValueError(f"unknown cutoff_eval: {cutoff_eval!r}")
         self.rollouts_per_move = int(rollouts_per_move)
         self.max_rollout_turns = int(max_rollout_turns)
@@ -301,6 +302,8 @@ class RolloutAI:
     def _cutoff_score(self, state: GameState, perspective: Player) -> float:
         if self.cutoff_eval == "draw":
             return 0.5
+        if self.cutoff_eval == "zweistein_dp":
+            return zweistein_dp_win_prob(state, perspective)
         if self.cutoff_eval == "zweistein":
             value = zweistein_lite_score(state, perspective)
         else:

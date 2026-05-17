@@ -8,6 +8,7 @@ from core.move import Move
 from ai.expectimax_ai import ExpectimaxAI
 from ai.expectimax_v2 import ExpectimaxV2
 from ai.greedy_ai import GreedyAI
+from ai.chance_rerank import ExactOpponentDiceRerankAI
 from ai.mcts import MCTSAI
 from ai.random_ai import RandomAI, choose_random_move
 from ai.rollout_ai import RolloutAI
@@ -28,6 +29,7 @@ __all__ = [
     "AIPlayer",
     "ExpectimaxAI",
     "ExpectimaxV2",
+    "ExactOpponentDiceRerankAI",
     "GreedyAI",
     "MCTSAI",
     "RandomAI",

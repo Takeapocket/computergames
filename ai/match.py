@@ -387,6 +387,18 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
                 "cutoff_eval": "zweistein",
             }),
         )
+    if kind == "rollout_zweistein_dp_cutoff":
+        from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
+        from ai.rollout_ai import RolloutAI
+
+        return RolloutAI(
+            rng=rng,
+            name="rollout_zweistein_dp_cutoff",
+            **_merged({
+                **RELEASE_DEFAULT_ROLLOUT_KWARGS,
+                "cutoff_eval": "zweistein_dp",
+            }),
+        )
     if kind == "rollout_adaptive_close_sample":
         from ai.rollout_ai import RolloutAI
         from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
@@ -400,6 +412,34 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
                 "close_sample_rollouts_per_move": 64,
                 "low_confidence_margin": 0.06,
             }),
+        )
+    if kind == "rollout_exact_opp1_zdp":
+        from ai.chance_rerank import ExactOpponentDiceRerankAI
+        from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
+        from ai.rollout_ai import RolloutAI
+
+        top_k = int(ai_kwargs.pop("top_k", 3))
+        exact_mix = float(ai_kwargs.pop("exact_mix", 0.35))
+        min_time_remaining_ms = float(ai_kwargs.pop("min_time_remaining_ms", 20.0))
+        max_step_time_ms = float(ai_kwargs.pop("max_step_time_ms", RELEASE_DEFAULT_ROLLOUT_KWARGS["max_step_time_ms"]))
+        base_kwargs = {**RELEASE_DEFAULT_ROLLOUT_KWARGS, "max_step_time_ms": max_step_time_ms}
+        for key in list(ai_kwargs):
+            if key in base_kwargs:
+                base_kwargs[key] = ai_kwargs.pop(key)
+        if ai_kwargs:
+            raise TypeError(f"rollout_exact_opp1_zdp does not accept kwargs: {sorted(ai_kwargs)}")
+        base_rng = random.Random(seed)
+        wrapper_seed = None if seed is None else (int(seed) ^ 0x9E3779B9)
+        wrapper_rng = random.Random(wrapper_seed)
+        base = RolloutAI(rng=base_rng, **base_kwargs)
+        return ExactOpponentDiceRerankAI(
+            base=base,
+            top_k=top_k,
+            exact_mix=exact_mix,
+            min_time_remaining_ms=min_time_remaining_ms,
+            max_step_time_ms=max_step_time_ms,
+            rng=wrapper_rng,
+            name="rollout_exact_opp1_zdp",
         )
     if kind == "expectimax":
         from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
@@ -460,6 +500,7 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     ``TacticalAI`` 等包装器额外暴露 ``base`` 子签名（递归调用）与 ``patches``
     列表，让 bench metadata 能区分「裸 base」与「base + 战术补丁」。
     """
+    from ai.chance_rerank import ExactOpponentDiceRerankAI
     from ai.tactical import TacticalAI
 
     if isinstance(ai, TacticalAI):
@@ -467,6 +508,16 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
             "name": ai.name,
             "base": ai_version_signature(ai.base),
             "patches": ["direct_win", "block_one_step_win"],
+        }
+
+    if isinstance(ai, ExactOpponentDiceRerankAI):
+        return {
+            "name": ai.name,
+            "base": ai_version_signature(ai.base),
+            "top_k": ai.top_k,
+            "exact_mix": ai.exact_mix,
+            "min_time_remaining_ms": ai.min_time_remaining_ms,
+            "max_step_time_ms": ai.max_step_time_ms,
         }
 
     sig: dict[str, Any] = {"name": ai.name}
