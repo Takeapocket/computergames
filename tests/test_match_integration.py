@@ -546,11 +546,13 @@ def test_match_restore_playing_phase_with_missing_game_user_accepts(
 
 
 def test_load_record_during_active_match_prompts(tk_root, monkeypatch, tmp_path):
-    """比赛进行中通过菜单加载棋谱，必须先弹窗确认。"""
+    """比赛进行中选择有效棋谱后，必须先确认再退出 match。"""
     window = MainWindow(tk_root)
     window.pack()
     _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
     assert window._match is not None
+    path = tmp_path / "record.json"
+    GameRecord.from_state(window.state).save(path)
 
     askyesno_calls: list[tuple] = []
 
@@ -559,7 +561,7 @@ def test_load_record_during_active_match_prompts(tk_root, monkeypatch, tmp_path)
         return False  # 用户拒绝 → 不应改变 self._match
 
     monkeypatch.setattr("gui.main_window.messagebox.askyesno", fake_askyesno)
-    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kw: "")
+    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kw: str(path))
     window._load_record()
 
     titles = [call[0] for call in askyesno_calls]
@@ -572,19 +574,82 @@ def test_load_record_during_active_match_prompts(tk_root, monkeypatch, tmp_path)
 def test_load_record_during_active_match_exits_match_when_confirmed(
     tk_root, monkeypatch, tmp_path
 ):
-    """用户选'是'后：match 被退出，但因为没真选文件，最终 mode 应已回到 debug。"""
+    """用户确认且棋谱加载成功后，才退出当前 match 并进入加载后的状态。"""
     window = MainWindow(tk_root)
     window.pack()
     _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
     assert window._match is not None
 
+    path = tmp_path / "record.json"
+    GameRecord.from_state(window.state).save(path)
     monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *a, **k: True)
-    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kw: "")
+    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kw: str(path))
     window._load_record()
 
-    # 用户确认 → match 已被清，模式回 debug；后续棋谱未实际加载（filedialog 返回空）
+    # 用户确认且文件成功加载 → 退出 match，回到棋谱自身模式
     assert window._match is None
     assert window._mode == "debug"
+
+
+def test_load_record_during_active_match_cancel_keeps_match(tk_root, monkeypatch):
+    window = MainWindow(tk_root)
+    window.pack()
+    _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
+    original_match = window._match
+    original_record = window.record
+    original_state = window.state
+
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *a, **k: True)
+    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kw: "")
+
+    window._load_record()
+
+    assert window._match is original_match
+    assert window._mode == "match"
+    assert window._phase == "setup"
+    assert window.record is original_record
+    assert window.state is original_state
+
+
+def test_load_bad_record_during_active_match_keeps_match(
+    tk_root,
+    monkeypatch,
+    tmp_path,
+):
+    import json
+
+    window = MainWindow(tk_root)
+    window.pack()
+    _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
+    original_match = window._match
+    original_record = window.record
+    original_state = window.state
+
+    state = window.state
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 6)[0], dice=6)
+    record.append(dice=6, move=move, state_after=state)
+    payload = record.to_dict()
+    payload["steps"][0]["remaining_seconds"] = {"red": float("inf"), "blue": 240.0}
+    path = tmp_path / "bad_record.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors: list[str] = []
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *a, **k: True)
+    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kw: str(path))
+    monkeypatch.setattr(
+        "gui.main_window.messagebox.showerror",
+        lambda title, message, **kwargs: errors.append(title),
+    )
+
+    window._load_record()
+
+    assert errors == ["加载棋谱失败"]
+    assert window._match is original_match
+    assert window._mode == "match"
+    assert window._phase == "setup"
+    assert window.record is original_record
+    assert window.state is original_state
 
 
 def test_finalize_match_game_persists_match_before_clearing_game(
@@ -631,6 +696,59 @@ def test_timeout_during_match_advances_score(tk_root, monkeypatch):
     # 单盘 auto-save 已清（finalize 调用过 _clear_auto_save）
     from record.auto_save import has_auto_save
     assert not has_auto_save(path=window._auto_save_path)
+
+
+def test_judge_confirmed_timeout_advances_score_without_auto_timeout(
+    tk_root, monkeypatch
+):
+    window = MainWindow(tk_root)
+    window.pack()
+    _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
+    _fill_opening_and_confirm(window, our_side=Player.RED)
+    window.timer.reset(
+        current_player=Player.RED,
+        remaining_seconds={Player.RED: 0.0, Player.BLUE: 60.0},
+    )
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *a, **k: True)
+    monkeypatch.setattr("gui.main_window.messagebox.showinfo", lambda *a, **k: None)
+
+    window._refresh_timer()
+    window.timer_panel.red_timeout_button.invoke()
+
+    assert window._match.games_won_them == 1
+    assert window._match.games_won_us == 0
+    finished_game = window._match.games[-1]
+    assert finished_game.result["reason"] == "timeout"
+    assert finished_game.result["winner_side"] == "them"
+    assert window._phase == "setup"
+
+
+def test_judge_confirmed_timeout_replaces_pending_timer_refresh(
+    tk_root, monkeypatch
+):
+    window = MainWindow(tk_root)
+    window.pack()
+    _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
+    _fill_opening_and_confirm(window, our_side=Player.RED)
+    window.timer.reset(
+        current_player=Player.RED,
+        remaining_seconds={Player.RED: 0.0, Player.BLUE: 60.0},
+    )
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *a, **k: True)
+    monkeypatch.setattr("gui.main_window.messagebox.showinfo", lambda *a, **k: None)
+
+    if window._timer_after_id is not None:
+        window.after_cancel(window._timer_after_id)
+        window._timer_after_id = None
+    window._refresh_timer()
+    stale_refresh_id = window._timer_after_id
+
+    window.timer_panel.red_timeout_button.invoke()
+
+    pending = str(tk_root.tk.call("after", "info"))
+    assert stale_refresh_id not in pending
+    assert window._timer_after_id is not None
+    assert window._timer_after_id in pending
 
 
 def test_handle_timeout_in_match_reschedules_timer_refresh(tk_root, monkeypatch):

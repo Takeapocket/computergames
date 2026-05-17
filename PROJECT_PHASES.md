@@ -28,7 +28,7 @@
 | 最小 GUI | 已完成 | Tkinter 棋盘、骰子录入、合法走法、悔棋、重置、AI 推荐已具备。 |
 | GUI 程序掷骰 R-4 | 已完成 | `core/dice.py::roll_die()` 使用 `secrets.randbelow` 生成 1-6；GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮，只在等待骰子时启用，掷完禁用直到执行走法进入下一轮。手动骰子录入保留。 |
 | 现场一键启动器 | 已完成 | 根目录 `启动项目.cmd` 可双击打开菜单；`scripts/launcher.py` 提供 GUI、preflight、pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态入口，并支持 `--list`、`--dry-run`、`--run` 便于自动测试；`preflight_check.py` 已把启动器文件纳入必备文件检查；`.gitattributes` 固定 `启动项目.cmd` 为 CRLF。 |
-| 棋谱与计时 | 已完成 | JSON 棋谱、加载恢复、单方 4 分钟包干计时已具备。 |
+| 棋谱与计时 | 已完成 | JSON 棋谱、加载恢复、单方时限计时已具备；比赛模式可调整时限，默认只提示超时、不自动判负，裁判确认后可用 GUI 按钮记分，裁判要求时可开启程序自动超时判负。 |
 | 开局录入 R-1 | 已完成 | 支持预设布局、自定义布局、录入对方布局，并写入棋谱 metadata。 |
 | 崩溃自救 R-3 | 已完成 | `record/auto_save.py`、启动恢复、走子/悔棋自动保存已实现并有测试。 |
 | 七盘制 R-2 | 已完成 | `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已落地；R-2 review Critical+Important 修复已合并；甲乙身份选择、先手序列、盘内/整轮 auto-save 全链路打通。 |
@@ -52,7 +52,7 @@
 | P9 Zweistein-DP chance-aware evaluation | 已完成，候选未晋升 | P9.0 DP 概率估值已实现并测试通过；P9.1 `rollout_zweistein_dp_cutoff` candidate 胜率 45.0%，未过 candidate；P9.2 `rollout_exact_opp1_zdp` candidate 胜率 51.5%，未过 candidate，且低于 P9.3 启动线 52%，因此 TT / move ordering 不启动。全量验证通过，`scripts/preflight_check.py` 输出 `READY FOR MATCH`。默认 AI 仍为 `rollout` kind + P3 promotion 显式参数，默认布局仍为 `balanced_v1`，core/release 未变。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**赛前冻结与现场包核对**。R-4 已补齐 GUI 内程序掷骰能力且保留手动录入；现场启动器已提供双击菜单和一键验证入口；P6 已把 release 一致性、preflight、GUI 推荐兜底、损坏 auto-save 恢复和默认 rollout 步时预算锁定；P7 已完成默认 rollout 失败归因，当前唯一被数据支持的 P7.2 候选未过 candidate 门槛；P8 threat defense audit 已生成报告，gate 不支持实现 `rollout_threat_rerank`；P9 Zweistein-DP chance-aware evaluation 已完成，P9.1 / P9.2 候选均未过 candidate，P9.3 不启动。赛前不再默认启用新 AI、不继续 MCTS、不扩大 P5.5 失败布局候选、不启动 P9 后续搜索增强；只修现场风险 bug。
+下一步主线：**赛前冻结与现场包核对**。R-4 已补齐 GUI 内程序掷骰能力且保留手动录入；现场启动器已提供双击菜单和一键验证入口；计时判负安全开关已落地，默认只提示超时、不自动判负，裁判确认后可用 GUI 按钮记分；P6 已把 release 一致性、preflight、GUI 推荐兜底、损坏 auto-save 恢复和默认 rollout 步时预算锁定；P7 已完成默认 rollout 失败归因，当前唯一被数据支持的 P7.2 候选未过 candidate 门槛；P8 threat defense audit 已生成报告，gate 不支持实现 `rollout_threat_rerank`；P9 Zweistein-DP chance-aware evaluation 已完成，P9.1 / P9.2 候选均未过 candidate，P9.3 不启动。赛前不再默认启用新 AI、不继续 MCTS、不扩大 P5.5 失败布局候选、不启动 P9 后续搜索增强；只修现场风险 bug。
 详细方案见：`docs/superpowers/specs/2026-05-16-p6-robustness-lock-rollout-failure-analysis-design.md`
 历史收官方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
 执行计划见：`docs/superpowers/plans/2026-05-12-final-sprint-plan.md`
@@ -253,7 +253,7 @@ docs/EMERGENCY_GUIDE.md
 ```text
 pytest 全部通过。
 GUI 可离线启动。
-开局录入、计时、棋谱、auto_save、七盘制流程正常。
+开局录入、计时提示、棋谱、auto_save、七盘制流程正常；默认不自动超时判负，裁判确认后可用 GUI 按钮记分，裁判要求时可开启。
 当前默认 AI 为 `rollout` kind + P3 promotion 显式参数；`greedy_risk` 仅作为应急回退。后续候选必须直接对当前默认 `rollout` 配置过门禁后才可替换。
 无非法走法、无崩溃、无超时。
 有源码和可运行版本备份。
@@ -437,4 +437,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**R-4 GUI 程序掷骰与现场一键启动器已完成；P6/P7/P8/P9 已闭环。R-4 新增 `core.dice.roll_die()` 和 GUI "程序掷骰"按钮，按钮只在等待骰子时启用，手动录入仍保留；代码审查 follow-up 已覆盖 Spinbox `FocusOut` 与程序掷骰按钮点击/禁用状态的边界。根目录 `启动项目.cmd` 可双击打开菜单，`scripts/launcher.py` 支持 GUI、preflight、pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态入口；`preflight_check.py` 已把启动器文件纳入必备文件检查，`.gitattributes` 固定 `启动项目.cmd` 为 CRLF。P6.0/P6.1 锁定 release 默认 AI、默认布局和 `scripts/preflight_check.py`；P6.2 GUI 推荐兜底链已实现；P6.3 损坏 auto-save 启动清理已覆盖；P6.4 timing probe 报告已生成。P7.0 默认 rollout 失败归因已完成；P7.1 因 `missed_direct_win=0` 不执行；P7.2 adaptive close-sample 候选已注册并在 `balanced_v1` 布局跑完 candidate bench，但 50.0% 未过 55% 门槛。P8 threat defense audit 已生成报告；gate 不支持实现 `rollout_threat_rerank`。P9.0 DP 概率估值已实现并测试通过；P9.1 `rollout_zweistein_dp_cutoff` 双边 100+100 合并胜率 45.0%，P9.2 `rollout_exact_opp1_zdp` 双边 100+100 合并胜率 51.5%，均未过 55% candidate 门槛，且 P9.2 低于 P9.3 启动线 52%，因此 P9.3 不启动。`rollout` 仍是 GUI/release 默认 AI kind + P3 promotion 参数；`balanced_v1` 仍是默认布局；`greedy_risk` 仍是应急回退。最新验证：699 pytest passed、启动器 `--list` / `--dry-run 4` / `--run status` 正常。**
+当前最近任务：**R-4 GUI 程序掷骰与现场一键启动器已完成；计时判负安全开关已完成并补审查 follow-up；P6/P7/P8/P9 已闭环。R-4 新增 `core.dice.roll_die()` 和 GUI "程序掷骰"按钮，按钮只在等待骰子时启用，手动录入仍保留；代码审查 follow-up 已覆盖 Spinbox `FocusOut` 与程序掷骰按钮点击/禁用状态的边界。根目录 `启动项目.cmd` 可双击打开菜单，`scripts/launcher.py` 支持 GUI、preflight、pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态入口；`preflight_check.py` 已把启动器文件纳入必备文件检查，`.gitattributes` 固定 `启动项目.cmd` 为 CRLF。比赛模式弹窗支持调整单方时限，并默认只提示超时、不自动判负；裁判确认某方超时负后可用计时面板按钮手动记分；裁判要求双方程序自行计时时才开启程序自动超时判负；auto-save / 棋谱内计时数据会拒绝 `nan/inf/负数`；比赛中取消/加载损坏棋谱不会提前清掉当前 match。P6.0/P6.1 锁定 release 默认 AI、默认布局和 `scripts/preflight_check.py`；P6.2 GUI 推荐兜底链已实现；P6.3 损坏 auto-save 启动清理已覆盖；P6.4 timing probe 报告已生成。P7.0 默认 rollout 失败归因已完成；P7.1 因 `missed_direct_win=0` 不执行；P7.2 adaptive close-sample 候选已注册并在 `balanced_v1` 布局跑完 candidate bench，但 50.0% 未过 55% 门槛。P8 threat defense audit 已生成报告；gate 不支持实现 `rollout_threat_rerank`。P9.0 DP 概率估值已实现并测试通过；P9.1 `rollout_zweistein_dp_cutoff` 双边 100+100 合并胜率 45.0%，P9.2 `rollout_exact_opp1_zdp` 双边 100+100 合并胜率 51.5%，均未过 55% candidate 门槛，且 P9.2 低于 P9.3 启动线 52%，因此 P9.3 不启动。`rollout` 仍是 GUI/release 默认 AI kind + P3 promotion 参数；`balanced_v1` 仍是默认布局；`greedy_risk` 仍是应急回退。最新验证：744 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。**

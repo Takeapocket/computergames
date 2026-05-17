@@ -23,6 +23,7 @@ code 退出，便于 `reports/gui-rehearsal.md` 引用脚本输出作为 S2 验�
 """
 from __future__ import annotations
 
+import os
 import sys
 import shutil
 import tempfile
@@ -78,6 +79,19 @@ def _cleanup_tmp(tmp: Path) -> None:
     shutil.rmtree(tmp, ignore_errors=True)
 
 
+def _configure_tk_library_paths() -> None:
+    _set_library_path_if_present("TCL_LIBRARY", "tcl8.6", "init.tcl")
+    _set_library_path_if_present("TK_LIBRARY", "tk8.6", "tk.tcl")
+
+
+def _set_library_path_if_present(env_var: str, directory_name: str, marker_file: str) -> None:
+    if os.environ.get(env_var):
+        return
+    candidate = Path(sys.base_prefix) / "tcl" / directory_name
+    if (candidate / marker_file).is_file():
+        os.environ[env_var] = str(candidate)
+
+
 def _make_window(
     tmp: Path,
     *,
@@ -87,6 +101,7 @@ def _make_window(
     """工厂：返回 (root, MainWindow)，路径隔离到 tmp。所有 dialog 静音。"""
     restore_messagebox = _silence_messagebox(askyesno_return=askyesno_return)
     try:
+        _configure_tk_library_paths()
         root = tk.Tk()
         root.withdraw()
         window = MainWindow(

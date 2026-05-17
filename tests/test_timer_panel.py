@@ -1,7 +1,9 @@
 import pytest
+import tkinter as tk
 
 from core.types import Player
-from gui.timer_panel import MatchTimer
+from gui.timer_panel import MatchTimer, TimerPanel, TimerSnapshot
+from tests.tk_support import make_hidden_tk_root
 
 
 class FakeClock:
@@ -13,6 +15,21 @@ class FakeClock:
 
     def advance(self, seconds: float) -> None:
         self.value += seconds
+
+
+@pytest.fixture(scope="module")
+def _tk_root():
+    root = make_hidden_tk_root()
+    yield root
+
+
+@pytest.fixture
+def tk_root(_tk_root):
+    top = tk.Toplevel(_tk_root)
+    top.withdraw()
+    yield top
+    if top.winfo_exists():
+        top.destroy()
 
 
 def test_match_timer_starts_with_equal_remaining_time():
@@ -140,3 +157,44 @@ def test_reset_with_remaining_seconds_overrides_default():
     assert snapshot.current_player is Player.BLUE
     assert snapshot.remaining_seconds[Player.RED] == pytest.approx(100)
     assert snapshot.remaining_seconds[Player.BLUE] == pytest.approx(80)
+
+
+@pytest.mark.parametrize("seconds", [float("nan"), float("inf"), -1.0])
+def test_reset_rejects_invalid_remaining_seconds(seconds):
+    clock = FakeClock()
+    timer = MatchTimer(total_seconds=240, now=clock)
+
+    with pytest.raises(ValueError, match="计时秒数"):
+        timer.reset(remaining_seconds={Player.RED: seconds, Player.BLUE: 80})
+
+
+def test_timer_panel_default_timeout_mode_waits_for_judge_and_enables_timed_out_player(
+    tk_root,
+):
+    confirmed: list[Player] = []
+    panel = TimerPanel(
+        tk_root,
+        on_toggle_pause=lambda: None,
+        on_confirm_timeout_forfeit=confirmed.append,
+    )
+    snapshot = TimerSnapshot(
+        current_player=Player.RED,
+        remaining_seconds={Player.RED: 0.0, Player.BLUE: 10.0},
+        current_step_seconds=12.0,
+        paused=False,
+        timeout_players=(Player.RED,),
+    )
+
+    panel.set_snapshot(
+        snapshot,
+        auto_timeout_enabled=False,
+        timeout_adjudication_enabled=True,
+    )
+
+    assert panel.timer_status_var.get() == "超时提示：红方（等裁判）"
+    assert panel.red_timeout_button["state"] == tk.NORMAL
+    assert panel.blue_timeout_button["state"] == tk.DISABLED
+
+    panel.red_timeout_button.invoke()
+
+    assert confirmed == [Player.RED]

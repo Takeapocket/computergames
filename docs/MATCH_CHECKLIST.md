@@ -35,7 +35,7 @@
 
 人工验证：
 - 棋盘渲染完整、5×5。
-- 菜单"模式 → 比赛模式" → 弹颜色 + 角色 dialog → 选红方/甲方/确认 → 进入第 1 盘 setup。
+- 菜单"模式 → 比赛模式" → 弹颜色 + 角色 + 计时设置 dialog → 选红方/甲方，确认"程序自动超时判负"默认未勾选 → 进入第 1 盘 setup。
 - MatchModePanel 显示"第 1 盘 / 比分 我方 0 — 对方 0 / 本盘先手 我方 / 我方身份 甲方"。
 - 手动录入骰子或点击"程序掷骰" → 出现合法走法列表。
 - 关闭程序前清理 `replays/auto_save*.json`（见 §1.4）。
@@ -86,7 +86,7 @@ Remove-Item -ErrorAction SilentlyContinue replays/auto_save_match.json
 & ".venv/Scripts/python.exe" "scripts/run_gui.py"
 ```
 
-如需 10 分钟快棋决赛加赛：
+如需 10 分钟快棋决赛加赛，可在进入比赛模式的弹窗里把"单方时限（秒）"改为 `600`；命令行也可提前指定：
 
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/run_gui.py" --total-seconds 600
@@ -101,11 +101,12 @@ Remove-Item -ErrorAction SilentlyContinue replays/auto_save_match.json
 裁判宣布开始后：
 
 1. **菜单 → 模式 → 比赛模式**。
-2. 弹出对话框 → 选"我方颜色"（红 / 蓝）+ "我方角色"（甲 / 乙）→ 点确认。
+2. 弹出对话框 → 选"我方颜色"（红 / 蓝）+ "我方角色"（甲 / 乙）→ 核对"单方时限（秒）"。
    - 注意：**甲乙是先手身份**，与红蓝颜色独立；甲方一四五盘先手，乙方二三六七盘先手。
-3. 进入第 1 盘 setup 阶段，MatchModePanel 显示比分 0:0 + 当前盘数 + 本盘先手。
-4. 在开局录入区设置我方棋子布局（选预设或自定义）+ 录入对方棋子布局。
-5. 确认开局 → 进入第 1 盘 playing。
+3. 默认不要勾选"程序自动超时判负"；只有裁判明确要求双方程序自行计时时才勾选。
+4. 点确认后进入第 1 盘 setup 阶段，MatchModePanel 显示比分 0:0 + 当前盘数 + 本盘先手。
+5. 在开局录入区设置我方棋子布局（选预设或自定义）+ 录入对方棋子布局。
+6. 确认开局 → 进入第 1 盘 playing。
 
 ## 4. 每盘流程
 
@@ -124,7 +125,9 @@ playing 阶段每一轮（双方各走一步前后）的操作：
 | 4 | 告知对方本方走法（规则义务） | — |
 | 5 | 等对方在他们的程序操作 → 对方告知本方他们的走法 | — |
 | 6 | 按同一骰子来源规则得到对方回合骰 → 程序录入/生成骰子 → 在合法走法里点对方实际走的那条 → 执行 | 棋盘应用对方走法；状态栏 source=opponent |
-| 7 | 重复 1-6 直到本盘胜负 | 任一方到达对方出发区角点 / 吃光对方 / 任一方超时判负 |
+| 7 | 重复 1-6 直到本盘胜负 | 任一方到达对方出发区角点 / 吃光对方 / 裁判判定超时 |
+
+若默认计时模式下出现超时提示，先报告裁判；裁判确认某方超时负后，再点击计时面板中对应的"裁判判红方超时负" / "裁判判蓝方超时负"按钮。未得到裁判确认时不要点击。
 
 **提示**：每 5 步左右主动 Ctrl+S（"保存棋谱"按钮）一次，作为额外快照备份。
 
@@ -163,7 +166,7 @@ playing 阶段每一轮（双方各走一步前后）的操作：
 赛事规则允许：休息 ≤10 分钟，可调整程序与参数，不能换电脑（除非裁判许可）。
 
 操作员可以做的事：
-- 切换 `--total-seconds`（决赛加赛 10 分钟快棋时改 600）。
+- 通过比赛模式弹窗调整单方时限（决赛加赛 10 分钟快棋时改 600）。
 - 调 AI 参数（如有 release 配置文件）。
 
 **禁止**：
@@ -189,8 +192,9 @@ playing 阶段每一轮（双方各走一步前后）的操作：
 | 基础冒烟 | `& ".venv/Scripts/python.exe" "scripts/smoke_test.py"` |
 | R-2 七盘制冒烟 | `& ".venv/Scripts/python.exe" "scripts/r2_smoke.py"` |
 | S2 GUI 全流程演练 | `& ".venv/Scripts/python.exe" "scripts/s2_rehearsal.py"` |
-| 启动 GUI（4 分钟包干） | `& ".venv/Scripts/python.exe" "scripts/run_gui.py"` |
+| 启动 GUI（默认 4 分钟，仅提示超时） | `& ".venv/Scripts/python.exe" "scripts/run_gui.py"` |
 | 启动 GUI（10 分钟决赛加赛） | `& ".venv/Scripts/python.exe" "scripts/run_gui.py" --total-seconds 600` |
+| 启动 GUI（程序自动超时判负，裁判要求时才用） | `& ".venv/Scripts/python.exe" "scripts/run_gui.py" --auto-timeout` |
 | AI 对战基线复测（仅家中） | `& ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red greedy_risk --blue greedy --games 200 --seed 2026` |
 
 ## 10. 现场绝对禁止

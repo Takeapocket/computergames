@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, Protocol
@@ -128,10 +129,18 @@ def _validate_timer_metadata(metadata: dict[str, Any]) -> None:
         if not isinstance(remaining, dict):
             raise ValueError
         for player in (Player.RED, Player.BLUE):
-            float(remaining[player.value])
-        bool(metadata["timer_paused"])
+            _validate_remaining_seconds(remaining[player.value])
+        if not isinstance(metadata["timer_paused"], bool):
+            raise ValueError
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError("invalid auto-save metadata") from exc
+
+
+def _validate_remaining_seconds(value: Any) -> float:
+    seconds = float(value)
+    if not math.isfinite(seconds) or seconds < 0.0:
+        raise ValueError
+    return seconds
 
 
 def auto_save_match(

@@ -101,6 +101,44 @@ def test_load_auto_save_rejects_missing_timer_metadata(tmp_path) -> None:
         load_auto_save(path=path)
 
 
+@pytest.mark.parametrize("seconds", [float("nan"), float("inf"), -1.0])
+def test_auto_save_rejects_invalid_timer_remaining(tmp_path, seconds) -> None:
+    from record.auto_save import has_auto_save, is_invalid_auto_save_file, load_auto_save
+
+    path = tmp_path / "auto_save.json"
+    payload = make_record_with_one_step().to_dict()
+    payload["metadata"]["auto_save"] = {
+        "timer_current_player": "red",
+        "timer_remaining": {"red": seconds, "blue": 240.0},
+        "timer_paused": False,
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert has_auto_save(path=path) is False
+    assert is_invalid_auto_save_file(path=path) is True
+    with pytest.raises(ValueError, match="auto-save metadata"):
+        load_auto_save(path=path)
+
+
+@pytest.mark.parametrize("timer_paused", ["false", "0", 0, 1, None])
+def test_auto_save_rejects_non_bool_timer_paused(tmp_path, timer_paused) -> None:
+    from record.auto_save import has_auto_save, is_invalid_auto_save_file, load_auto_save
+
+    path = tmp_path / "auto_save.json"
+    payload = make_record_with_one_step().to_dict()
+    payload["metadata"]["auto_save"] = {
+        "timer_current_player": "red",
+        "timer_remaining": {"red": 200.0, "blue": 240.0},
+        "timer_paused": timer_paused,
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert has_auto_save(path=path) is False
+    assert is_invalid_auto_save_file(path=path) is True
+    with pytest.raises(ValueError, match="auto-save metadata"):
+        load_auto_save(path=path)
+
+
 # ---- R-2 match-level auto-save ----
 
 def _make_match():

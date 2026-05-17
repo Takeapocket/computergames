@@ -350,14 +350,19 @@ def test_main_uses_formal_competition_title(monkeypatch) -> None:
             pass
 
     class FakeWindow:
-        def __init__(self, root, *, total_seconds):
-            pass
+        def __init__(self, root, *, total_seconds, auto_timeout_enabled):
+            self.total_seconds = total_seconds
+            self.auto_timeout_enabled = auto_timeout_enabled
 
         def pack(self, **kwargs):
             pass
 
     monkeypatch.setattr(app.tk, "Tk", FakeRoot)
-    monkeypatch.setattr(app, "parse_args", lambda: argparse.Namespace(total_seconds=240.0))
+    monkeypatch.setattr(
+        app,
+        "parse_args",
+        lambda: argparse.Namespace(total_seconds=240.0, auto_timeout=False),
+    )
     monkeypatch.setattr("gui.main_window.MainWindow", FakeWindow)
 
     app.main()

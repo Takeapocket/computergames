@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import tempfile
 from collections.abc import Mapping
@@ -48,7 +49,7 @@ class MoveRecord:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "player", Player.from_value(self.player))
-        object.__setattr__(self, "step_seconds", max(0.0, float(self.step_seconds)))
+        object.__setattr__(self, "step_seconds", _normalize_step_seconds(self.step_seconds))
         object.__setattr__(self, "remaining_seconds", _normalize_remaining_seconds(self.remaining_seconds))
         if self.turn < 1:
             raise ValueError("turn must be positive")
@@ -85,7 +86,7 @@ class MoveRecord:
                 source=data.get("source", "unknown"),
             )
         except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError("invalid move record data") from exc
+            raise ValueError(f"invalid move record data: {exc}") from exc
 
 
 @dataclass
@@ -209,7 +210,17 @@ class GameRecord:
 def _normalize_remaining_seconds(
     remaining_seconds: Mapping[Player | str, float],
 ) -> dict[Player, float]:
-    return {
-        Player.from_value(player): max(0.0, float(seconds))
-        for player, seconds in remaining_seconds.items()
-    }
+    normalized: dict[Player, float] = {}
+    for player, seconds in remaining_seconds.items():
+        value = float(seconds)
+        if not math.isfinite(value) or value < 0.0:
+            raise ValueError("remaining_seconds must be non-negative finite values")
+        normalized[Player.from_value(player)] = value
+    return normalized
+
+
+def _normalize_step_seconds(step_seconds: float) -> float:
+    value = float(step_seconds)
+    if not math.isfinite(value) or value < 0.0:
+        raise ValueError("step_seconds must be a non-negative finite value")
+    return value

@@ -527,12 +527,48 @@ def test_main_window_accepts_custom_total_seconds(tk_root):
     assert window.timer.total_seconds == 600.0
 
 
+@pytest.mark.parametrize("total_seconds", [0.0, -1.0, float("nan"), float("inf")])
+def test_main_window_rejects_invalid_total_seconds(tk_root, total_seconds):
+    with pytest.raises(ValueError, match="正数秒"):
+        MainWindow(tk_root, total_seconds=total_seconds)
+
+
+def test_main_window_disables_auto_timeout_by_default(tk_root):
+    window = MainWindow(tk_root)
+
+    assert window._auto_timeout_enabled is False
+
+
+def test_main_window_accepts_auto_timeout_enabled(tk_root):
+    window = MainWindow(tk_root, auto_timeout_enabled=True)
+
+    assert window._auto_timeout_enabled is True
+
+
+@pytest.mark.parametrize("time_limit", [0.0, -1.0, float("nan"), float("inf")])
+def test_restore_timer_options_ignores_invalid_time_limit_metadata(
+    tk_root,
+    time_limit,
+):
+    from record.game_record import GameRecord
+
+    window = MainWindow(tk_root)
+    record = GameRecord.from_state(window.state)
+    record.metadata["time_limit_seconds"] = time_limit
+
+    window._restore_timer_options_from_record(record)
+
+    assert window._total_seconds == 240.0
+    assert window.timer.total_seconds == 240.0
+
+
 def test_parse_args_default_total_seconds():
     from gui.app import parse_args
 
     args = parse_args([])
 
     assert args.total_seconds == 240.0
+    assert args.auto_timeout is False
 
 
 def test_parse_args_custom_total_seconds():
@@ -541,6 +577,83 @@ def test_parse_args_custom_total_seconds():
     args = parse_args(["--total-seconds", "600"])
 
     assert args.total_seconds == 600.0
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "nan", "inf", "1e309"])
+def test_parse_args_rejects_invalid_total_seconds(value):
+    from gui.app import parse_args
+
+    with pytest.raises(SystemExit):
+        parse_args(["--total-seconds", value])
+
+
+def test_parse_args_auto_timeout():
+    from gui.app import parse_args
+
+    args = parse_args(["--auto-timeout"])
+
+    assert args.auto_timeout is True
+
+
+def test_default_timer_timeout_only_warns_in_match_mode(tk_root, monkeypatch):
+    from record.match_record import MatchRecord
+
+    window = MainWindow(tk_root, total_seconds=1.0)
+    window.pack()
+    window._phase = "playing"
+    window._match = MatchRecord(our_side=Player.RED, our_role="甲")
+    window._match.start_playing()
+    window.timer.reset(
+        current_player=Player.RED,
+        remaining_seconds={Player.RED: 0.0, Player.BLUE: 1.0},
+    )
+    called = []
+    monkeypatch.setattr(window, "_handle_timeout", lambda player: called.append(player))
+
+    window._refresh_timer()
+
+    assert called == []
+    assert window._match.phase == "playing"
+    assert "裁判" in window.status_message
+    assert "未自动判负" in window.status_message
+
+
+def test_auto_timeout_enabled_still_finalizes_timeout(tk_root, monkeypatch):
+    from record.match_record import MatchRecord
+
+    window = MainWindow(tk_root, total_seconds=1.0, auto_timeout_enabled=True)
+    window.pack()
+    window._phase = "playing"
+    window._match = MatchRecord(our_side=Player.RED, our_role="甲")
+    window._match.start_playing()
+    window.timer.reset(
+        current_player=Player.RED,
+        remaining_seconds={Player.RED: 0.0, Player.BLUE: 1.0},
+    )
+    called = []
+    monkeypatch.setattr(window, "_handle_timeout", lambda player: called.append(player))
+
+    window._refresh_timer()
+
+    assert called == [Player.RED]
+
+
+def test_enter_match_mode_applies_timer_options(tk_root, monkeypatch):
+    window = MainWindow(tk_root)
+    window.pack()
+
+    monkeypatch.setattr(
+        window,
+        "_show_match_setup_dialog",
+        lambda: (Player.BLUE, "乙", True, 600.0),
+    )
+
+    window._enter_match_mode()
+
+    assert window._our_side is Player.BLUE
+    assert window._auto_timeout_enabled is True
+    assert window._total_seconds == 600.0
+    assert window.timer.total_seconds == 600.0
 
 
 def test_default_mode_is_debug(tk_root):
@@ -881,6 +994,44 @@ def test_load_record_restores_match_side_from_metadata(tk_root, tmp_path, monkey
     window._apply_selected_move()
 
     assert window.record.steps[-1].source == "opponent"
+
+
+def test_load_record_rejects_invalid_remaining_seconds_without_mutating_window(
+    tk_root,
+    tmp_path,
+    monkeypatch,
+):
+    import json
+
+    from record.game_record import GameRecord
+
+    window = MainWindow(tk_root)
+    window.pack()
+    original_record = window.record
+    original_state = window.state
+
+    state = window.state
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 6)[0], dice=6)
+    record.append(dice=6, move=move, state_after=state)
+    payload = record.to_dict()
+    payload["steps"][0]["remaining_seconds"] = {"red": float("inf"), "blue": 240.0}
+    path = tmp_path / "bad_timer_record.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    errors: list[tuple[str, str]] = []
+    monkeypatch.setattr("gui.main_window.DEFAULT_RECORD_DIR", tmp_path)
+    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kwargs: str(path))
+    monkeypatch.setattr(
+        "gui.main_window.messagebox.showerror",
+        lambda title, message, **kwargs: errors.append((title, message)),
+    )
+
+    window._load_record()
+
+    assert errors and errors[0][0] == "加载棋谱失败"
+    assert window.record is original_record
+    assert window.state is original_state
 
 
 def test_match_mode_panel_displays_greedy_risk_fallback_source(tk_root, monkeypatch):

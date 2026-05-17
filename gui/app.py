@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
+from gui.time_limit import parse_total_seconds_arg
 
 
 DEFAULT_RED_LAYOUT: dict[int, Position] = {
@@ -69,7 +70,11 @@ def main() -> None:
     root.title(APP_TITLE)
     root.minsize(800, 520)
 
-    window = MainWindow(root, total_seconds=args.total_seconds)
+    window = MainWindow(
+        root,
+        total_seconds=args.total_seconds,
+        auto_timeout_enabled=args.auto_timeout,
+    )
     window.pack(fill=tk.BOTH, expand=True)
 
     root.mainloop()
@@ -79,9 +84,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="爱恩斯坦棋离线 GUI")
     parser.add_argument(
         "--total-seconds",
-        type=float,
+        type=parse_total_seconds_arg,
         default=240.0,
         help="单方比赛总时长（秒），默认 240。需与 gui.timer_panel.DEFAULT_TOTAL_SECONDS 保持一致。",
+    )
+    parser.add_argument(
+        "--auto-timeout",
+        action="store_true",
+        help="启用程序自动超时判负；默认只提示超时，以现场裁判判定为准。",
     )
     return parser.parse_args(argv)
 

@@ -35,6 +35,7 @@
 - **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：P9.0 已实现 `ai/zweistein_dp.py` 概率估值表并通过测试；DP 表尺寸为 `15625 x 20`，`PDF_VAL` / `CDF_VAL` 均为 15625 行。P9.1 `rollout_zweistein_dp_cutoff` 已作为显式候选评测，双边 100+100 合并胜率 45.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛；P9.2 `rollout_exact_opp1_zdp` 已作为显式候选评测，双边 100+100 合并胜率 51.5%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛，且低于 P9.3 TT / move ordering 启动线 52%，因此 P9.3 不启动。全量验证通过，`scripts/preflight_check.py` 输出 `READY FOR MATCH`。GUI/release 默认 AI、默认布局、core 规则均未变。
 - **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，使用 `secrets.randbelow(6) + 1` 作为程序掷骰来源；GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已修复 Spinbox `FocusOut` 与程序掷骰按钮点击的事件顺序边界，且禁用按钮不会吞掉手动改错提交。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 - **2026-05-17 现场一键启动器已完成**：新增根目录 `启动项目.cmd` 和 `scripts/launcher.py`。双击可打开菜单，支持启动 GUI、一键赛前总检查、完整 pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示；`scripts/launcher.py` 支持 `--list`、`--dry-run`、`--run` 非交互入口并有 `tests/test_launcher.py` 覆盖；`scripts/preflight_check.py` 已把启动器文件纳入必备文件检查；`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，避免 Windows `cmd.exe` 解析异常。默认 AI、默认布局、core 规则语义和 release 配置均未变。最新验证：699 pytest passed；启动器 `--list` / `--dry-run 4` / `--run status` 均正常。
+- **2026-05-17 计时判负安全开关已完成并补审查 follow-up**：比赛模式弹窗新增"单方时限（秒）"和"程序自动超时判负"；默认不再由程序自动超时判负，只显示超时提示并以裁判判定为准。默认模式下裁判确认某方超时负后，可点击计时面板对应的"裁判判红方超时负" / "裁判判蓝方超时负"按钮，程序会二次确认、写入 `reason="timeout"`、推进七盘制比分并进入下一盘 setup。若裁判要求双方程序自行计时判负，可在比赛模式弹窗勾选自动判负，或命令行使用 `scripts/run_gui.py --auto-timeout`。`--total-seconds`、弹窗时限、auto-save / 棋谱内计时数据现在拒绝 `nan/inf/负数`；比赛中取消/加载损坏棋谱不会提前清掉当前 match；`step_seconds` 也拒绝非负有限数以外的损坏值。S2 演练脚本会主动设置 Tcl/Tk 库路径，避免全量 pytest 中 Tk 初始化抖动。默认 AI、默认布局、core 规则语义和 release 配置均未变。最新验证：744 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 
 ## 已确认的比赛事实
 
@@ -54,7 +55,7 @@
 - **吃子**：目标格有棋子（**含本方**）则吃掉；吃本方子是合法策略。✅ R-0 已修复 core 实现。
 - **骰子映射**：骰子 d 对应棋子已死时，可走最近编号棋子（双向并列时两个都可选）。
 - **胜负**：到达对方出发区角点 OR 吃光对方棋子 = 胜；**只有胜负，没有和棋**。
-- **单方时限**：每盘每方 4 分钟包干，超时判负。
+- **单方时限**：每盘每方 4 分钟包干，超时判负；程序默认只提示超时，不自动判负，裁判确认后可用 GUI 按钮记分，裁判要求时可开启程序自动判负。
 - **轮制**：每轮 7 盘，先胜 4 盘为胜方；甲方一四五盘先手，乙方二三六七盘先手；两盘中间不休息。
 - **决赛加赛**：积分相等 → 胜负关系 → 10 分钟包干快棋两盘 → 抽签/掷骰只比一局。
 - **崩盘**：程序崩溃 = 该方判负。
@@ -75,7 +76,7 @@
 - 可录入对方走法。
 - 可输出我方建议走法，并明确显示移动棋子、起点、终点、是否吃子。
 - 自动判断胜负。
-- 计时功能：单方总时间 + 每步耗时统计（已实现 4 分钟包干）。
+- 计时功能：单方总时间 + 每步耗时统计（默认 4 分钟包干，比赛模式可改时限；默认只提示超时，裁判确认后可用 GUI 按钮记分，裁判要求时可开启自动判负）。
 - 棋谱保存：JSON 格式（已实现）；后续如有组委会规范再适配。
 - 悔棋/恢复局面（已实现）。
 - 比赛模式：合法步校验、当前轮状态提示、当前推荐走法（已实现）。

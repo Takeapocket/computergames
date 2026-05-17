@@ -61,6 +61,42 @@ def test_append_records_step_time_and_remaining_seconds():
     assert step.to_dict()["remaining_seconds"] == {"red": 236.75, "blue": 240.0}
 
 
+@pytest.mark.parametrize("seconds", [float("nan"), float("inf"), -1.0])
+def test_from_dict_rejects_invalid_remaining_seconds(seconds):
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+    payload = record.to_dict()
+    payload["steps"][0]["remaining_seconds"] = {"red": seconds, "blue": 240.0}
+
+    with pytest.raises(ValueError, match="remaining_seconds"):
+        GameRecord.from_dict(payload)
+
+
+@pytest.mark.parametrize("step_seconds", [float("nan"), float("inf"), -1.0])
+def test_from_dict_rejects_invalid_step_seconds(step_seconds):
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+    payload = record.to_dict()
+    payload["steps"][0]["step_seconds"] = step_seconds
+
+    with pytest.raises(ValueError, match="step_seconds"):
+        GameRecord.from_dict(payload)
+
+
+@pytest.mark.parametrize("step_seconds", [float("nan"), float("inf"), -1.0])
+def test_append_rejects_invalid_step_seconds(step_seconds):
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+
+    with pytest.raises(ValueError, match="step_seconds"):
+        record.append(dice=1, move=move, state_after=state, step_seconds=step_seconds)
+
+
 def test_append_records_capture_move():
     state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
     record = GameRecord.from_state(state)

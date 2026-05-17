@@ -15,6 +15,7 @@ from gui.board_widget import BoardWidget
 from gui.control_panel import ControlPanel
 from gui.match_mode import MatchModePanel
 from gui.opening_panel import OpeningPanel, OpeningSelection
+from gui.time_limit import validate_nonnegative_seconds, validate_total_seconds
 from gui.timer_panel import DEFAULT_TOTAL_SECONDS, MatchTimer, TimerPanel
 from record.auto_save import (
     AUTO_SAVE_MATCH_PATH,
@@ -74,12 +75,16 @@ class MainWindow(tk.Frame):
         master: tk.Misc,
         *,
         total_seconds: float = DEFAULT_TOTAL_SECONDS,
+        auto_timeout_enabled: bool = False,
         auto_save_path: str | Path | None = None,
         auto_save_match_path: str | Path | None = None,
     ) -> None:
+        validated_total_seconds = validate_total_seconds(total_seconds)
         super().__init__(master, padx=16, pady=16)
         self._build_menu(master)
-        self._total_seconds = float(total_seconds)
+        self._total_seconds = validated_total_seconds
+        self._auto_timeout_enabled = bool(auto_timeout_enabled)
+        self._timeout_notice_players: tuple[Player, ...] = ()
         self._auto_save_path = Path(auto_save_path) if auto_save_path is not None else AUTO_SAVE_PATH
         self._auto_save_match_path = (
             Path(auto_save_match_path) if auto_save_match_path is not None else AUTO_SAVE_MATCH_PATH
@@ -112,7 +117,11 @@ class MainWindow(tk.Frame):
         side_panel = tk.Frame(self)
         side_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.timer_panel = TimerPanel(side_panel, on_toggle_pause=self._toggle_timer_pause)
+        self.timer_panel = TimerPanel(
+            side_panel,
+            on_toggle_pause=self._toggle_timer_pause,
+            on_confirm_timeout_forfeit=self._confirm_timeout_forfeit,
+        )
         self.timer_panel.pack(fill=tk.X, pady=(0, 8))
 
         self.match_mode_panel = MatchModePanel(side_panel)
@@ -337,6 +346,8 @@ class MainWindow(tk.Frame):
         self._our_side = None
         self._match = None
         self._match_finished_notified = False
+        self._auto_timeout_enabled = False
+        self._timeout_notice_players = ()
         self.opening_panel.reset()
         self.opening_panel.set_side_controls_enabled(True)
         self.status_message = "棋局已重置，请重新录入开局。"
@@ -372,6 +383,12 @@ class MainWindow(tk.Frame):
         )
         self.record = GameRecord.from_state(self.state)
         record_meta = dict(selection.metadata())
+        record_meta.update(
+            {
+                "time_limit_seconds": self._total_seconds,
+                "auto_timeout_enabled": self._auto_timeout_enabled,
+            }
+        )
         if self._match is not None:
             record_meta.update(
                 {
@@ -385,6 +402,7 @@ class MainWindow(tk.Frame):
         self.timer.reset(current_player=initial_player)
         self.current_dice = 6
         self._clear_selection()
+        self._timeout_notice_players = ()
         self._record_dirty = False
         self._awaiting_dice = True
         self._phase = "playing"
@@ -417,6 +435,8 @@ class MainWindow(tk.Frame):
 
     def _auto_save_current_game(self) -> None:
         try:
+            self.record.metadata["time_limit_seconds"] = self._total_seconds
+            self.record.metadata["auto_timeout_enabled"] = self._auto_timeout_enabled
             auto_save(self.record, self.timer.snapshot(), path=self._auto_save_path)
         except OSError as exc:
             self.status_message = f"自动保存失败：{exc}"
@@ -520,6 +540,7 @@ class MainWindow(tk.Frame):
                 return True
             self.record = loaded_record
             self.state = loaded_state
+            self._restore_timer_options_from_record(loaded_record)
             self.timer.reset(
                 current_player=timer_current_player,
                 remaining_seconds=timer_remaining,
@@ -579,6 +600,7 @@ class MainWindow(tk.Frame):
 
         self.record = loaded_record
         self.state = loaded_state
+        self._restore_timer_options_from_record(loaded_record)
         self.timer.reset(
             current_player=timer_current_player,
             remaining_seconds=timer_remaining,
@@ -603,9 +625,26 @@ class MainWindow(tk.Frame):
         if not isinstance(remaining, dict):
             raise ValueError("invalid auto-save metadata")
         return {
-            Player.RED: float(remaining[Player.RED.value]),
-            Player.BLUE: float(remaining[Player.BLUE.value]),
+            Player.RED: validate_nonnegative_seconds(remaining[Player.RED.value]),
+            Player.BLUE: validate_nonnegative_seconds(remaining[Player.BLUE.value]),
         }
+
+    def _restore_timer_options_from_record(self, record: GameRecord) -> None:
+        time_limit = record.metadata.get("time_limit_seconds")
+        if time_limit is not None:
+            try:
+                self._total_seconds = validate_total_seconds(time_limit)
+            except ValueError:
+                pass
+            else:
+                self.timer.total_seconds = self._total_seconds
+
+        auto_timeout_enabled = record.metadata.get("auto_timeout_enabled")
+        if isinstance(auto_timeout_enabled, bool):
+            self._auto_timeout_enabled = auto_timeout_enabled
+        else:
+            self._auto_timeout_enabled = False
+        self._timeout_notice_players = ()
 
     def _save_record(self) -> None:
         DEFAULT_RECORD_DIR.mkdir(exist_ok=True)
@@ -630,17 +669,6 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _load_record(self) -> None:
-        # R-2 review Important #17：比赛进行中加载棋谱会产生混合状态，必须先确认并清掉 match。
-        if self._match is not None and not self._match.is_finished():
-            confirm = messagebox.askyesno(
-                "比赛进行中",
-                "当前正在比赛模式，加载棋谱将终止本轮比赛并丢弃整轮记录。是否继续？",
-                parent=self,
-            )
-            if not confirm:
-                return
-            self._exit_match_mode()
-
         DEFAULT_RECORD_DIR.mkdir(exist_ok=True)
         path = filedialog.askopenfilename(
             parent=self,
@@ -654,15 +682,29 @@ class MainWindow(tk.Frame):
         try:
             loaded_record = GameRecord.load(path)
             loaded_state = loaded_record.restore_state()
+            remaining_seconds = self._remaining_seconds_from_record(loaded_record)
         except (OSError, ValueError) as exc:
             messagebox.showerror("加载棋谱失败", str(exc), parent=self)
             return
 
+        # R-2 review Important #17：比赛进行中加载棋谱会产生混合状态；先确认文件有效，
+        # 再让操作员确认退出 match，避免取消/损坏文件清掉当前整轮上下文。
+        if self._match is not None and not self._match.is_finished():
+            confirm = messagebox.askyesno(
+                "比赛进行中",
+                "当前正在比赛模式，加载棋谱将终止本轮比赛并丢弃整轮记录。是否继续？",
+                parent=self,
+            )
+            if not confirm:
+                return
+            self._exit_match_mode()
+
         self.record = loaded_record
         self.state = loaded_state
+        self._restore_timer_options_from_record(self.record)
         self.timer.reset(
             current_player=self.state.current_player,
-            remaining_seconds=self._remaining_seconds_from_record(self.record),
+            remaining_seconds=remaining_seconds,
         )
         self.current_dice = 6
         self._clear_selection()
@@ -769,7 +811,12 @@ class MainWindow(tk.Frame):
         self.controls.set_dice_enabled(can_enter_dice)
         self.controls.set_can_roll_dice(can_enter_dice and self._awaiting_dice)
         self.controls.set_move_selection_enabled(can_select_moves)
-        self.timer_panel.set_snapshot(self.timer.snapshot())
+        snapshot = self.timer.snapshot()
+        self.timer_panel.set_snapshot(
+            snapshot,
+            auto_timeout_enabled=self._auto_timeout_enabled,
+            timeout_adjudication_enabled=self._can_confirm_timeout_forfeit(snapshot),
+        )
         if self._phase == "setup":
             self._refresh_setup_board()
         else:
@@ -836,6 +883,9 @@ class MainWindow(tk.Frame):
             return "本轮已结束"
         if winner is not None:
             return "对局已结束"
+        if self._timeout_notice_players and not self._auto_timeout_enabled:
+            timeout_text = "、".join(player_label(player) for player in self._timeout_notice_players)
+            return f"超时提示：{timeout_text}（等裁判）"
         if self._mode == "match" and self._our_side is not None and self.state.current_player is not self._our_side:
             if self._awaiting_dice:
                 return "等待对方录入：请输入对方骰子"
@@ -1014,7 +1064,16 @@ class MainWindow(tk.Frame):
         chosen = self._show_match_setup_dialog()
         if chosen is None:
             return
-        our_side, our_role = chosen
+        if len(chosen) == 2:
+            our_side, our_role = chosen
+            auto_timeout_enabled = self._auto_timeout_enabled
+            total_seconds = self._total_seconds
+        else:
+            our_side, our_role, auto_timeout_enabled, total_seconds = chosen
+        self._configure_timer_options(
+            total_seconds=total_seconds,
+            auto_timeout_enabled=auto_timeout_enabled,
+        )
         # R-2 review Important #18：进入新一轮前清掉可能残留的旧 auto-save（单盘 + 整轮）。
         self._clear_auto_save()
         self._clear_match_auto_save()
@@ -1026,6 +1085,17 @@ class MainWindow(tk.Frame):
         self._match_finished_notified = False
         self._start_new_game_in_match()
         self._auto_save_current_match()
+
+    def _configure_timer_options(
+        self,
+        *,
+        total_seconds: float,
+        auto_timeout_enabled: bool,
+    ) -> None:
+        self._total_seconds = validate_total_seconds(total_seconds)
+        self._auto_timeout_enabled = bool(auto_timeout_enabled)
+        self._timeout_notice_players = ()
+        self.timer = MatchTimer(total_seconds=self._total_seconds, current_player=self.state.current_player)
 
     def _exit_match_mode(self) -> None:
         """R-2 review Important #12/#17：集中清理 match 状态。
@@ -1042,7 +1112,7 @@ class MainWindow(tk.Frame):
         self._clear_auto_save()
         self.opening_panel.set_side_controls_enabled(True)
 
-    def _show_match_setup_dialog(self) -> tuple[Player, MatchRole] | None:
+    def _show_match_setup_dialog(self) -> tuple[Player, MatchRole, bool, float] | None:
         dialog = tk.Toplevel(self)
         dialog.title("进入比赛模式")
         dialog.transient(self.winfo_toplevel())
@@ -1050,6 +1120,8 @@ class MainWindow(tk.Frame):
 
         side_var = tk.StringVar(value=Player.RED.value)
         role_var = tk.StringVar(value="甲")
+        total_seconds_var = tk.StringVar(value=f"{self._total_seconds:g}")
+        auto_timeout_var = tk.BooleanVar(value=self._auto_timeout_enabled)
         result: dict[str, object] = {"chosen": None}
 
         tk.Label(dialog, text="我方颜色：", padx=20, anchor="w").pack(fill=tk.X, pady=(16, 4))
@@ -1064,11 +1136,32 @@ class MainWindow(tk.Frame):
         tk.Radiobutton(role_row, text="甲方（1/4/5 盘先手）", value="甲", variable=role_var).pack(anchor="w")
         tk.Radiobutton(role_row, text="乙方（2/3/6/7 盘先手）", value="乙", variable=role_var).pack(anchor="w")
 
+        tk.Label(dialog, text="单方时限（秒）：", padx=20, anchor="w").pack(fill=tk.X, pady=(12, 4))
+        tk.Entry(dialog, textvariable=total_seconds_var).pack(fill=tk.X, padx=20)
+
+        tk.Checkbutton(
+            dialog,
+            text="程序自动超时判负（默认关闭；裁判要求时再打开）",
+            variable=auto_timeout_var,
+            padx=20,
+            anchor="w",
+        ).pack(fill=tk.X, pady=(12, 0))
+
         button_row = tk.Frame(dialog)
         button_row.pack(padx=20, pady=(16, 16))
 
         def confirm() -> None:
-            result["chosen"] = (Player.from_value(side_var.get()), role_var.get())
+            try:
+                total_seconds = validate_total_seconds(total_seconds_var.get())
+            except ValueError:
+                messagebox.showerror("时限无效", "单方时限必须是正数秒。", parent=dialog)
+                return
+            result["chosen"] = (
+                Player.from_value(side_var.get()),
+                role_var.get(),
+                bool(auto_timeout_var.get()),
+                total_seconds,
+            )
             dialog.destroy()
 
         def cancel() -> None:
@@ -1120,6 +1213,7 @@ class MainWindow(tk.Frame):
         self.timer.pause()
         self.current_dice = 6
         self._clear_selection()
+        self._timeout_notice_players = ()
         self._awaiting_dice = True
         self._phase = "setup"
         self._match.phase = "setup"
@@ -1210,11 +1304,24 @@ class MainWindow(tk.Frame):
     def _schedule_timer_refresh(self) -> None:
         self._timer_after_id = self.after(500, self._refresh_timer)
 
+    def _cancel_timer_refresh(self) -> None:
+        if self._timer_after_id is None:
+            return
+        try:
+            self.after_cancel(self._timer_after_id)
+        except tk.TclError:
+            pass
+        self._timer_after_id = None
+
     def _refresh_timer(self) -> None:
         if not self.winfo_exists():
             return
         snapshot = self.timer.snapshot()
-        self.timer_panel.set_snapshot(snapshot)
+        self.timer_panel.set_snapshot(
+            snapshot,
+            auto_timeout_enabled=self._auto_timeout_enabled,
+            timeout_adjudication_enabled=self._can_confirm_timeout_forfeit(snapshot),
+        )
         if (
             self._phase == "playing"
             and self.state.get_winner() is None
@@ -1223,9 +1330,53 @@ class MainWindow(tk.Frame):
             and not self._match.is_finished()
         ):
             timed_out = snapshot.timeout_players[0]
-            self._handle_timeout(timed_out)
-            return
+            if self._auto_timeout_enabled:
+                self._handle_timeout(timed_out)
+                return
+            self._show_timeout_notice(snapshot.timeout_players)
+        else:
+            self._timeout_notice_players = ()
         self._schedule_timer_refresh()
+
+    def _show_timeout_notice(self, timeout_players: tuple[Player, ...]) -> None:
+        timeout_players = tuple(timeout_players)
+        if timeout_players == self._timeout_notice_players:
+            return
+        self._timeout_notice_players = timeout_players
+        timeout_text = "、".join(player_label(player) for player in timeout_players)
+        self.status_message = (
+            f"计时提示：{timeout_text} 已到 0。未自动判负，请以裁判判定为准。"
+        )
+        self._refresh()
+
+    def _can_confirm_timeout_forfeit(self, snapshot: object) -> bool:
+        timeout_players = getattr(snapshot, "timeout_players", ())
+        return (
+            not self._auto_timeout_enabled
+            and self._phase == "playing"
+            and self.state.get_winner() is None
+            and bool(timeout_players)
+            and self._match is not None
+            and not self._match.is_finished()
+        )
+
+    def _confirm_timeout_forfeit(self, timed_out: Player) -> None:
+        snapshot = self.timer.snapshot()
+        if timed_out not in snapshot.timeout_players or not self._can_confirm_timeout_forfeit(snapshot):
+            return
+        winner = timed_out.opponent
+        confirm = messagebox.askyesno(
+            "确认超时判负",
+            (
+                f"确认裁判已判定{player_label(timed_out)}超时判负，"
+                f"{player_label(winner)}获胜？"
+            ),
+            parent=self,
+        )
+        if not confirm:
+            return
+        self._cancel_timer_refresh()
+        self._handle_timeout(timed_out)
 
     def _handle_timeout(self, timed_out: Player) -> None:
         winner = timed_out.opponent
@@ -1249,10 +1400,5 @@ class MainWindow(tk.Frame):
             self._schedule_timer_refresh()
 
     def destroy(self) -> None:
-        if self._timer_after_id is not None:
-            try:
-                self.after_cancel(self._timer_after_id)
-            except tk.TclError:
-                pass
-            self._timer_after_id = None
+        self._cancel_timer_refresh()
         super().destroy()
