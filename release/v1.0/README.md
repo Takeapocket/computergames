@@ -10,7 +10,25 @@
 
 ## 启动
 
-赛前主检查先运行：
+优先双击仓库根目录的 `启动项目.cmd` 打开现场菜单。
+
+菜单常用项：
+
+```text
+1. 启动 GUI
+2. 一键赛前总检查
+3. 完整 pytest
+4. smoke 测试
+5. S2 全流程演练
+```
+
+命令行等价入口：
+
+```powershell
+& ".venv/Scripts/python.exe" "scripts/launcher.py"
+```
+
+赛前主检查命令行方式：
 
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/preflight_check.py"
@@ -56,6 +74,7 @@
 
 ## 工程化基线
 
+- 现场启动器：根目录 `启动项目.cmd`，内部调用 `scripts/launcher.py`
 - 赛前主检查：`scripts/preflight_check.py`，成功必须输出 `READY FOR MATCH`
 - 验证脚本：`scripts/smoke_test.py`、`scripts/s2_rehearsal.py`、`scripts/quick_bench.py`、`scripts/tournament.py`
 - 应急手册：`docs/EMERGENCY_GUIDE.md`

@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-17（R-4 GUI 程序掷骰后同步）
+更新时间：2026-05-17（R-4 GUI 程序掷骰与一键启动器后同步）
 
 ## 项目定位
 
@@ -35,9 +35,10 @@
 - **2026-05-17 P8 threat defense audit 已完成，候选未实现**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。120 局审计得到 `audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。gate 不支持 `rollout_threat_rerank`，因此未实现候选；默认 AI、默认布局、core 规则和 release 配置未变。
 - **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：新增 `ai/zweistein_dp.py` 概率估值表和 `rollout_zweistein_dp_cutoff` / `rollout_exact_opp1_zdp` 显式候选。P9.0 smoke 显示 DP 表尺寸为 `15625 x 20`，测试通过；P9.1 双边 candidate 合并胜率 45.0%，未过 55% candidate 门槛；P9.2 双边 candidate 合并胜率 51.5%，未过 55% candidate 门槛，且低于 P9.3 启动线 52%，因此不启动 TT / move ordering。默认 AI、默认布局、core 规则和 release 配置均未变。
 - **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已覆盖 Spinbox `FocusOut` 与程序掷骰按钮点击/禁用状态的边界。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
+- **2026-05-17 现场一键启动器已完成**：新增根目录 `启动项目.cmd` 和 `scripts/launcher.py`。双击可打开现场菜单；菜单支持启动 GUI、一键赛前总检查、完整 pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示。`scripts/launcher.py` 提供 `--list`、`--dry-run`、`--run` 入口并有测试覆盖；`scripts/preflight_check.py` 已把启动器文件纳入必备文件检查；`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，避免 Windows `cmd.exe` 解析异常。验证：699 pytest passed，启动器 `--list` / `--dry-run 4` / `--run status` 正常。
 
 下一会话优先级：
-1. **赛前冻结与现场启动包核对**：使用 `scripts/preflight_check.py` 作为赛前总检查，成功必须输出 `READY FOR MATCH`。
+1. **赛前冻结与现场启动包核对**：现场优先双击根目录 `启动项目.cmd`；使用其中的"一键赛前总检查"或直接运行 `scripts/preflight_check.py`，成功必须输出 `READY FOR MATCH`。
 2. 默认 AI 仍是 `rollout` kind + P3 promotion 显式参数；P7.2 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动。赛前不得默认启用这些实验候选。
 3. 默认布局仍是 `balanced_v1`；P5.5 失败候选和 P5.0-P5.4 报告都不是晋升证据。
 
@@ -46,6 +47,7 @@
 - Python 3.11
 - pytest
 - tkinter 标准库 GUI
+- Windows 双击启动入口：`启动项目.cmd` + `scripts/launcher.py`
 - 当前不依赖网络服务、数据库或统一平台 API
 
 ## 已有能力
@@ -59,6 +61,7 @@
 - 状态序列化和反序列化。
 - 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P3 promotion 显式 kwargs）、P2/P3 rollout/Zweistein 显式实验候选、MCTSAI（实验性，P4.1 已停止，不进入 promotion）、ExpectimaxAI（实验性）。
 - Tkinter GUI（含开局录入、手动骰子录入、程序掷骰、推荐走法 by rollout；rollout 异常时回退到 `greedy_risk` / 第一条合法步）。
+- 现场启动器：根目录 `启动项目.cmd` 双击菜单，覆盖 GUI、preflight、pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示。
 - 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）+ P6/P7/P8 报告脚本（`scripts/preflight_check.py`、`scripts/timing_budget_probe.py`、`scripts/analyze_rollout_failures.py`、`scripts/analyze_threat_defense.py`）。
 - 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
 - 单方计时（4 分钟包干）。

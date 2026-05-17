@@ -16,6 +16,16 @@
 
 优先使用仓库内 `.venv/`：
 
+双击根目录的 `启动项目.cmd` 可打开现场启动菜单，菜单内包含 GUI 启动、preflight、pytest、smoke、S2 rehearsal 和 timing probe。
+
+命令行等价入口：
+
+```powershell
+& ".venv/Scripts/python.exe" "scripts/launcher.py"
+```
+
+直接启动 GUI：
+
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/run_gui.py"
 ```
@@ -69,8 +79,8 @@ gui/           Tkinter 离线 GUI：main_window / board_widget / control_panel /
 record/        JSON 棋谱、状态序列化、auto_save、match_record
 adapters/      统一平台/API 适配层预留，目前无正式实现
 scripts/       run_gui / smoke_test / quick_bench / bench_ai / tournament /
-               param_sweep / search_openings / compare_opening_layouts /
-               s2_rehearsal
+               launcher / param_sweep / search_openings /
+               compare_opening_layouts / s2_rehearsal
 tests/         pytest 自动测试
 docs/          规则、项目摘要、现场操作清单、应急手册
 release/v1.0/  封版比赛产物

@@ -17,6 +17,10 @@
 
 ### 1.1 工程验证
 
+双击根目录 `启动项目.cmd`，选择 `2. 一键赛前总检查`。
+
+命令行等价方式：
+
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/preflight_check.py"
 ```
@@ -62,6 +66,10 @@ Remove-Item -ErrorAction SilentlyContinue replays/auto_save_match.json
 
 ### 2.2 工程二次验证
 
+优先双击根目录 `启动项目.cmd`，选择 `2. 一键赛前总检查`。
+
+命令行等价方式：
+
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/preflight_check.py"
 ```
@@ -69,6 +77,10 @@ Remove-Item -ErrorAction SilentlyContinue replays/auto_save_match.json
 成功标准同样是 `READY FOR MATCH`。如果现场时间不足，优先使用赛前已完整通过 preflight 的备机，不在比赛开始前临时跳过失败项。
 
 ### 2.3 启动主程序
+
+优先双击根目录 `启动项目.cmd`，选择 `1. 启动 GUI`。
+
+命令行等价方式：
 
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/run_gui.py"
@@ -171,6 +183,7 @@ playing 阶段每一轮（双方各走一步前后）的操作：
 
 | 用途 | 命令 |
 |---|---|
+| 一键启动菜单 | 双击 `启动项目.cmd`，或 `& ".venv/Scripts/python.exe" "scripts/launcher.py"` |
 | 赛前主检查 | `& ".venv/Scripts/python.exe" "scripts/preflight_check.py"` |
 | 完整 pytest | `& ".venv/Scripts/python.exe" -m pytest -q` |
 | 基础冒烟 | `& ".venv/Scripts/python.exe" "scripts/smoke_test.py"` |

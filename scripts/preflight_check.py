@@ -76,6 +76,8 @@ REQUIRED_FILES = (
     "release/v1.0/known_limitations.md",
     "scripts/smoke_test.py",
     "scripts/s2_rehearsal.py",
+    "scripts/launcher.py",
+    "启动项目.cmd",
 )
 
 Runner = Callable[[Sequence[str], Path], int]

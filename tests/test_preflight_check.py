@@ -79,6 +79,11 @@ def test_required_files_include_release_signoff_docs() -> None:
     assert "release/v1.0/known_limitations.md" in preflight_check.REQUIRED_FILES
 
 
+def test_required_files_include_one_click_launcher() -> None:
+    assert "启动项目.cmd" in preflight_check.REQUIRED_FILES
+    assert "scripts/launcher.py" in preflight_check.REQUIRED_FILES
+
+
 def test_default_commands_include_small_timing_probe_gate() -> None:
     timing_commands = [
         tuple(args)

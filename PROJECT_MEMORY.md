@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-17（R-4 GUI 程序掷骰后同步）
+更新时间：2026-05-17（R-4 GUI 程序掷骰与一键启动器后同步）
 
 ## 当前结论
 
@@ -34,6 +34,7 @@
 - **2026-05-17 P8 threat defense audit 已完成**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。审计结果：`audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。报告见 `reports/p8_threat_defense_audit_20260517.md` / `.json`。默认 AI、默认布局、core 规则和 release 配置未变。`rollout_threat_rerank` 未实现，因为审计 gate 不支持：低置信 threat-reducing ratio 0.012 < 0.250，低置信 top-k 命中 ratio 0.500 < 0.600；未过门禁不得晋升。最新验证：590 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 - **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：P9.0 已实现 `ai/zweistein_dp.py` 概率估值表并通过测试；DP 表尺寸为 `15625 x 20`，`PDF_VAL` / `CDF_VAL` 均为 15625 行。P9.1 `rollout_zweistein_dp_cutoff` 已作为显式候选评测，双边 100+100 合并胜率 45.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛；P9.2 `rollout_exact_opp1_zdp` 已作为显式候选评测，双边 100+100 合并胜率 51.5%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛，且低于 P9.3 TT / move ordering 启动线 52%，因此 P9.3 不启动。全量验证通过，`scripts/preflight_check.py` 输出 `READY FOR MATCH`。GUI/release 默认 AI、默认布局、core 规则均未变。
 - **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，使用 `secrets.randbelow(6) + 1` 作为程序掷骰来源；GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已修复 Spinbox `FocusOut` 与程序掷骰按钮点击的事件顺序边界，且禁用按钮不会吞掉手动改错提交。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
+- **2026-05-17 现场一键启动器已完成**：新增根目录 `启动项目.cmd` 和 `scripts/launcher.py`。双击可打开菜单，支持启动 GUI、一键赛前总检查、完整 pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示；`scripts/launcher.py` 支持 `--list`、`--dry-run`、`--run` 非交互入口并有 `tests/test_launcher.py` 覆盖；`scripts/preflight_check.py` 已把启动器文件纳入必备文件检查；`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，避免 Windows `cmd.exe` 解析异常。默认 AI、默认布局、core 规则语义和 release 配置均未变。最新验证：699 pytest passed；启动器 `--list` / `--dry-run 4` / `--run status` 均正常。
 
 ## 已确认的比赛事实
 
@@ -105,7 +106,7 @@
 2. R-0 / R-1 / R-2 / R-3 / R-4 / S2 / S3 / S4 / P6 / P7 / P8 / P9 全部闭环；当前 GUI/release 默认仍是 `rollout` kind + P3 promotion 参数，不是旧 flat rollout。
 3. P7.2 adaptive close-sample candidate 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动；没有用户明确批准前不得进入 GUI/release 默认。
 4. P5.5 opening 候选晋升路线已停止；任何默认布局变更仍必须直接对当前 release 默认 rollout kwargs 做正式门禁验证。
-5. 下一步优先赛前冻结、现场启动包核对和 QQ 群/老师附件对齐；只修现场风险 bug，不继续默认 AI/布局调参。
+5. 下一步优先赛前冻结、现场启动包核对和 QQ 群/老师附件对齐；现场启动优先双击根目录 `启动项目.cmd`；只修现场风险 bug，不继续默认 AI/布局调参。
 
 ## 待确认事项
 

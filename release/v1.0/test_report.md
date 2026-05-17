@@ -1,18 +1,23 @@
 # Test Report
 
-Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive/P3 候选复验）/ 2026-05-16（P3 受控默认替换复验）/ 2026-05-17（P6-P9 robustness / audit / candidate follow-up）
+Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive/P3 候选复验）/ 2026-05-16（P3 受控默认替换复验）/ 2026-05-17（P6-P9 robustness / audit / candidate follow-up / R-4 GUI dice / launcher）
 
 ## Current sign-off snapshot
 
 | command | exit code | result |
 |---|---:|---|
-| `.venv/Scripts/python.exe -m pytest -q` | 0 | 614 passed |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 699 passed |
 | `.venv/Scripts/python.exe scripts/preflight_check.py` | 0 | READY FOR MATCH |
+| `.venv/Scripts/python.exe scripts/launcher.py --list` | 0 | 菜单正常 |
+| `.venv/Scripts/python.exe scripts/launcher.py --dry-run 4` | 0 | smoke 命令映射正常 |
+| `.venv/Scripts/python.exe scripts/launcher.py --run status` | 0 | release/default 状态正常 |
+| `cmd /c "启动项目.cmd"`（输入 0 退出） | 0 | 菜单可进入并正常退出 |
 
 - **P6 robustness lock**：release/GUI 默认 AI、fallback、`balanced_v1` 布局和 timing probe 已锁定；preflight 成功输出 `READY FOR MATCH`。
 - **P7 rollout failure analysis**：失败归因脚本落地，adaptive close-sample 仍是显式候选，未进入默认。
 - **P8 threat defense audit**：threat rerank gate 不支持实现候选，默认 AI、布局和 release 配置未变。
 - **P9 Zweistein-DP chance-aware evaluation**：P9.1 / P9.2 候选未过 candidate 门槛，P9.3 不启动。
+- **R-4 GUI dice + launcher**：GUI 程序掷骰已完成；现场一键启动器 `启动项目.cmd` / `scripts/launcher.py` 已完成，`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，preflight 已纳入启动器文件存在性检查。
 
 ## Commands
 
@@ -20,6 +25,7 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 |---|---:|---|
 | `.venv/Scripts/python.exe -m pytest -q` | 0 | 495 passed in 11.68s |
 | `.venv/Scripts/python.exe -m pytest -q` | 0 | 520 passed in 10.51s（2026-05-16 P3 默认替换后） |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 699 passed（2026-05-17 一键启动器与 R-4 follow-up 后） |
 | `.venv/Scripts/python.exe -m pytest tests/test_default_ai_config.py tests/test_ai_basic.py tests/test_quick_bench_ci.py tests/test_bench_ai.py tests/test_ai_match.py tests/test_rollout_ai.py tests/test_rollout_stability.py tests/test_gui_logic.py -q` | 0 | 91 passed |
 | `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过；undo restored: True |
 | hidden Tk `MainWindow` smoke with temporary auto-save paths | 0 | default recommender kind=`rollout`, cutoff_eval=`zweistein`, deadline_safety_ms=`30.0` |
