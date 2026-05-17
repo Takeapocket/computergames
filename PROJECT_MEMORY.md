@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-17（P6 robustness lock + P7 rollout failure analysis 后同步）
+更新时间：2026-05-17（P8 threat defense audit 后同步）
 
 ## 当前结论
 
@@ -31,6 +31,7 @@
 - **2026-05-16 P5.5 opening duel 60-game expansion 已完成，停止该候选晋升路线**：复用 P5.4 同一 balanced 候选，扩到 `--games-per-side 10 --seed-pool 23026,23027,23028`，直接对当前默认 `balanced_v1` 做 60 局双边复验。结果合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；candidate as red 13/30，candidate as blue 10/30，`illegal_moves=0`、`crashes=0`、`timeouts=0`。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`。P5.4 小样本正信号未能复现，该候选不进入正式晋升门禁，GUI/release 默认布局不变。
 - **2026-05-17 P6 robustness lock 已完成**：新增 `tests/test_release_consistency.py` 锁定 GUI/release 默认 AI、fallback 与 `balanced_v1` 默认布局；新增 `scripts/preflight_check.py`，成功时输出 `READY FOR MATCH`。GUI 推荐兜底链已固定为 current default rollout -> `greedy_risk` -> 第一条合法步 -> 无合法步，并在推荐文本区标出来源。损坏 `auto_save.json` / `auto_save_match.json` 启动时会自动清理，不再阻塞 GUI。`scripts/timing_budget_probe.py` 120 样本结果：`illegal_recommendations=0`、`exceptions=0`、`p99_ms≈641`、`max_ms≈720`，1 个 timeout/fallback 样本已列入报告。报告见 `reports/p6_timing_budget_probe_20260516.md` / `.json`。release 默认 AI、默认布局和 core 规则未变。
 - **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：新增 `scripts/analyze_rollout_failures.py`。P7.0 对当前 release 默认 rollout vs `greedy_risk` 跑 120 局：87 胜 / 33 负，`illegal_moves=0`、`crashes=0`、`timeouts=0`；失败桶为 `missed_direct_win=0`、`allowed_direct_loss=63`、`low_confidence_loss=145`、`timeout_or_fallback=4`、`bad_self_capture=33`。因此 P7.1 direct-win guard 不成立；P7.2 `rollout_adaptive_close_sample` 作为显式实验候选注册并在 `balanced_v1` 布局 bench，双边 100+100 合并胜率 50.0%，未达 55% candidate 门槛，不进入默认。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。最新验证：576 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
+- **2026-05-17 P8 threat defense audit 已完成**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。审计结果：`audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。报告见 `reports/p8_threat_defense_audit_20260517.md` / `.json`。默认 AI、默认布局、core 规则和 release 配置未变。`rollout_threat_rerank` 未实现，因为审计 gate 不支持：低置信 threat-reducing ratio 0.012 < 0.250，低置信 top-k 命中 ratio 0.500 < 0.600；未过门禁不得晋升。最新验证：590 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 
 ## 已确认的比赛事实
 

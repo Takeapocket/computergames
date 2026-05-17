@@ -1,0 +1,909 @@
+{
+  "subject": {
+    "ai": "rollout",
+    "ai_kwargs_source": "release/v1.0/default_params.json"
+  },
+  "opponent": "greedy_risk",
+  "games": 6,
+  "seed_pool": [
+    28016
+  ],
+  "default_layout": "balanced_v1",
+  "analysis_window": {
+    "subject_losses_only": true,
+    "subject_to_move_only": true,
+    "score_margin": 0.08,
+    "top_k": 5
+  },
+  "summary": {
+    "subject_wins": 4,
+    "subject_losses": 2,
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "draw_max_turns": 0,
+    "audited_positions": 17
+  },
+  "threat_defense": {
+    "chosen_allowed_direct_loss_positions": 3,
+    "threat_reducing_alternative_positions": 1,
+    "full_block_alternative_positions": 1,
+    "partial_reduction_alternative_positions": 0,
+    "average_chosen_threat_count": 0.47058823529411764,
+    "average_best_alternative_threat_count": 0.35294117647058826,
+    "average_reduction_when_available": 2.0
+  },
+  "low_confidence": {
+    "positions": 11,
+    "with_allowed_direct_loss": 2,
+    "with_threat_reducing_alternative": 1,
+    "with_full_block_alternative": 1,
+    "threat_reducing_ratio": 0.09090909090909091,
+    "full_block_ratio": 0.09090909090909091,
+    "best_threat_reducing_in_top_k": 1,
+    "best_threat_reducing_in_top_k_ratio": 1.0
+  },
+  "self_capture_correlation": {
+    "self_capture_positions": 3,
+    "self_capture_and_allowed_direct_loss": 0,
+    "non_self_capture_positions": 14,
+    "non_self_capture_and_allowed_direct_loss": 3,
+    "allowed_direct_loss_rate_given_self_capture": 0.0,
+    "allowed_direct_loss_rate_given_non_self_capture": 0.21428571428571427,
+    "self_capture_with_threat_reducing_alternative": 0,
+    "self_capture_with_full_block_alternative": 0
+  },
+  "score_margin_buckets": {
+    "<=0.02": {
+      "positions": 6,
+      "with_threat_reducing_alternative": 0
+    },
+    "(0.02,0.04]": {
+      "positions": 4,
+      "with_threat_reducing_alternative": 1
+    },
+    "(0.04,0.08]": {
+      "positions": 1,
+      "with_threat_reducing_alternative": 0
+    },
+    ">0.08_or_null": {
+      "positions": 6,
+      "with_threat_reducing_alternative": 0
+    }
+  },
+  "top_k": {
+    "threat_reducing_positions": 1,
+    "best_threat_reducing_in_top_k": 1,
+    "best_threat_reducing_in_top_k_ratio": 1.0
+  },
+  "positions": [
+    {
+      "game_index": 1,
+      "turn": 1,
+      "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": true, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 4}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 4}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 3}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 3}}, \"6\": {\"alive\": true, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 0}}, \"2\": {\"alive\": true, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 0}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 1}}, \"6\": {\"alive\": true, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 2}}}}}",
+      "subject_player": "blue",
+      "player": "blue",
+      "dice": 4,
+      "low_confidence": true,
+      "score_margin": 0.0,
+      "score_margin_bucket": "<=0.02",
+      "failure_tags": [
+        "low_confidence_loss",
+        "bad_self_capture"
+      ],
+      "chosen": {
+        "piece_id": 4,
+        "from": [
+          3,
+          4
+        ],
+        "to": [
+          2,
+          4
+        ],
+        "root_rank": 1,
+        "root_score": 0.59375,
+        "root_winrate": 0.59375,
+        "opponent_winning_dice_set": [],
+        "opponent_winning_dice_count": 0,
+        "self_capture": true
+      },
+      "alternatives": [
+        {
+          "piece_id": 4,
+          "from": [
+            3,
+            4
+          ],
+          "to": [
+            3,
+            3
+          ],
+          "root_rank": 2,
+          "root_score": 0.59375,
+          "root_winrate": 0.59375,
+          "score_delta_from_chosen": 0.0,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": true
+        },
+        {
+          "piece_id": 4,
+          "from": [
+            3,
+            4
+          ],
+          "to": [
+            2,
+            3
+          ],
+          "root_rank": 3,
+          "root_score": 0.46875,
+          "root_winrate": 0.46875,
+          "score_delta_from_chosen": -0.125,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        }
+      ],
+      "best_threat_count": 0,
+      "threat_reducing_alternative_exists": false,
+      "full_block_alternative_exists": false,
+      "best_threat_reducing_rank": null
+    },
+    {
+      "game_index": 1,
+      "turn": 3,
+      "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": true, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 4}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 4}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 3}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 0}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 1}}, \"6\": {\"alive\": true, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 2}}}}}",
+      "subject_player": "blue",
+      "player": "blue",
+      "dice": 4,
+      "low_confidence": false,
+      "score_margin": 0.25,
+      "score_margin_bucket": ">0.08_or_null",
+      "failure_tags": [],
+      "chosen": {
+        "piece_id": 4,
+        "from": [
+          2,
+          4
+        ],
+        "to": [
+          1,
+          3
+        ],
+        "root_rank": 1,
+        "root_score": 0.71875,
+        "root_winrate": 0.71875,
+        "opponent_winning_dice_set": [],
+        "opponent_winning_dice_count": 0,
+        "self_capture": false
+      },
+      "alternatives": [
+        {
+          "piece_id": 4,
+          "from": [
+            2,
+            4
+          ],
+          "to": [
+            2,
+            3
+          ],
+          "root_rank": 2,
+          "root_score": 0.46875,
+          "root_winrate": 0.46875,
+          "score_delta_from_chosen": -0.25,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        },
+        {
+          "piece_id": 4,
+          "from": [
+            2,
+            4
+          ],
+          "to": [
+            1,
+            4
+          ],
+          "root_rank": 3,
+          "root_score": 0.34375,
+          "root_winrate": 0.34375,
+          "score_delta_from_chosen": -0.375,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        }
+      ],
+      "best_threat_count": 0,
+      "threat_reducing_alternative_exists": false,
+      "full_block_alternative_exists": false,
+      "best_threat_reducing_rank": null
+    },
+    {
+      "game_index": 1,
+      "turn": 5,
+      "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": true, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 4}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 4}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 3}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 0}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 1}}, \"6\": {\"alive\": true, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 2}}}}}",
+      "subject_player": "blue",
+      "player": "blue",
+      "dice": 5,
+      "low_confidence": true,
+      "score_margin": 0.0,
+      "score_margin_bucket": "<=0.02",
+      "failure_tags": [
+        "low_confidence_loss"
+      ],
+      "chosen": {
+        "piece_id": 5,
+        "from": [
+          3,
+          3
+        ],
+        "to": [
+          2,
+          3
+        ],
+        "root_rank": 2,
+        "root_score": 0.625,
+        "root_winrate": 0.625,
+        "opponent_winning_dice_set": [],
+        "opponent_winning_dice_count": 0,
+        "self_capture": false
+      },
+      "alternatives": [
+        {
+          "piece_id": 5,
+          "from": [
+            3,
+            3
+          ],
+          "to": [
+            2,
+            2
+          ],
+          "root_rank": 1,
+          "root_score": 0.625,
+          "root_winrate": 0.625,
+          "score_delta_from_chosen": 0.0,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        },
+        {
+          "piece_id": 5,
+          "from": [
+            3,
+            3
+          ],
+          "to": [
+            3,
+            2
+          ],
+          "root_rank": 3,
+          "root_score": 0.5,
+          "root_winrate": 0.5,
+          "score_delta_from_chosen": -0.125,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        }
+      ],
+      "best_threat_count": 0,
+      "threat_reducing_alternative_exists": false,
+      "full_block_alternative_exists": false,
+      "best_threat_reducing_rank": null
+    },
+    {
+      "game_index": 1,
+      "turn": 7,
+      "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": true, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 4}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 4}}, \"4\": {\"alive\": false, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 2}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 1}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 1}}, \"6\": {\"alive\": true, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 2}}}}}",
+      "subject_player": "blue",
+      "player": "blue",
+      "dice": 6,
+      "low_confidence": true,
+      "score_margin": 0.0,
+      "score_margin_bucket": "<=0.02",
+      "failure_tags": [
+        "low_confidence_loss"
+      ],
+      "chosen": {
+        "piece_id": 5,
+        "from": [
+          2,
+          3
+        ],
+        "to": [
+          1,
+          3
+        ],
+        "root_rank": 2,
+        "root_score": 0.65625,
+        "root_winrate": 0.65625,
+        "opponent_winning_dice_set": [],
+        "opponent_winning_dice_count": 0,
+        "self_capture": false
+      },
+      "alternatives": [
+        {
+          "piece_id": 5,
+          "from": [
+            2,
+            3
+          ],
+          "to": [
+            1,
+            2
+          ],
+          "root_rank": 1,
+          "root_score": 0.65625,
+          "root_winrate": 0.65625,
+          "score_delta_from_chosen": 0.0,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        },
+        {
+          "piece_id": 5,
+          "from": [
+            2,
+            3
+          ],
+          "to": [
+            2,
+            2
+          ],
+          "root_rank": 3,
+          "root_score": 0.46875,
+          "root_winrate": 0.46875,
+          "score_delta_from_chosen": -0.1875,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        }
+      ],
+      "best_threat_count": 0,
+      "threat_reducing_alternative_exists": false,
+      "full_block_alternative_exists": false,
+      "best_threat_reducing_rank": null
+    },
+    {
+      "game_index": 1,
+      "turn": 9,
+      "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": true, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 4}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 4}}, \"4\": {\"alive\": false, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": false, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 1}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 2}}, \"6\": {\"alive\": true, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 2}}}}}",
+      "subject_player": "blue",
+      "player": "blue",
+      "dice": 2,
+      "low_confidence": true,
+      "score_margin": 0.03125,
+      "score_margin_bucket": "(0.02,0.04]",
+      "failure_tags": [
+        "low_confidence_loss"
+      ],
+      "chosen": {
+        "piece_id": 2,
+        "from": [
+          4,
+          3
+        ],
+        "to": [
+          3,
+          2
+        ],
+        "root_rank": 1,
+        "root_score": 0.71875,
+        "root_winrate": 0.71875,
+        "opponent_winning_dice_set": [],
+        "opponent_winning_dice_count": 0,
+        "self_capture": false
+      },
+      "alternatives": [
+        {
+          "piece_id": 2,
+          "from": [
+            4,
+            3
+          ],
+          "to": [
+            4,
+            2
+          ],
+          "root_rank": 2,
+          "root_score": 0.6875,
+          "root_winrate": 0.6875,
+          "score_delta_from_chosen": -0.03125,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": true
+        },
+        {
+          "piece_id": 2,
+          "from": [
+            4,
+            3
+          ],
+          "to": [
+            3,
+            3
+          ],
+          "root_rank": 3,
+          "root_score": 0.4375,
+          "root_winrate": 0.4375,
+          "score_delta_from_chosen": -0.28125,
+          "opponent_winning_dice_set": [],
+          "opponent_winning_dice_count": 0,
+          "threat_delta_from_chosen": 0,
+          "self_capture": false
+        }
+      ],
+      "best_threat_count": 0,
+      "threat_reducing_alternative_exists": false,
+      "full_block_alternative_exists": false,
+      "best_threat_reducing_rank": null
+    }
+  ],
+  "examples": {
+    "threat_reducing_examples": [
+      {
+        "game_index": 1,
+        "turn": 19,
+        "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 3}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 0, \"row\": 2}}, \"4\": {\"alive\": false, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 0}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 1}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": false, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 1}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 3}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 3}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 2}}}}}",
+        "subject_player": "blue",
+        "player": "blue",
+        "dice": 2,
+        "low_confidence": true,
+        "score_margin": 0.03125,
+        "score_margin_bucket": "(0.02,0.04]",
+        "failure_tags": [
+          "allowed_direct_loss",
+          "low_confidence_loss"
+        ],
+        "chosen": {
+          "piece_id": 3,
+          "from": [
+            2,
+            0
+          ],
+          "to": [
+            1,
+            0
+          ],
+          "root_rank": 1,
+          "root_score": 0.5,
+          "root_winrate": 0.5,
+          "opponent_winning_dice_set": [
+            3,
+            4
+          ],
+          "opponent_winning_dice_count": 2,
+          "self_capture": false
+        },
+        "alternatives": [
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              3,
+              3
+            ],
+            "root_rank": 2,
+            "root_score": 0.46875,
+            "root_winrate": 0.46875,
+            "score_delta_from_chosen": -0.03125,
+            "opponent_winning_dice_set": [],
+            "opponent_winning_dice_count": 0,
+            "threat_delta_from_chosen": -2,
+            "self_capture": false
+          },
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              3,
+              4
+            ],
+            "root_rank": 3,
+            "root_score": 0.375,
+            "root_winrate": 0.375,
+            "score_delta_from_chosen": -0.125,
+            "opponent_winning_dice_set": [
+              3,
+              4
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          },
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              4,
+              3
+            ],
+            "root_rank": 4,
+            "root_score": 0.28125,
+            "root_winrate": 0.28125,
+            "score_delta_from_chosen": -0.21875,
+            "opponent_winning_dice_set": [
+              3,
+              4
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          }
+        ],
+        "best_threat_count": 0,
+        "threat_reducing_alternative_exists": true,
+        "full_block_alternative_exists": true,
+        "best_threat_reducing_rank": 2
+      }
+    ],
+    "low_confidence_threat_reducing_examples": [
+      {
+        "game_index": 1,
+        "turn": 19,
+        "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 3}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 0, \"row\": 2}}, \"4\": {\"alive\": false, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 0}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 1}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": false, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 1}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 3}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 3}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 2}}}}}",
+        "subject_player": "blue",
+        "player": "blue",
+        "dice": 2,
+        "low_confidence": true,
+        "score_margin": 0.03125,
+        "score_margin_bucket": "(0.02,0.04]",
+        "failure_tags": [
+          "allowed_direct_loss",
+          "low_confidence_loss"
+        ],
+        "chosen": {
+          "piece_id": 3,
+          "from": [
+            2,
+            0
+          ],
+          "to": [
+            1,
+            0
+          ],
+          "root_rank": 1,
+          "root_score": 0.5,
+          "root_winrate": 0.5,
+          "opponent_winning_dice_set": [
+            3,
+            4
+          ],
+          "opponent_winning_dice_count": 2,
+          "self_capture": false
+        },
+        "alternatives": [
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              3,
+              3
+            ],
+            "root_rank": 2,
+            "root_score": 0.46875,
+            "root_winrate": 0.46875,
+            "score_delta_from_chosen": -0.03125,
+            "opponent_winning_dice_set": [],
+            "opponent_winning_dice_count": 0,
+            "threat_delta_from_chosen": -2,
+            "self_capture": false
+          },
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              3,
+              4
+            ],
+            "root_rank": 3,
+            "root_score": 0.375,
+            "root_winrate": 0.375,
+            "score_delta_from_chosen": -0.125,
+            "opponent_winning_dice_set": [
+              3,
+              4
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          },
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              4,
+              3
+            ],
+            "root_rank": 4,
+            "root_score": 0.28125,
+            "root_winrate": 0.28125,
+            "score_delta_from_chosen": -0.21875,
+            "opponent_winning_dice_set": [
+              3,
+              4
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          }
+        ],
+        "best_threat_count": 0,
+        "threat_reducing_alternative_exists": true,
+        "full_block_alternative_exists": true,
+        "best_threat_reducing_rank": 2
+      }
+    ],
+    "allowed_direct_loss_examples": [
+      {
+        "game_index": 1,
+        "turn": 19,
+        "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 3}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 0, \"row\": 2}}, \"4\": {\"alive\": false, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 0}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 1}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": false, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 1}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 3}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 3}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 2}}}}}",
+        "subject_player": "blue",
+        "player": "blue",
+        "dice": 2,
+        "low_confidence": true,
+        "score_margin": 0.03125,
+        "score_margin_bucket": "(0.02,0.04]",
+        "failure_tags": [
+          "allowed_direct_loss",
+          "low_confidence_loss"
+        ],
+        "chosen": {
+          "piece_id": 3,
+          "from": [
+            2,
+            0
+          ],
+          "to": [
+            1,
+            0
+          ],
+          "root_rank": 1,
+          "root_score": 0.5,
+          "root_winrate": 0.5,
+          "opponent_winning_dice_set": [
+            3,
+            4
+          ],
+          "opponent_winning_dice_count": 2,
+          "self_capture": false
+        },
+        "alternatives": [
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              3,
+              3
+            ],
+            "root_rank": 2,
+            "root_score": 0.46875,
+            "root_winrate": 0.46875,
+            "score_delta_from_chosen": -0.03125,
+            "opponent_winning_dice_set": [],
+            "opponent_winning_dice_count": 0,
+            "threat_delta_from_chosen": -2,
+            "self_capture": false
+          },
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              3,
+              4
+            ],
+            "root_rank": 3,
+            "root_score": 0.375,
+            "root_winrate": 0.375,
+            "score_delta_from_chosen": -0.125,
+            "opponent_winning_dice_set": [
+              3,
+              4
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          },
+          {
+            "piece_id": 1,
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              4,
+              3
+            ],
+            "root_rank": 4,
+            "root_score": 0.28125,
+            "root_winrate": 0.28125,
+            "score_delta_from_chosen": -0.21875,
+            "opponent_winning_dice_set": [
+              3,
+              4
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          }
+        ],
+        "best_threat_count": 0,
+        "threat_reducing_alternative_exists": true,
+        "full_block_alternative_exists": true,
+        "best_threat_reducing_rank": 2
+      },
+      {
+        "game_index": 1,
+        "turn": 21,
+        "board": "{\"current_player\": \"blue\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 3}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 0, \"row\": 1}}, \"4\": {\"alive\": false, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 1}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 0}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 2}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 1}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 0}}, \"3\": {\"alive\": false, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 1}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 3}}, \"5\": {\"alive\": true, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 3, \"row\": 4}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 2}}}}}",
+        "subject_player": "blue",
+        "player": "blue",
+        "dice": 6,
+        "low_confidence": false,
+        "score_margin": null,
+        "score_margin_bucket": ">0.08_or_null",
+        "failure_tags": [
+          "allowed_direct_loss"
+        ],
+        "chosen": {
+          "piece_id": 5,
+          "from": [
+            0,
+            2
+          ],
+          "to": [
+            0,
+            1
+          ],
+          "root_rank": 1,
+          "root_score": 0.28125,
+          "root_winrate": 0.28125,
+          "opponent_winning_dice_set": [
+            3,
+            4,
+            5,
+            6
+          ],
+          "opponent_winning_dice_count": 4,
+          "self_capture": false
+        },
+        "alternatives": [],
+        "best_threat_count": 4,
+        "threat_reducing_alternative_exists": false,
+        "full_block_alternative_exists": false,
+        "best_threat_reducing_rank": null
+      },
+      {
+        "game_index": 4,
+        "turn": 10,
+        "board": "{\"current_player\": \"red\", \"pieces\": {\"blue\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 4}}, \"2\": {\"alive\": true, \"piece_id\": 2, \"player\": \"blue\", \"position\": {\"col\": 3, \"row\": 4}}, \"3\": {\"alive\": true, \"piece_id\": 3, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 4}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"blue\", \"position\": {\"col\": 4, \"row\": 3}}, \"5\": {\"alive\": false, \"piece_id\": 5, \"player\": \"blue\", \"position\": {\"col\": 2, \"row\": 1}}, \"6\": {\"alive\": true, \"piece_id\": 6, \"player\": \"blue\", \"position\": {\"col\": 1, \"row\": 1}}}, \"red\": {\"1\": {\"alive\": true, \"piece_id\": 1, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 0}}, \"2\": {\"alive\": false, \"piece_id\": 2, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 1}}, \"3\": {\"alive\": false, \"piece_id\": 3, \"player\": \"red\", \"position\": {\"col\": 2, \"row\": 1}}, \"4\": {\"alive\": true, \"piece_id\": 4, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 3}}, \"5\": {\"alive\": false, \"piece_id\": 5, \"player\": \"red\", \"position\": {\"col\": 1, \"row\": 1}}, \"6\": {\"alive\": false, \"piece_id\": 6, \"player\": \"red\", \"position\": {\"col\": 0, \"row\": 2}}}}}",
+        "subject_player": "red",
+        "player": "red",
+        "dice": 4,
+        "low_confidence": true,
+        "score_margin": 0.0625,
+        "score_margin_bucket": "(0.04,0.08]",
+        "failure_tags": [
+          "allowed_direct_loss",
+          "low_confidence_loss"
+        ],
+        "chosen": {
+          "piece_id": 4,
+          "from": [
+            3,
+            0
+          ],
+          "to": [
+            4,
+            1
+          ],
+          "root_rank": 1,
+          "root_score": 0.34375,
+          "root_winrate": 0.34375,
+          "opponent_winning_dice_set": [
+            5,
+            6
+          ],
+          "opponent_winning_dice_count": 2,
+          "self_capture": false
+        },
+        "alternatives": [
+          {
+            "piece_id": 4,
+            "from": [
+              3,
+              0
+            ],
+            "to": [
+              3,
+              1
+            ],
+            "root_rank": 2,
+            "root_score": 0.28125,
+            "root_winrate": 0.28125,
+            "score_delta_from_chosen": -0.0625,
+            "opponent_winning_dice_set": [
+              5,
+              6
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          },
+          {
+            "piece_id": 4,
+            "from": [
+              3,
+              0
+            ],
+            "to": [
+              4,
+              0
+            ],
+            "root_rank": 3,
+            "root_score": 0.15625,
+            "root_winrate": 0.15625,
+            "score_delta_from_chosen": -0.1875,
+            "opponent_winning_dice_set": [
+              5,
+              6
+            ],
+            "opponent_winning_dice_count": 2,
+            "threat_delta_from_chosen": 0,
+            "self_capture": false
+          }
+        ],
+        "best_threat_count": 2,
+        "threat_reducing_alternative_exists": false,
+        "full_block_alternative_exists": false,
+        "best_threat_reducing_rank": null
+      }
+    ]
+  },
+  "decision": {
+    "supports_threat_rerank_candidate": false,
+    "reasons": [
+      "low_confidence positions 11 < 30",
+      "low_confidence threat_reducing_ratio 0.091 < 0.250"
+    ]
+  },
+  "command": "& \".venv/Scripts/python.exe\" \"scripts/analyze_threat_defense.py\" --games 6 --seed-pool 28016 --opponent greedy_risk --starting-layout balanced_v1 --max-turns 80 --score-margin 0.08 --top-k 5 --max-examples 5 --output \"reports\\p8_threat_defense_audit_smoke.md\" --json-output \"reports\\p8_threat_defense_audit_smoke.json\""
+}

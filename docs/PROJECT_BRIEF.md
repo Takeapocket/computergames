@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-17（P6 robustness lock + P7 rollout failure analysis 后同步）
+更新时间：2026-05-17（P8 threat defense audit 后同步）
 
 ## 项目定位
 
@@ -8,7 +8,7 @@
 
 程序目标不是命令行工具，而是比赛现场可操作的软件：操作员录入骰子和对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
 
-## 当前阶段判断（2026-05-17，P6/P7 已闭环）
+## 当前阶段判断（2026-05-17，P6/P7/P8 已闭环）
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
 - 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
@@ -32,10 +32,11 @@
 - **2026-05-16 P5.5 opening duel 60-game expansion 已完成**：复用 P5.4 同一 balanced 候选，扩到 60 局双边复验。结果：合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；candidate as red 13/30，candidate as blue 10/30，0 illegal/crash/timeout。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`；P5.4 小样本正信号未复现，停止该候选晋升路线，未改 GUI/release 默认布局。
 - **2026-05-17 P6 robustness lock 已完成**：`tests/test_release_consistency.py` 锁定 release/GUI 默认 AI、fallback 与 `balanced_v1`；`scripts/preflight_check.py` 可一条命令跑 pytest、smoke、S2 rehearsal，并以 `READY FOR MATCH` 作为成功结论。GUI 推荐兜底链已实现为 default rollout -> `greedy_risk` -> 第一条合法步 -> 无合法步；损坏 auto-save 启动清理已覆盖。P6.4 timing probe 120 样本：0 illegal、0 exception、p99≈641ms、max≈720ms，1 个 timeout/fallback 样本已列入报告。
 - **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：P7.0 默认 rollout vs `greedy_risk` 120 局为 87 胜 / 33 负，0 illegal/crash/timeout；`missed_direct_win=0`，所以 P7.1 direct-win guard 不成立。P7.2 `rollout_adaptive_close_sample` 已注册为显式实验候选，双边 100+100 在 `balanced_v1` 布局对当前 release 默认 rollout 合并胜率 50.0%，未过 55% candidate 门槛，不能默认启用。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。
+- **2026-05-17 P8 threat defense audit 已完成，候选未实现**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。120 局审计得到 `audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。gate 不支持 `rollout_threat_rerank`，因此未实现候选；默认 AI、默认布局、core 规则和 release 配置未变。
 
 下一会话优先级：
 1. **赛前冻结与现场启动包核对**：使用 `scripts/preflight_check.py` 作为赛前总检查，成功必须输出 `READY FOR MATCH`。
-2. 默认 AI 仍是 `rollout` kind + P3 promotion 显式参数；P7.2 未过门禁，不得默认启用。
+2. 默认 AI 仍是 `rollout` kind + P3 promotion 显式参数；P7.2 未过门禁，P8 gate 也不支持 `rollout_threat_rerank`，不得默认启用。
 3. 默认布局仍是 `balanced_v1`；P5.5 失败候选和 P5.0-P5.4 报告都不是晋升证据。
 
 ## 当前技术栈
@@ -55,7 +56,7 @@
 - 状态序列化和反序列化。
 - 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P3 promotion 显式 kwargs）、P2/P3 rollout/Zweistein 显式实验候选、MCTSAI（实验性，P4.1 已停止，不进入 promotion）、ExpectimaxAI（实验性）。
 - Tkinter GUI（含开局录入、骰子录入、推荐走法 by rollout；rollout 异常时回退到 `greedy_risk` / 第一条合法步）。
-- 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）+ P6/P7 报告脚本（`scripts/preflight_check.py`、`scripts/timing_budget_probe.py`、`scripts/analyze_rollout_failures.py`）。
+- 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）+ P6/P7/P8 报告脚本（`scripts/preflight_check.py`、`scripts/timing_budget_probe.py`、`scripts/analyze_rollout_failures.py`、`scripts/analyze_threat_defense.py`）。
 - 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
 - 单方计时（4 分钟包干）。
 
@@ -103,5 +104,5 @@
 详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
 
 1. **release/v1.0 归档**：把 release/v1.0 当作正式提交物备份；准备现场启动包。
-2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数，P4.1 已停止 MCTS，P5.5 已证明当前 balanced 候选小样本正信号不可复现。任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
+2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数，P4.1 已停止 MCTS，P5.5 已证明当前 balanced 候选小样本正信号不可复现，P8 threat defense audit 也不支持实现 `rollout_threat_rerank`。任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
 3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。
