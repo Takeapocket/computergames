@@ -214,6 +214,30 @@ def test_has_auto_save_match_rejects_corrupt_json(tmp_path):
     assert has_auto_save_match(path=path) is False
 
 
+def test_is_invalid_auto_save_file_detects_corrupt_json(tmp_path):
+    from record.auto_save import is_invalid_auto_save_file
+
+    path = tmp_path / "auto_save.json"
+    path.write_text("{not valid json", encoding="utf-8")
+
+    assert is_invalid_auto_save_file(path=path) is True
+
+
+def test_is_invalid_auto_save_file_is_false_for_missing_file(tmp_path):
+    from record.auto_save import is_invalid_auto_save_file
+
+    assert is_invalid_auto_save_file(path=tmp_path / "missing.json") is False
+
+
+def test_is_invalid_match_auto_save_file_detects_corrupt_json(tmp_path):
+    from record.auto_save import is_invalid_match_auto_save_file
+
+    path = tmp_path / "auto_save_match.json"
+    path.write_text("{not valid json", encoding="utf-8")
+
+    assert is_invalid_match_auto_save_file(path=path) is True
+
+
 def test_auto_save_match_atomic_write_preserves_existing(tmp_path, monkeypatch):
     """match auto-save 也走原子写。"""
     import record.auto_save as auto_save_mod

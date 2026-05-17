@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-05-16（P5.5 opening duel 60-game expansion 后同步默认 AI 参数和开局搜索约束）
+更新时间：2026-05-17（P6 robustness lock + P7 rollout failure analysis 后同步）
 项目目标：2026 年辽宁省大学生计算机博弈大赛校内选拔赛  
 项目方向：离线 GUI 参赛程序
 
@@ -44,10 +44,13 @@
 | 开局搜索 P5.3 | 3 seed + validation=2 门禁已完成，未晋升 | 复用 P5.2 分层流程，`--candidate-mode stratified --per-style 2 --games 1 --validation-games 2 --top-k 3 --seed-pool 2026,2027,2028` 跑 6 个候选；train top3 均为 6/12，validation top3 为 10/24、10/24、11/24，0 illegal/crash/timeout。报告见 `reports/p53_opening_seed3_validation2_20260516.md` / `.json`。结果没有布局晋升信号，未改 GUI/release 默认布局。 |
 | 开局搜索 P5.4 | 候选 vs 默认布局双边前置验证已完成，未晋升 | 新增 `scripts/compare_opening_layouts.py`，直接对 `balanced_v1` 做 candidate-as-red / candidate-as-blue 双边验证。取 P5.3 validation 最好的 balanced 候选，`--games-per-side 4 --seed-pool 22026,22027,22028`，合并 14/24 = 58.3%，Wilson CI [38.8%, 75.5%]；红方 9/12、蓝方 5/12，0 illegal/crash/timeout。报告见 `reports/p54_opening_duel_best_balanced_20260516.md` / `.json`。样本和 CI 不满足晋升门槛，未改 GUI/release 默认布局。 |
 | 开局搜索 P5.5 | 60 局扩样复验已完成，停止该候选晋升路线 | 复用 P5.4 同一 balanced 候选，`--games-per-side 10 --seed-pool 23026,23027,23028`，对当前默认 `balanced_v1` 做 60 局双边复验。结果合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；红方 13/30、蓝方 10/30，0 illegal/crash/timeout。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`。P5.4 小样本正信号未复现，未改 GUI/release 默认布局。 |
+| P6 鲁棒性锁定 | 已完成 | 新增 release/default/layout 锁定测试与 `scripts/preflight_check.py`；GUI 推荐兜底链固定为 default rollout -> `greedy_risk` -> 第一条合法步 -> 无合法步；损坏 `auto_save.json` / `auto_save_match.json` 启动时自动清理且不阻塞恢复；`scripts/timing_budget_probe.py` 120 样本结果 illegal=0、exceptions=0、p99≈641ms、max≈720ms，1 个 timeout/fallback 样本已列入报告。报告见 `reports/p6_timing_budget_probe_20260516.md` / `.json`。release 默认 AI、默认布局和 core 规则未变。 |
+| P7 默认 rollout 失败归因 | 已完成，候选未晋升 | 新增 `scripts/analyze_rollout_failures.py`。P7.0 对当前 release 默认 rollout vs `greedy_risk` 120 局：87 胜 / 33 负，0 illegal/crash/timeout；失败标签为 `missed_direct_win=0`、`allowed_direct_loss=63`、`low_confidence_loss=145`、`timeout_or_fallback=4`、`bad_self_capture=33`。因此 P7.1 direct-win guard 不成立；P7.2 `rollout_adaptive_close_sample` 作为显式实验候选注册并在 `balanced_v1` 布局 bench，双边 100+100 合并胜率 50.0%，未达 55% candidate 门槛，不进入默认。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**release/v1.0 归档/赛前核对；P5.5 已完成同一候选 60 局扩样复验，P5.4 小样本正信号未复现。赛前不建议继续扩大该布局候选；若继续 P5，应换候选或转为赛后开局库研究。比赛后再推进 Expectimax 结构修复。**
-详细方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
+下一步主线：**赛前冻结与现场包核对**。P6 已把 release 一致性、preflight、GUI 推荐兜底、损坏 auto-save 恢复和默认 rollout 步时预算锁定；P7 已完成默认 rollout 失败归因，当前唯一被数据支持的 P7.2 候选未过 candidate 门槛。赛前不再默认启用新 AI、不继续 MCTS、不扩大 P5.5 失败布局候选；只修现场风险 bug。
+详细方案见：`docs/superpowers/specs/2026-05-16-p6-robustness-lock-rollout-failure-analysis-design.md`
+历史收官方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
 执行计划见：`docs/superpowers/plans/2026-05-12-final-sprint-plan.md`
 
 ---
@@ -430,4 +433,4 @@ AI 相关阶段必须有 reports/ 数据和复现命令。
 文档同步更新 PROJECT_MEMORY.md 或对应报告。
 ```
 
-当前最近任务：**S2/S3/S4 全部闭环；2026-05-16 已完成 P3 受控默认替换、P4/P4.1 MCTS targeted fix 与 probe、P5.0 opening-search entry guard、P5.1 分层候选与 seed 池 smoke、P5.2 小规模扩大样本门禁、P5.3 3 seed / validation=2 门禁、P5.4 候选 vs 默认布局双边前置验证、P5.5 60 局扩样复验。`rollout` 仍是 GUI/release 默认 AI kind，但默认参数已改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集；`greedy_risk` 保留为应急回退。P5 后续只允许基于当前 release 默认 rollout kwargs 验证，P5.0/P5.1/P5.2/P5.3/P5.4/P5.5 都不是布局晋升证据。**
+当前最近任务：**P6/P7 已闭环。P6.0/P6.1 锁定 release 默认 AI、默认布局和 `scripts/preflight_check.py`；P6.2 GUI 推荐兜底链已实现；P6.3 损坏 auto-save 启动清理已覆盖；P6.4 timing probe 报告已生成。P7.0 默认 rollout 失败归因已完成；P7.1 因 `missed_direct_win=0` 不执行；P7.2 adaptive close-sample 候选已注册并在 `balanced_v1` 布局跑完 candidate bench，但 50.0% 未过 55% 门槛。`rollout` 仍是 GUI/release 默认 AI kind + P3 promotion 参数；`balanced_v1` 仍是默认布局；`greedy_risk` 仍是应急回退。最新验证：576 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。**

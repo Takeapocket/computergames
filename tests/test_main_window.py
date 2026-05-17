@@ -729,3 +729,66 @@ def test_load_record_restores_match_side_from_metadata(tk_root, tmp_path, monkey
     window._apply_selected_move()
 
     assert window.record.steps[-1].source == "opponent"
+
+
+def test_match_mode_panel_displays_greedy_risk_fallback_source(tk_root, monkeypatch):
+    from ai.match import default_starting_state
+    from record.game_record import GameRecord
+
+    state = default_starting_state()
+    fallback_move = state.legal_moves(state.current_player, 6)[0]
+
+    class BrokenRollout:
+        name = "rollout"
+
+        def choose_move(self, state, dice):
+            raise RuntimeError("rollout failed")
+
+    class FallbackAI:
+        name = "greedy_risk"
+
+        def choose_move(self, state, dice):
+            return fallback_move
+
+    def fake_build_ai(kind, *, seed=None, **kwargs):
+        if kind == "rollout":
+            return BrokenRollout()
+        if kind == "greedy_risk":
+            return FallbackAI()
+        raise AssertionError(kind)
+
+    monkeypatch.setattr("gui.main_window.build_ai", fake_build_ai)
+
+    window = MainWindow(tk_root)
+    window.pack()
+    window.state = state
+    window.record = GameRecord.from_state(state)
+    window._phase = "playing"
+    window._awaiting_dice = False
+    window.current_dice = 6
+    window._refresh()
+
+    assert "greedy_risk 回退：" in window.match_mode_panel.recommendation_var.get()
+
+
+def test_corrupt_single_game_auto_save_is_cleared_without_prompt(tk_root, monkeypatch, tmp_path):
+    auto_save_path = tmp_path / "auto_save.json"
+    auto_save_path.write_text("{not valid json", encoding="utf-8")
+
+    prompts = []
+    monkeypatch.setattr(
+        "gui.main_window.messagebox.askyesno",
+        lambda title, message, **kwargs: prompts.append(title) or True,
+    )
+
+    window = MainWindow(
+        tk_root,
+        auto_save_path=auto_save_path,
+        auto_save_match_path=tmp_path / "auto_save_match.json",
+    )
+    window.pack()
+
+    assert prompts == []
+    assert window._mode == "debug"
+    assert window._phase == "setup"
+    assert not auto_save_path.exists()

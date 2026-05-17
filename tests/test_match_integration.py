@@ -659,3 +659,98 @@ def test_handle_timeout_in_match_reschedules_timer_refresh(tk_root, monkeypatch)
     assert window._timer_after_id in pending, (
         f"after-id {window._timer_after_id} not in pending after-info {pending}"
     )
+
+
+def test_corrupt_match_auto_save_is_cleared_without_prompt(tk_root, monkeypatch, tmp_path):
+    match_path = tmp_path / "auto_save_match.json"
+    match_path.write_text("{not valid json", encoding="utf-8")
+
+    prompts = []
+    monkeypatch.setattr(
+        "gui.main_window.messagebox.askyesno",
+        lambda title, message, **kwargs: prompts.append(title) or True,
+    )
+
+    window = MainWindow(
+        tk_root,
+        auto_save_path=tmp_path / "auto_save.json",
+        auto_save_match_path=match_path,
+    )
+    window.pack()
+
+    assert prompts == []
+    assert window._mode == "debug"
+    assert window._match is None
+    assert not match_path.exists()
+
+
+def test_match_playing_with_corrupt_single_game_prompts_missing_progress(
+    tk_root, monkeypatch, tmp_path
+):
+    from record.auto_save import auto_save_match, has_auto_save, has_auto_save_match
+    from record.match_record import MatchRecord
+
+    game_path = tmp_path / "auto_save.json"
+    match_path = tmp_path / "auto_save_match.json"
+    game_path.write_text("{not valid json", encoding="utf-8")
+    match = MatchRecord(
+        our_side=Player.RED,
+        our_role="甲",
+        current_game_index=2,
+        games_won_us=1,
+        phase="playing",
+        games=[_stub_game()],
+    )
+    auto_save_match(match, path=match_path)
+
+    prompts = []
+
+    def fake_askyesno(title, message, **kwargs):
+        prompts.append(title)
+        if title == "恢复未完成对局":
+            return True
+        if title == "本盘进度缺失":
+            return False
+        return False
+
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", fake_askyesno)
+    monkeypatch.setattr("gui.main_window.messagebox.showinfo", lambda *args, **kwargs: None)
+
+    window = MainWindow(tk_root, auto_save_path=game_path, auto_save_match_path=match_path)
+    window.pack()
+
+    assert "本盘进度缺失" in prompts
+    assert window._mode == "debug"
+    assert window._match is None
+    assert not has_auto_save(path=game_path)
+    assert not has_auto_save_match(path=match_path)
+
+
+def test_finished_match_with_corrupt_single_game_clears_both_files(tk_root, monkeypatch, tmp_path):
+    from record.auto_save import auto_save_match, has_auto_save, has_auto_save_match
+    from record.match_record import MatchRecord
+
+    game_path = tmp_path / "auto_save.json"
+    match_path = tmp_path / "auto_save_match.json"
+    game_path.write_text("{not valid json", encoding="utf-8")
+    match = MatchRecord(
+        our_side=Player.RED,
+        our_role="甲",
+        current_game_index=4,
+        games_won_us=4,
+        games_won_them=0,
+        phase="finished",
+        games=[_stub_game(), _stub_game(), _stub_game(), _stub_game()],
+    )
+    auto_save_match(match, path=match_path)
+
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *args, **kwargs: True)
+    monkeypatch.setattr("gui.main_window.messagebox.showinfo", lambda *args, **kwargs: None)
+
+    window = MainWindow(tk_root, auto_save_path=game_path, auto_save_match_path=match_path)
+    window.pack()
+
+    assert window._mode == "debug"
+    assert window._match is None
+    assert not has_auto_save(path=game_path)
+    assert not has_auto_save_match(path=match_path)

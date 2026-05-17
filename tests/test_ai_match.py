@@ -251,7 +251,7 @@ def test_play_one_game_counts_ai_step_deadline_timeouts():
     assert result.timeouts == 1
 
 
-from ai.match import build_ai
+from ai.match import ai_version_signature, build_ai
 
 
 def test_build_ai_random_returns_random_ai():
@@ -274,3 +274,39 @@ def test_build_ai_random_seeded_is_deterministic():
 def test_build_ai_unknown_kind_raises_value_error():
     with pytest.raises(ValueError, match="unknown AI"):
         build_ai("does_not_exist", seed=0)
+
+
+def test_build_ai_rollout_adaptive_close_sample_overrides_only_close_sampling() -> None:
+    ai = build_ai("rollout_adaptive_close_sample", seed=2026)
+
+    assert ai.name == "rollout_adaptive_close_sample"
+    assert ai.rollouts_per_move == 32
+    assert ai.max_rollout_turns == 80
+    assert ai.max_step_time_ms == 750.0
+    assert ai.epsilon == 0.1
+    assert ai.playout_policy == "greedy_risk"
+    assert ai.cutoff_eval == "zweistein"
+    assert ai.deadline_safety_ms == 30.0
+    assert ai.close_sample_margin == 0.06
+    assert ai.close_sample_rollouts_per_move == 64
+    assert ai.low_confidence_margin == 0.06
+
+
+def test_ai_version_signature_records_rollout_adaptive_close_sample() -> None:
+    ai = build_ai("rollout_adaptive_close_sample", seed=2026)
+
+    signature = ai_version_signature(ai)
+
+    assert signature["name"] == "rollout_adaptive_close_sample"
+    assert signature["close_sample_margin"] == 0.06
+    assert signature["close_sample_rollouts_per_move"] == 64
+    assert signature["low_confidence_margin"] == 0.06
+
+
+def test_rollout_adaptive_close_sample_small_deadline_returns_legal_move() -> None:
+    state = default_starting_state()
+    ai = build_ai("rollout_adaptive_close_sample", seed=2026, max_step_time_ms=1.0)
+
+    move = ai.choose_move(state, 6)
+
+    assert move is None or move in state.legal_moves(state.current_player, 6)

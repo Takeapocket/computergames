@@ -58,6 +58,18 @@ def _is_valid_json_file(target: Path) -> bool:
     return True
 
 
+def _is_invalid_json_file(path: Path) -> bool:
+    return path.is_file() and not _is_valid_json_file(path)
+
+
+def is_invalid_auto_save_file(*, path: str | Path = AUTO_SAVE_PATH) -> bool:
+    return _is_invalid_json_file(Path(path))
+
+
+def is_invalid_match_auto_save_file(*, path: str | Path = AUTO_SAVE_MATCH_PATH) -> bool:
+    return _is_invalid_json_file(Path(path))
+
+
 def auto_save(
     record: GameRecord,
     timer_snapshot: TimerSnapshotLike,

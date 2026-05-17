@@ -170,3 +170,163 @@ def test_format_seconds_rounds_up_to_be_kind_to_player():
     assert format_seconds(0.6) == "00:01"
     assert format_seconds(0) == "00:00"
     assert format_seconds(-3) == "00:00"
+
+
+def test_recommended_move_uses_greedy_risk_fallback_when_rollout_raises() -> None:
+    from ai.match import default_starting_state
+
+    state = default_starting_state()
+    legal = state.legal_moves(state.current_player, 6)
+    fallback_move = legal[-1]
+
+    class BrokenRollout:
+        def choose_move(self, state, dice):
+            raise RuntimeError("rollout exploded")
+
+    class FallbackAI:
+        def choose_move(self, state, dice):
+            return fallback_move
+
+    class FakeWindow:
+        current_dice = 6
+        _recommender = BrokenRollout()
+        _fallback_recommender = FallbackAI()
+        _recommendation_cache_key = None
+        _recommendation_cache_move = None
+        _recommendation_cache_source = "none"
+        _is_legal_recommendation = MainWindow._is_legal_recommendation
+        _choose_fallback_recommendation = MainWindow._choose_fallback_recommendation
+
+        def _recommendation_key(self):
+            return (self.current_dice, repr(self.state.serialize(include_history=False)))
+
+    window = FakeWindow()
+    window.state = state
+
+    assert MainWindow._recommended_move(window) == fallback_move
+    assert window._recommendation_cache_source == "greedy_risk"
+
+
+def test_recommended_move_rejects_illegal_rollout_move_and_uses_fallback() -> None:
+    from ai.match import default_starting_state
+
+    state = default_starting_state()
+    legal = state.legal_moves(state.current_player, 6)
+    illegal_source = legal[0]
+    illegal_move = Move(
+        player=illegal_source.player,
+        piece_id=illegal_source.piece_id,
+        from_pos=illegal_source.from_pos,
+        to_pos=Position(4, 4),
+        is_capture=False,
+    )
+    fallback_move = legal[-1]
+
+    class IllegalRollout:
+        def choose_move(self, state, dice):
+            return illegal_move
+
+    class FallbackAI:
+        def choose_move(self, state, dice):
+            return fallback_move
+
+    class FakeWindow:
+        current_dice = 6
+        _recommender = IllegalRollout()
+        _fallback_recommender = FallbackAI()
+        _recommendation_cache_key = None
+        _recommendation_cache_move = None
+        _recommendation_cache_source = "none"
+        _is_legal_recommendation = MainWindow._is_legal_recommendation
+        _choose_fallback_recommendation = MainWindow._choose_fallback_recommendation
+
+        def _recommendation_key(self):
+            return (self.current_dice, repr(self.state.serialize(include_history=False)))
+
+    window = FakeWindow()
+    window.state = state
+
+    assert MainWindow._recommended_move(window) == fallback_move
+    assert window._recommendation_cache_source == "greedy_risk"
+
+
+def test_recommended_move_uses_first_legal_when_fallback_fails() -> None:
+    from ai.match import default_starting_state
+
+    state = default_starting_state()
+    legal = state.legal_moves(state.current_player, 6)
+
+    class BrokenAI:
+        def choose_move(self, state, dice):
+            raise RuntimeError("no recommendation")
+
+    class FakeWindow:
+        current_dice = 6
+        _recommender = BrokenAI()
+        _fallback_recommender = BrokenAI()
+        _recommendation_cache_key = None
+        _recommendation_cache_move = None
+        _recommendation_cache_source = "none"
+        _is_legal_recommendation = MainWindow._is_legal_recommendation
+        _choose_fallback_recommendation = MainWindow._choose_fallback_recommendation
+
+        def _recommendation_key(self):
+            return (self.current_dice, repr(self.state.serialize(include_history=False)))
+
+    window = FakeWindow()
+    window.state = state
+
+    assert MainWindow._recommended_move(window) == legal[0]
+    assert window._recommendation_cache_source == "rules"
+
+
+def test_recommendation_text_names_greedy_risk_fallback_source() -> None:
+    from ai.match import default_starting_state
+
+    state = default_starting_state()
+    move = state.legal_moves(state.current_player, 6)[0]
+
+    class FakeRecommender:
+        last_diagnostics = []
+        last_root_stats = []
+        last_low_confidence = False
+        last_timed_out = False
+
+    class FakeWindow:
+        _awaiting_dice = False
+        _recommender = FakeRecommender()
+        _recommendation_cache_source = "greedy_risk"
+
+        def _recommended_move(self):
+            return move
+
+    text = MainWindow._recommendation_text(FakeWindow(), None)
+
+    assert "greedy_risk 回退：" in text
+    assert "rollout：" not in text
+
+
+def test_recommendation_text_names_rules_fallback_source() -> None:
+    from ai.match import default_starting_state
+
+    state = default_starting_state()
+    move = state.legal_moves(state.current_player, 6)[0]
+
+    class FakeRecommender:
+        last_diagnostics = []
+        last_root_stats = []
+        last_low_confidence = False
+        last_timed_out = False
+
+    class FakeWindow:
+        _awaiting_dice = False
+        _recommender = FakeRecommender()
+        _recommendation_cache_source = "rules"
+
+        def _recommended_move(self):
+            return move
+
+    text = MainWindow._recommendation_text(FakeWindow(), None)
+
+    assert "规则兜底：" in text
+    assert "rollout：" not in text

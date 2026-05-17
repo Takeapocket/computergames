@@ -24,6 +24,8 @@ from record.auto_save import (
     clear_auto_save_match,
     has_auto_save,
     has_auto_save_match,
+    is_invalid_auto_save_file,
+    is_invalid_match_auto_save_file,
     load_auto_save,
     load_auto_save_match,
 )
@@ -98,8 +100,10 @@ class MainWindow(tk.Frame):
         self._match_finished_notified = False
         # R-2 review Critical #5：AI 在 __init__ 一次构造、复用，避免每次 _refresh 都新建。
         self._recommender = build_ai(DEFAULT_RECOMMENDER_KIND, seed=0, **DEFAULT_RECOMMENDER_KWARGS)
+        self._fallback_recommender = build_ai("greedy_risk", seed=0)
         self._recommendation_cache_key: tuple[int, str] | None = None
         self._recommendation_cache_move: Move | None = None
+        self._recommendation_cache_source: Literal["rollout", "greedy_risk", "rules", "none"] = "none"
 
         self.board = BoardWidget(self, self._handle_square_click)
         self.board.pack(side=tk.LEFT, padx=(0, 16), pady=0)
@@ -323,7 +327,14 @@ class MainWindow(tk.Frame):
         except OSError as exc:
             self.status_message = f"自动保存清理失败：{exc}"
 
+    def _clear_invalid_auto_save_files(self) -> None:
+        if is_invalid_auto_save_file(path=self._auto_save_path):
+            self._clear_auto_save()
+        if is_invalid_match_auto_save_file(path=self._auto_save_match_path):
+            clear_auto_save_match(path=self._auto_save_match_path)
+
     def _restore_auto_save_if_available(self) -> bool:
+        self._clear_invalid_auto_save_files()
         has_game = has_auto_save(path=self._auto_save_path)
         has_match = has_auto_save_match(path=self._auto_save_match_path)
         if not has_game and not has_match:
@@ -692,32 +703,77 @@ class MainWindow(tk.Frame):
         if move is None:
             return "当前骰子无合法走法"
 
-        lines = [f"{DEFAULT_RECOMMENDER_KIND}：{format_move_label(move, distinguish_self_capture=True)}"]
-        if getattr(self._recommender, "last_low_confidence", False):
-            margin = getattr(self._recommender, "last_score_margin", None)
-            if margin is None:
-                lines.append("置信：低，候选差距过小")
-            else:
-                lines.append(f"置信：低，候选差距={float(margin):.2f}")
-        if getattr(self._recommender, "last_timed_out", False):
-            if getattr(self._recommender, "last_used_fallback", False):
-                lines.append("采样：超时，已使用 greedy_risk 回退")
-            else:
-                lines.append("采样：超时，使用已完成样本")
-        diagnostics = getattr(self._recommender, "last_root_stats", None)
-        if diagnostics is None:
-            diagnostics = getattr(self._recommender, "last_diagnostics", [])
-        if diagnostics:
-            lines.append("rollout 候选：")
-            lines.extend(_format_rollout_diagnostic(diagnostic) for diagnostic in diagnostics)
+        source = getattr(self, "_recommendation_cache_source", "rollout")
+        source_label = {
+            "rollout": DEFAULT_RECOMMENDER_KIND,
+            "greedy_risk": "greedy_risk 回退",
+            "rules": "规则兜底",
+            "none": DEFAULT_RECOMMENDER_KIND,
+        }.get(source, DEFAULT_RECOMMENDER_KIND)
+        lines = [f"{source_label}：{format_move_label(move, distinguish_self_capture=True)}"]
+        if source == "rollout":
+            if getattr(self._recommender, "last_low_confidence", False):
+                margin = getattr(self._recommender, "last_score_margin", None)
+                if margin is None:
+                    lines.append("置信：低，候选差距过小")
+                else:
+                    lines.append(f"置信：低，候选差距={float(margin):.2f}")
+            if getattr(self._recommender, "last_timed_out", False):
+                if getattr(self._recommender, "last_used_fallback", False):
+                    lines.append("采样：超时，已使用 greedy_risk 回退")
+                else:
+                    lines.append("采样：超时，使用已完成样本")
+            diagnostics = getattr(self._recommender, "last_root_stats", None)
+            if diagnostics is None:
+                diagnostics = getattr(self._recommender, "last_diagnostics", [])
+            if diagnostics:
+                lines.append("rollout 候选：")
+                lines.extend(_format_rollout_diagnostic(diagnostic) for diagnostic in diagnostics)
         return "\n".join(lines)
+
+    def _is_legal_recommendation(self, move: Move | None, legal_moves: list[Move]) -> bool:
+        return move is not None and move in legal_moves
+
+    def _choose_fallback_recommendation(
+        self, legal_moves: list[Move]
+    ) -> tuple[Move | None, Literal["greedy_risk", "rules", "none"]]:
+        try:
+            fallback_move = self._fallback_recommender.choose_move(self.state, self.current_dice)
+        except Exception:  # noqa: BLE001 - GUI fallback must survive AI failures.
+            fallback_move = None
+
+        if self._is_legal_recommendation(fallback_move, legal_moves):
+            return fallback_move, "greedy_risk"
+        if legal_moves:
+            return legal_moves[0], "rules"
+        return None, "none"
 
     def _recommended_move(self) -> Move | None:
         key = self._recommendation_key()
-        if self._recommendation_cache_key != key:
-            self._recommendation_cache_key = key
-            self._recommendation_cache_move = self._recommender.choose_move(self.state, self.current_dice)
-        return self._recommendation_cache_move
+        if self._recommendation_cache_key == key:
+            return self._recommendation_cache_move
+
+        self._recommendation_cache_key = key
+        legal_moves = self.state.legal_moves(self.state.current_player, self.current_dice)
+        if not legal_moves:
+            self._recommendation_cache_move = None
+            self._recommendation_cache_source = "none"
+            return None
+
+        try:
+            rollout_move = self._recommender.choose_move(self.state, self.current_dice)
+        except Exception:  # noqa: BLE001 - GUI must keep producing a safe recommendation.
+            rollout_move = None
+
+        if self._is_legal_recommendation(rollout_move, legal_moves):
+            self._recommendation_cache_move = rollout_move
+            self._recommendation_cache_source = "rollout"
+            return rollout_move
+
+        fallback_move, source = self._choose_fallback_recommendation(legal_moves)
+        self._recommendation_cache_move = fallback_move
+        self._recommendation_cache_source = source
+        return fallback_move
 
     def _recommendation_key(self) -> tuple[int, str]:
         return (

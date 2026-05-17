@@ -31,6 +31,22 @@ def test_resolve_profile_uses_release_default_rollout_kwargs_for_mcts_p4():
         assert profile["games_per_side"] == games_per_side
 
 
+def test_rollout_adaptive_close_sample_profile_uses_release_default_opponent() -> None:
+    profile = bench_ai.CANDIDATE_PROFILES["rollout_adaptive_close_sample"]["candidate"]
+
+    assert profile["opponent"] == "rollout"
+    assert profile["opponent_kwargs"] == bench_ai.RELEASE_DEFAULT_ROLLOUT_KWARGS
+    assert profile["starting_layout"] == "balanced_v1"
+    assert profile["games_per_side"] == 100
+
+
+def test_rollout_adaptive_close_sample_profile_resolves_balanced_layout() -> None:
+    profile = bench_ai._resolve_profile("rollout_adaptive_close_sample", "candidate")
+
+    assert bench_ai._resolve_starting_layout(profile, None) == "balanced_v1"
+    assert bench_ai._resolve_starting_layout(profile, "aggressive_v1") == "aggressive_v1"
+
+
 @pytest.mark.parametrize(
     "override_args",
     [
@@ -246,6 +262,7 @@ def test_write_markdown_records_effective_kwargs_and_ai_signatures(tmp_path: Pat
             seed=2026,
             games_per_side=1,
             max_turns=12,
+            starting_layout="balanced_v1",
             candidate_arg=[],
             opponent_arg=[],
         ),
@@ -268,6 +285,7 @@ def test_write_markdown_records_effective_kwargs_and_ai_signatures(tmp_path: Pat
 
     text = md_path.read_text(encoding="utf-8")
     assert '- 候选参数（有效）：`{"deadline_safety_ms": 30.0}`' in text
+    assert "- 开局布局：`balanced_v1`" in text
     assert '- 对手参数（有效）：`{}`' in text
     assert '"name": "rollout_zweistein_cutoff"' in text
     assert '"name": "rollout"' in text

@@ -387,6 +387,20 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
                 "cutoff_eval": "zweistein",
             }),
         )
+    if kind == "rollout_adaptive_close_sample":
+        from ai.rollout_ai import RolloutAI
+        from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
+
+        return RolloutAI(
+            rng=rng,
+            name="rollout_adaptive_close_sample",
+            **_merged({
+                **RELEASE_DEFAULT_ROLLOUT_KWARGS,
+                "close_sample_margin": 0.06,
+                "close_sample_rollouts_per_move": 64,
+                "low_confidence_margin": 0.06,
+            }),
+        )
     if kind == "expectimax":
         from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
         from ai.expectimax_ai import ExpectimaxAI

@@ -36,20 +36,10 @@ from ai.match import (
     play_one_game,
     starting_state_for,
 )
+from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
 from core.types import Player
 from scripts._bench_meta import build_provenance
 from scripts.quick_bench import _percentile, wilson_ci
-
-
-def _load_release_default_rollout_kwargs() -> dict:
-    data = json.loads((ROOT / "release" / "v1.0" / "default_params.json").read_text(encoding="utf-8"))
-    if data.get("ai") != "rollout":
-        raise ValueError("release/v1.0/default_params.json must use ai='rollout' for P4 baselines")
-    metadata_keys = {"ai", "fallback_ai", "promotion_report"}
-    return {key: value for key, value in data.items() if key not in metadata_keys}
-
-
-RELEASE_DEFAULT_ROLLOUT_KWARGS = _load_release_default_rollout_kwargs()
 
 
 # 门禁运算符：name → (op, threshold)。op ∈ {"eq", "lt", "le", "ge"}
@@ -142,6 +132,20 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
             "opponent": "rollout",
             "games_per_side": 400,
             "extra_gates": {"candidate_win_ci_lower": ("ge", 0.52)},
+        },
+    },
+    "rollout_adaptive_close_sample": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 100,
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 400,
         },
     },
 }
@@ -380,6 +384,10 @@ def _resolve_profile(candidate_kind: str, stage: str) -> dict:
     return CANDIDATE_PROFILES.get(candidate_kind, {}).get(stage, {})
 
 
+def _resolve_starting_layout(profile: dict, explicit_layout: str | None) -> str:
+    return explicit_layout or profile.get("starting_layout", STARTING_LAYOUT_ID)
+
+
 def _resolve_gates(candidate_kind: str, stage: str) -> dict:
     gates = dict(STAGE_GATES[stage])
     extra = _resolve_profile(candidate_kind, stage).get("extra_gates")
@@ -429,6 +437,7 @@ def _write_markdown(
         f"- master seed：{args.seed}",
         f"- 每方局数：{args.games_per_side}",
         f"- 最大半步：{args.max_turns}",
+        f"- 开局布局：`{args.starting_layout}`",
         "- 候选参数（有效）："
         f"`{json.dumps(candidate_kwargs, ensure_ascii=False, sort_keys=True)}`",
         "- 对手参数（有效）："
@@ -582,7 +591,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--max-turns", type=int, default=200)
-    parser.add_argument("--starting-layout", default=STARTING_LAYOUT_ID)
+    parser.add_argument(
+        "--starting-layout",
+        default=None,
+        help="开局布局；省略时按候选 profile 选择，profile 未指定则使用历史 harness 默认布局。",
+    )
     parser.add_argument("--report-dir", default=str(ROOT / "reports"))
     parser.add_argument("--no-save-report", action="store_true")
     parser.add_argument("--report-name", default=None)
@@ -594,6 +607,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     profile = _resolve_profile(args.candidate, args.stage)
+    args.starting_layout = _resolve_starting_layout(profile, args.starting_layout)
     opponent_kind = args.opponent or profile.get("opponent")
     if opponent_kind is None:
         parser.error(

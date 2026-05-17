@@ -1,0 +1,51 @@
+{
+  "ai_kind": "rollout",
+  "ai_kwargs_source": "release/v1.0/default_params.json",
+  "default_layout": "balanced_v1",
+  "avg_ms": 505.88099999852903,
+  "p50_ms": 505.23359999715467,
+  "p95_ms": 555.3248100004566,
+  "p99_ms": 559.7773620007501,
+  "max_ms": 560.8905000008235,
+  "sample_count": 3,
+  "rollout_timed_out_count": 0,
+  "rollout_used_fallback_count": 0,
+  "illegal_recommendations": 0,
+  "exceptions": 0,
+  "samples": [
+    {
+      "index": 0,
+      "player": "red",
+      "dice": 4,
+      "legal_moves": 3,
+      "elapsed_ms": 560.8905000008235,
+      "timed_out": false,
+      "used_fallback": false,
+      "illegal": false,
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 0}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
+    },
+    {
+      "index": 1,
+      "player": "blue",
+      "dice": 4,
+      "legal_moves": 3,
+      "elapsed_ms": 505.23359999715467,
+      "timed_out": false,
+      "used_fallback": false,
+      "illegal": false,
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
+    },
+    {
+      "index": 2,
+      "player": "red",
+      "dice": 6,
+      "legal_moves": 3,
+      "elapsed_ms": 451.51889999760897,
+      "timed_out": false,
+      "used_fallback": false,
+      "illegal": false,
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+    }
+  ],
+  "command": "& \".venv/Scripts/python.exe\" \"scripts/timing_budget_probe.py\" --samples 3 --seed 26016 --layout balanced_v1 --output \"reports\\p6_timing_budget_probe_smoke.md\" --json-output \"reports\\p6_timing_budget_probe_smoke.json\""
+}
