@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox
 from typing import Literal
 
 from ai.match import build_ai
+from core.dice import roll_die
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
@@ -127,6 +128,7 @@ class MainWindow(tk.Frame):
         self.controls = ControlPanel(
             side_panel,
             on_dice_change=self._handle_dice_change,
+            on_roll_dice=self._roll_dice_from_gui,
             on_move_select=self._handle_move_select,
             on_apply=self._apply_selected_move,
             on_undo=self._undo_move,
@@ -176,6 +178,34 @@ class MainWindow(tk.Frame):
         self._awaiting_dice = False
         self._clear_selection()
         self.status_message = "骰子已更新，请选择合法走法。"
+        self._refresh()
+
+    def _roll_dice_from_gui(self) -> None:
+        if self._match_is_finished():
+            self.status_message = "本轮已结束，不能掷骰。"
+            self._clear_selection()
+            self._refresh()
+            return
+        if self._phase != "playing":
+            self.status_message = "请先确认开局，再掷骰。"
+            self._clear_selection()
+            self._refresh()
+            return
+        if self.state.get_winner() is not None:
+            self.status_message = "对局已结束，不能掷骰。"
+            self._clear_selection()
+            self._refresh()
+            return
+        if not self._awaiting_dice:
+            self.status_message = "本轮骰子已录入；如需改错，请手动修改骰子框。"
+            self._refresh()
+            return
+
+        dice = roll_die()
+        self.current_dice = dice
+        self._awaiting_dice = False
+        self._clear_selection()
+        self.status_message = f"程序掷骰：{dice}。请双方确认后选择合法走法。"
         self._refresh()
 
     def _handle_move_select(self, index: int) -> None:
@@ -737,6 +767,7 @@ class MainWindow(tk.Frame):
         self.controls.set_can_apply(can_apply)
         self.controls.set_can_undo(self._can_undo_move(winner))
         self.controls.set_dice_enabled(can_enter_dice)
+        self.controls.set_can_roll_dice(can_enter_dice and self._awaiting_dice)
         self.controls.set_move_selection_enabled(can_select_moves)
         self.timer_panel.set_snapshot(self.timer.snapshot())
         if self._phase == "setup":

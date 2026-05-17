@@ -1,18 +1,18 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-17（P9 Zweistein-DP chance-aware evaluation 后同步）
+更新时间：2026-05-17（R-4 GUI 程序掷骰后同步）
 
 ## 项目定位
 
 本项目用于 2026 年辽宁省大学生计算机博弈大赛校内选拔赛，方向为爱恩斯坦棋离线 GUI 参赛程序。
 
-程序目标不是命令行工具，而是比赛现场可操作的软件：操作员录入骰子和对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
+程序目标不是命令行工具，而是比赛现场可操作的软件：操作员按双方/裁判确认的来源录入或生成骰子，录入对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
 
-## 当前阶段判断（2026-05-17，P6/P7/P8/P9 已闭环）
+## 当前阶段判断（2026-05-17，R-4 与 P6/P7/P8/P9 已闭环）
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
 - 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
-- 阶段 2：Tkinter GUI 已实现（棋盘显示、开局录入、骰子录入、合法走法选择、执行、悔棋、重置、AI 推荐）。
+- 阶段 2：Tkinter GUI 已实现（棋盘显示、开局录入、骰子录入、程序掷骰、合法走法选择、执行、悔棋、重置、AI 推荐）。
 - 阶段 3：棋谱、计时、比赛模式已完成主链路。R-1 开局录入、R-2 七盘制、R-3 崩溃自救均已实现；S2 headless 自动演练 + 真实 Tk GUI 手动表（2026-05-13，`reports/gui-rehearsal.md` §4，21/21 正常）均已完成，S2 完整闭环。
 - 阶段 4.0 / 4.1 / 4.2：基础对战 harness、GreedyAI、greedy_risk 已完成；**R-0 合规重跑后**门槛全部通过：
   - 4.1 GreedyAI vs RandomAI 合并 63.75% ≥ 60%（详见 `reports/4-1-rebench.md`）
@@ -34,6 +34,7 @@
 - **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：P7.0 默认 rollout vs `greedy_risk` 120 局为 87 胜 / 33 负，0 illegal/crash/timeout；`missed_direct_win=0`，所以 P7.1 direct-win guard 不成立。P7.2 `rollout_adaptive_close_sample` 已注册为显式实验候选，双边 100+100 在 `balanced_v1` 布局对当前 release 默认 rollout 合并胜率 50.0%，未过 55% candidate 门槛，不能默认启用。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。
 - **2026-05-17 P8 threat defense audit 已完成，候选未实现**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。120 局审计得到 `audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。gate 不支持 `rollout_threat_rerank`，因此未实现候选；默认 AI、默认布局、core 规则和 release 配置未变。
 - **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：新增 `ai/zweistein_dp.py` 概率估值表和 `rollout_zweistein_dp_cutoff` / `rollout_exact_opp1_zdp` 显式候选。P9.0 smoke 显示 DP 表尺寸为 `15625 x 20`，测试通过；P9.1 双边 candidate 合并胜率 45.0%，未过 55% candidate 门槛；P9.2 双边 candidate 合并胜率 51.5%，未过 55% candidate 门槛，且低于 P9.3 启动线 52%，因此不启动 TT / move ordering。默认 AI、默认布局、core 规则和 release 配置均未变。
+- **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已覆盖 Spinbox `FocusOut` 与程序掷骰按钮点击/禁用状态的边界。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 
 下一会话优先级：
 1. **赛前冻结与现场启动包核对**：使用 `scripts/preflight_check.py` 作为赛前总检查，成功必须输出 `READY FOR MATCH`。
@@ -52,11 +53,12 @@
 - 5×5 棋盘。
 - 双方 1-6 号棋子。
 - 骰子点数到可动棋子的选择规则（含距离最近映射、双向并列）。
+- GUI 支持双方同意时由本程序生成 1-6 骰子，也支持手动录入对方程序、裁判或实体骰子给出的点数。
 - 合法走法生成（含吃本方棋子，R-0 已合规）。
 - 吃对方/本方子、胜负判断、走子和撤销。
 - 状态序列化和反序列化。
 - 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P3 promotion 显式 kwargs）、P2/P3 rollout/Zweistein 显式实验候选、MCTSAI（实验性，P4.1 已停止，不进入 promotion）、ExpectimaxAI（实验性）。
-- Tkinter GUI（含开局录入、骰子录入、推荐走法 by rollout；rollout 异常时回退到 `greedy_risk` / 第一条合法步）。
+- Tkinter GUI（含开局录入、手动骰子录入、程序掷骰、推荐走法 by rollout；rollout 异常时回退到 `greedy_risk` / 第一条合法步）。
 - 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）+ P6/P7/P8 报告脚本（`scripts/preflight_check.py`、`scripts/timing_budget_probe.py`、`scripts/analyze_rollout_failures.py`、`scripts/analyze_threat_defense.py`）。
 - 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
 - 单方计时（4 分钟包干）。

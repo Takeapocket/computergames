@@ -1,12 +1,12 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-17（P9 Zweistein-DP chance-aware evaluation 后同步）
+更新时间：2026-05-17（R-4 GUI 程序掷骰后同步）
 
 ## 当前结论
 
 - 目标比赛：2026 年辽宁省大学生计算机博弈大赛校内选拔赛，项目选择为"爱恩斯坦棋"。
 - 目标不是做命令行工具，而是构建一个离线可运行的 GUI 程序，用于现场比赛。
-- 当前最稳假设：现场不依赖统一 API，不联网；双方各自运行自己的程序，由操作员录入骰子、对方走法，并根据程序输出执行本方走法。若后续 QQ 群发布统一平台/API，再新增适配层，不改核心规则引擎和 AI。
+- 当前最稳假设：现场不依赖统一 API，不联网；双方各自运行自己的程序，骰子来源按双方协商或裁判要求确定，操作员录入骰子/对方走法，并根据程序输出执行本方走法。若后续 QQ 群发布统一平台/API，再新增适配层，不改核心规则引擎和 AI。
 - 爱恩斯坦棋有骰子随机性，但程序仍可通过开局布阵、局面评估、期望搜索、蒙特卡洛模拟等方法显著提升胜率。
 - **2026-05-11 R-0 已完成**：core 现已合规允许吃本方棋子；4.1 / 4.2 / 4.4 bench 已用合规规则重跑（slim 格式入库），全部门槛通过。详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`。
 - **2026-05-11 R-1 / R-2 / R-3 已完成**：开局录入 GUI（R-1）+ 七盘制比赛模式（R-2）+ 崩溃自救（R-3）均已实现并通过 324 条 pytest（含 80 条 R-2 新增）。R-2 详见 `reports/r2-rehearsal.md`；R-1 review followup 决策见 `reports/r1-review-followup.md`。
@@ -33,6 +33,7 @@
 - **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：新增 `scripts/analyze_rollout_failures.py`。P7.0 对当前 release 默认 rollout vs `greedy_risk` 跑 120 局：87 胜 / 33 负，`illegal_moves=0`、`crashes=0`、`timeouts=0`；失败桶为 `missed_direct_win=0`、`allowed_direct_loss=63`、`low_confidence_loss=145`、`timeout_or_fallback=4`、`bad_self_capture=33`。因此 P7.1 direct-win guard 不成立；P7.2 `rollout_adaptive_close_sample` 作为显式实验候选注册并在 `balanced_v1` 布局 bench，双边 100+100 合并胜率 50.0%，未达 55% candidate 门槛，不进入默认。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。最新验证：576 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 - **2026-05-17 P8 threat defense audit 已完成**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。审计结果：`audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。报告见 `reports/p8_threat_defense_audit_20260517.md` / `.json`。默认 AI、默认布局、core 规则和 release 配置未变。`rollout_threat_rerank` 未实现，因为审计 gate 不支持：低置信 threat-reducing ratio 0.012 < 0.250，低置信 top-k 命中 ratio 0.500 < 0.600；未过门禁不得晋升。最新验证：590 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 - **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：P9.0 已实现 `ai/zweistein_dp.py` 概率估值表并通过测试；DP 表尺寸为 `15625 x 20`，`PDF_VAL` / `CDF_VAL` 均为 15625 行。P9.1 `rollout_zweistein_dp_cutoff` 已作为显式候选评测，双边 100+100 合并胜率 45.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛；P9.2 `rollout_exact_opp1_zdp` 已作为显式候选评测，双边 100+100 合并胜率 51.5%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，但未过 55% candidate 门槛，且低于 P9.3 TT / move ordering 启动线 52%，因此 P9.3 不启动。全量验证通过，`scripts/preflight_check.py` 输出 `READY FOR MATCH`。GUI/release 默认 AI、默认布局、core 规则均未变。
+- **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，使用 `secrets.randbelow(6) + 1` 作为程序掷骰来源；GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已修复 Spinbox `FocusOut` 与程序掷骰按钮点击的事件顺序边界，且禁用按钮不会吞掉手动改错提交。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 
 ## 已确认的比赛事实
 
@@ -46,6 +47,7 @@
 ### 国赛规则（2026-05-10 通过 `全国计算机博弈竞赛总则.md` + `爱恩斯坦棋项目规则.md` 确认）
 - **棋盘**：5×5；红方左上出发区，蓝方右下出发区。
 - **棋子**：双方各 6 子，编号 1-6。
+- **骰子来源**：由双方协商或裁判要求确定；本程序支持 GUI 内"程序掷骰"和手动录入外部骰子结果。
 - **开局**：可任意摆放（**无组委会强制布局**）。
 - **走法**：红向下/右/右下，蓝向上/左/左上，每次一格。
 - **吃子**：目标格有棋子（**含本方**）则吃掉；吃本方子是合法策略。✅ R-0 已修复 core 实现。
@@ -68,7 +70,7 @@
 
 - 离线运行，不依赖网络。
 - 可视化 5×5 爱恩斯坦棋棋盘。
-- 可录入当前轮骰子点数。
+- 可手动录入当前轮骰子点数；双方同意时可由 GUI 点击"程序掷骰"生成点数。
 - 可录入对方走法。
 - 可输出我方建议走法，并明确显示移动棋子、起点、终点、是否吃子。
 - 自动判断胜负。
@@ -100,7 +102,7 @@
 ## 下一次对话建议第一步
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
-2. R-0 / R-1 / R-2 / R-3 / S2 / S3 / S4 / P6 / P7 / P8 / P9 全部闭环；当前 GUI/release 默认仍是 `rollout` kind + P3 promotion 参数，不是旧 flat rollout。
+2. R-0 / R-1 / R-2 / R-3 / R-4 / S2 / S3 / S4 / P6 / P7 / P8 / P9 全部闭环；当前 GUI/release 默认仍是 `rollout` kind + P3 promotion 参数，不是旧 flat rollout。
 3. P7.2 adaptive close-sample candidate 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动；没有用户明确批准前不得进入 GUI/release 默认。
 4. P5.5 opening 候选晋升路线已停止；任何默认布局变更仍必须直接对当前 release 默认 rollout kwargs 做正式门禁验证。
 5. 下一步优先赛前冻结、现场启动包核对和 QQ 群/老师附件对齐；只修现场风险 bug，不继续默认 AI/布局调参。
@@ -108,5 +110,5 @@
 ## 待确认事项
 
 - 校赛 QQ 群是否发布了项目附件、棋谱标准或统一平台协议（赛前持续关注）。
-- 现场骰子由裁判实体投掷、程序生成，还是由平台提供（默认假设：裁判实物投掷，操作员录入到程序）。
+- 现场骰子具体来源仍需按裁判要求和双方协商执行；程序已支持本机程序掷骰和手动录入外部骰子结果。
 - 校赛与省赛是否使用国赛同套规则（默认假设：是；如果有校赛特殊规则，赛前需重新对齐）。

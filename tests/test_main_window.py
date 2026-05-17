@@ -364,6 +364,128 @@ def test_phase_after_dice_input_is_select(tk_root):
     assert "走法" in window.match_mode_panel.phase_var.get() or "选择" in window.match_mode_panel.phase_var.get()
 
 
+def test_roll_dice_button_rolls_once_and_enters_move_selection(tk_root, monkeypatch):
+    monkeypatch.setattr("gui.main_window.roll_die", lambda: 4)
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window.selected_move_index = 0
+    window.selected_position = window.state.pieces[Player.RED][6].position
+    window._refresh()
+
+    window.controls.roll_dice_button.invoke()
+
+    assert window.current_dice == 4
+    assert window._awaiting_dice is False
+    assert window.selected_move_index is None
+    assert window.selected_position is None
+    assert "程序掷骰：4" in window.status_message
+    assert "请双方确认后选择合法走法" in window.status_message
+    assert str(window.controls.roll_dice_button["state"]) == "disabled"
+
+
+def test_roll_dice_button_ignores_spinbox_focusout_when_clicked(tk_root, monkeypatch):
+    class FocusOutEvent:
+        type = tk.EventType.FocusOut
+
+    monkeypatch.setattr("gui.main_window.roll_die", lambda: 4)
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._show_playing_phase()
+    window._refresh()
+
+    window.controls.dice_var.set("2")
+    monkeypatch.setattr(window.controls, "winfo_pointerxy", lambda: (10, 20))
+    monkeypatch.setattr(
+        window.controls,
+        "winfo_containing",
+        lambda pointer_x, pointer_y: window.controls.roll_dice_button,
+    )
+    window.controls._emit_dice_change(FocusOutEvent())
+    window.controls.roll_dice_button.invoke()
+
+    assert window.current_dice == 4
+    assert window._awaiting_dice is False
+    assert "程序掷骰：4" in window.status_message
+
+
+def test_spinbox_focusout_to_roll_button_without_pointer_still_submits_manual_dice(tk_root, monkeypatch):
+    class FocusOutEvent:
+        type = tk.EventType.FocusOut
+
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._show_playing_phase()
+    window._refresh()
+
+    window.controls.dice_var.set("2")
+    monkeypatch.setattr(window.controls, "focus_get", lambda: window.controls.roll_dice_button)
+    monkeypatch.setattr(window.controls, "winfo_pointerxy", lambda: (10, 20))
+    monkeypatch.setattr(window.controls, "winfo_containing", lambda pointer_x, pointer_y: None)
+    window.controls._emit_dice_change(FocusOutEvent())
+
+    assert window.current_dice == 2
+    assert window._awaiting_dice is False
+    assert "骰子已更新" in window.status_message
+
+
+def test_spinbox_focusout_to_disabled_roll_button_still_submits_manual_dice(tk_root, monkeypatch):
+    class FocusOutEvent:
+        type = tk.EventType.FocusOut
+
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._awaiting_dice = False
+    window._show_playing_phase()
+    window._refresh()
+
+    assert str(window.controls.roll_dice_button["state"]) == "disabled"
+
+    window.controls.dice_var.set("2")
+    monkeypatch.setattr(window.controls, "winfo_pointerxy", lambda: (10, 20))
+    monkeypatch.setattr(
+        window.controls,
+        "winfo_containing",
+        lambda pointer_x, pointer_y: window.controls.roll_dice_button,
+    )
+    window.controls._emit_dice_change(FocusOutEvent())
+
+    assert window.current_dice == 2
+    assert window._awaiting_dice is False
+    assert "骰子已更新" in window.status_message
+
+
+def test_roll_dice_button_enable_state_tracks_turn_flow(tk_root, monkeypatch):
+    monkeypatch.setattr("gui.main_window.roll_die", lambda: 6)
+    window = MainWindow(tk_root)
+    window.pack()
+
+    assert str(window.controls.roll_dice_button["state"]) == "disabled"
+
+    window._phase = "playing"
+    window._awaiting_dice = True
+    window._show_playing_phase()
+    window._refresh()
+
+    assert str(window.controls.roll_dice_button["state"]) == "normal"
+
+    window.controls.roll_dice_button.invoke()
+
+    assert window._awaiting_dice is False
+    assert str(window.controls.roll_dice_button["state"]) == "disabled"
+
+    moves = window._current_moves()
+    assert moves
+    window.selected_move_index = 0
+    window._apply_selected_move()
+
+    assert window._awaiting_dice is True
+    assert str(window.controls.roll_dice_button["state"]) == "normal"
+
+
 def test_phase_returns_to_awaiting_dice_after_apply(tk_root):
     window = MainWindow(tk_root)
     window.pack()

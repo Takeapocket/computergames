@@ -10,6 +10,7 @@ class ControlPanel(tk.Frame):
         master: tk.Misc,
         *,
         on_dice_change: Callable[[str], None],
+        on_roll_dice: Callable[[], None],
         on_move_select: Callable[[int], None],
         on_apply: Callable[[], None],
         on_undo: Callable[[], None],
@@ -39,6 +40,12 @@ class ControlPanel(tk.Frame):
         self.dice_spinbox.pack(side=tk.LEFT)
         self.dice_spinbox.bind("<Return>", self._emit_dice_change)
         self.dice_spinbox.bind("<FocusOut>", self._emit_dice_change)
+        self.roll_dice_button = tk.Button(
+            dice_row,
+            text="程序掷骰",
+            command=on_roll_dice,
+        )
+        self.roll_dice_button.pack(side=tk.LEFT, padx=(8, 0))
 
         tk.Label(self, text="合法走法：", anchor="w").pack(fill=tk.X)
 
@@ -94,10 +101,26 @@ class ControlPanel(tk.Frame):
     def set_dice_enabled(self, enabled: bool) -> None:
         self.dice_spinbox.configure(state=tk.NORMAL if enabled else tk.DISABLED)
 
+    def set_can_roll_dice(self, enabled: bool) -> None:
+        self.roll_dice_button.configure(state=tk.NORMAL if enabled else tk.DISABLED)
+
     def set_move_selection_enabled(self, enabled: bool) -> None:
         self.move_listbox.configure(state=tk.NORMAL if enabled else tk.DISABLED)
 
+    def _focusout_targets_roll_button(self, event: tk.Event | None) -> bool:
+        if event is None or getattr(event, "type", None) != tk.EventType.FocusOut:
+            return False
+        if str(self.roll_dice_button.cget("state")) != tk.NORMAL:
+            return False
+        try:
+            pointer_x, pointer_y = self.winfo_pointerxy()
+            return self.winfo_containing(pointer_x, pointer_y) is self.roll_dice_button
+        except tk.TclError:
+            return False
+
     def _emit_dice_change(self, event: tk.Event | None = None) -> None:
+        if self._focusout_targets_roll_button(event):
+            return
         self._on_dice_change(self.dice_var.get())
 
     def _emit_move_select(self, event: tk.Event) -> None:
