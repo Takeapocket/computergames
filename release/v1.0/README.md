@@ -10,6 +10,16 @@
 
 ## 启动
 
+赛前主检查先运行：
+
+```powershell
+& ".venv/Scripts/python.exe" "scripts/preflight_check.py"
+```
+
+成功标准：最后一行必须是 `READY FOR MATCH`。
+
+主程序启动：
+
 ```powershell
 & ".venv/Scripts/python.exe" "scripts/run_gui.py"
 ```
@@ -46,6 +56,7 @@
 
 ## 工程化基线
 
+- 赛前主检查：`scripts/preflight_check.py`，成功必须输出 `READY FOR MATCH`
 - 验证脚本：`scripts/smoke_test.py`、`scripts/s2_rehearsal.py`、`scripts/quick_bench.py`、`scripts/tournament.py`
 - 应急手册：`docs/EMERGENCY_GUIDE.md`
 - 现场清单：`docs/MATCH_CHECKLIST.md`
@@ -54,5 +65,5 @@
 
 ## 紧急回滚
 
-- 若现场 AI 输出异常，可在 `gui/main_window.py` 中临时把 `DEFAULT_RECOMMENDER_KIND` 改为 `"greedy_risk"`，并把 `DEFAULT_RECOMMENDER_KWARGS` 改为 `{}`。
+- 不要在比赛中直接编辑 `gui/main_window.py` 默认常量。若赛前间隙必须回滚 AI，先记录原因，只做受控修改或切换到已复验备机，然后完整重跑 `scripts/preflight_check.py` 并确认 `READY FOR MATCH`；比赛进行中依赖程序内置 fallback，不临时改源码。
 - 若布局录入异常，可切回 `balanced_v1` 默认。

@@ -108,11 +108,15 @@ class ExactOpponentDiceRerankAI:
             self.fire_counts["passthrough_base_none"] += 1
             return None
 
+        legal = state.legal_moves(perspective, dice)
+        if base_move not in legal:
+            self.fire_counts["fallback_illegal_base"] += 1
+            return legal[0] if legal else None
+
         if self._time_remaining_ms(outer_deadline) <= self.min_time_remaining_ms:
             self.fire_counts["passthrough_no_time"] += 1
             return base_move
 
-        legal = state.legal_moves(perspective, dice)
         stats = [
             stats
             for stats in getattr(self.base, "last_root_stats", [])

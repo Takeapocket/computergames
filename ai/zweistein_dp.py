@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from core.game_state import GameState
-from core.rules import target_corner
+from core.rules import legal_piece_ids_for_dice, target_corner
 from core.types import MAX_PIECE_ID, MIN_PIECE_ID, Player, chebyshev_distance
 
 
@@ -13,6 +13,7 @@ TABLE_STATES = (MAX_DISTANCE + 1) ** DISTANCE_VECTOR_SIZE
 TABLE_HORIZON = 20
 
 DistanceVector = tuple[int, int, int, int, int, int]
+DicePieceOptions = tuple[tuple[int, ...], ...]
 
 
 def encode_distance_vector(distances: tuple[int, ...]) -> int:
@@ -94,6 +95,70 @@ def _cdf_after_turns(cdf_row: tuple[float, ...], turns: int) -> float:
     return cdf_row[turns - 1]
 
 
+def _dice_piece_options_for(state: GameState, player: Player) -> DicePieceOptions:
+    pieces = state.pieces[player]
+    return tuple(
+        tuple(piece_id - MIN_PIECE_ID for piece_id in legal_piece_ids_for_dice(pieces, dice))
+        for dice in range(MIN_PIECE_ID, MAX_PIECE_ID + 1)
+    )
+
+
+@lru_cache(maxsize=None)
+def _cdf_probability_with_core_mapping(
+    vector: DistanceVector,
+    dice_options: DicePieceOptions,
+    turns: int,
+) -> float:
+    alive_indexes = tuple(sorted({index for options in dice_options for index in options}))
+    if not alive_indexes:
+        return 0.0
+    if any(vector[index] == 0 for index in alive_indexes):
+        return 1.0
+    if turns <= 0:
+        return 0.0
+
+    total = 0.0
+    for piece_indexes in dice_options:
+        if not piece_indexes:
+            continue
+        best_for_dice = 0.0
+        for piece_index in piece_indexes:
+            next_vector = list(vector)
+            next_vector[piece_index] = max(0, next_vector[piece_index] - 1)
+            best_for_dice = max(
+                best_for_dice,
+                _cdf_probability_with_core_mapping(
+                    tuple(next_vector),
+                    dice_options,
+                    turns - 1,
+                ),
+            )
+        total += best_for_dice
+    return total / DISTANCE_VECTOR_SIZE
+
+
+def _cdf_row_for_state(
+    vector: DistanceVector,
+    dice_options: DicePieceOptions,
+) -> tuple[float, ...]:
+    exact_options = tuple((index,) for index in range(DISTANCE_VECTOR_SIZE))
+    if dice_options == exact_options:
+        return CDF_VAL[encode_distance_vector(vector)]
+    return tuple(
+        _cdf_probability_with_core_mapping(vector, dice_options, turns)
+        for turns in range(1, TABLE_HORIZON + 1)
+    )
+
+
+def _pdf_from_cdf(cdf_row: tuple[float, ...]) -> tuple[float, ...]:
+    previous = 0.0
+    values: list[float] = []
+    for value in cdf_row:
+        values.append(max(0.0, value - previous))
+        previous = value
+    return tuple(values)
+
+
 def zweistein_dp_win_prob(state: GameState, perspective: Player) -> float:
     perspective = Player.from_value(perspective)
     winner = state.get_winner()
@@ -102,11 +167,14 @@ def zweistein_dp_win_prob(state: GameState, perspective: Player) -> float:
     if winner is perspective.opponent:
         return 0.0
 
-    own_index = encode_distance_vector(distance_vector_for(state, perspective))
-    opp_index = encode_distance_vector(distance_vector_for(state, perspective.opponent))
-    own_pdf = PDF_VAL[own_index]
-    own_cdf = CDF_VAL[own_index]
-    opp_cdf = CDF_VAL[opp_index]
+    own_vector = distance_vector_for(state, perspective)
+    opp_vector = distance_vector_for(state, perspective.opponent)
+    own_cdf = _cdf_row_for_state(own_vector, _dice_piece_options_for(state, perspective))
+    opp_cdf = _cdf_row_for_state(
+        opp_vector,
+        _dice_piece_options_for(state, perspective.opponent),
+    )
+    own_pdf = _pdf_from_cdf(own_cdf)
 
     perspective_to_move = state.current_player is perspective
     resolved_win_prob = 0.0

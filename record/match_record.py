@@ -193,7 +193,7 @@ class MatchRecord:
 
     def save(self, path: str | Path) -> None:
         # R-2 review Critical #3：原子写，避免中途崩溃损坏现有文件。
-        from record.auto_save import _atomic_write_text
+        from record.game_record import _atomic_write_text
 
         _atomic_write_text(Path(path), self.to_json(indent=2) + "\n")
 

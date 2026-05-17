@@ -1,3 +1,5 @@
+import argparse
+
 from core.move import Move
 from core.types import BOARD_SIZE, Piece, Player, Position
 from gui.app import create_default_state, format_move_label
@@ -330,3 +332,34 @@ def test_recommendation_text_names_rules_fallback_source() -> None:
 
     assert "规则兜底：" in text
     assert "rollout：" not in text
+
+
+def test_main_uses_formal_competition_title(monkeypatch) -> None:
+    import gui.app as app
+
+    titles = []
+
+    class FakeRoot:
+        def title(self, value):
+            titles.append(value)
+
+        def minsize(self, width, height):
+            pass
+
+        def mainloop(self):
+            pass
+
+    class FakeWindow:
+        def __init__(self, root, *, total_seconds):
+            pass
+
+        def pack(self, **kwargs):
+            pass
+
+    monkeypatch.setattr(app.tk, "Tk", FakeRoot)
+    monkeypatch.setattr(app, "parse_args", lambda: argparse.Namespace(total_seconds=240.0))
+    monkeypatch.setattr("gui.main_window.MainWindow", FakeWindow)
+
+    app.main()
+
+    assert titles == ["爱恩斯坦棋离线 GUI 参赛程序"]

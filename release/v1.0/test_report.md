@@ -1,6 +1,18 @@
 # Test Report
 
-Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive/P3 候选复验）/ 2026-05-16（P3 受控默认替换复验）
+Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive/P3 候选复验）/ 2026-05-16（P3 受控默认替换复验）/ 2026-05-17（P6-P9 robustness / audit / candidate follow-up）
+
+## Current sign-off snapshot
+
+| command | exit code | result |
+|---|---:|---|
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 614 passed |
+| `.venv/Scripts/python.exe scripts/preflight_check.py` | 0 | READY FOR MATCH |
+
+- **P6 robustness lock**：release/GUI 默认 AI、fallback、`balanced_v1` 布局和 timing probe 已锁定；preflight 成功输出 `READY FOR MATCH`。
+- **P7 rollout failure analysis**：失败归因脚本落地，adaptive close-sample 仍是显式候选，未进入默认。
+- **P8 threat defense audit**：threat rerank gate 不支持实现候选，默认 AI、布局和 release 配置未变。
+- **P9 Zweistein-DP chance-aware evaluation**：P9.1 / P9.2 候选未过 candidate 门槛，P9.3 不启动。
 
 ## Commands
 

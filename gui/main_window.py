@@ -144,6 +144,22 @@ class MainWindow(tk.Frame):
         self._schedule_timer_refresh()
 
     def _handle_dice_change(self, value: str) -> None:
+        if self._match_is_finished():
+            self.status_message = "本轮已结束，不能继续录入骰子。"
+            self._clear_selection()
+            self._refresh()
+            return
+        if self._phase != "playing":
+            self.status_message = "请先确认开局后再录入骰子。"
+            self._clear_selection()
+            self._refresh()
+            return
+        if self.state.get_winner() is not None:
+            self.status_message = "对局已结束，不能继续录入骰子。"
+            self._clear_selection()
+            self._refresh()
+            return
+
         try:
             dice = int(value)
         except ValueError:
@@ -163,18 +179,29 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _handle_move_select(self, index: int) -> None:
+        if not self._can_select_moves():
+            self.status_message = self._blocked_move_message()
+            self._clear_selection()
+            self._refresh()
+            return
+
         moves = self._current_moves()
         if not 0 <= index < len(moves):
             return
 
         self.selected_move_index = index
         self.selected_position = moves[index].from_pos
-        self.status_message = f"已选择：{format_move_label(moves[index])}"
+        self.status_message = f"已选择：{format_move_label(moves[index], distinguish_self_capture=True)}"
         self._refresh()
 
     def _handle_square_click(self, position: Position) -> None:
         if self.state.get_winner() is not None:
             self.status_message = "对局已结束；可以悔棋或重置。"
+            self._refresh()
+            return
+        if not self._can_select_moves():
+            self.status_message = self._blocked_move_message()
+            self._clear_selection()
             self._refresh()
             return
 
@@ -191,6 +218,12 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _apply_selected_move(self) -> None:
+        if not self._can_select_moves():
+            self.status_message = self._blocked_move_message()
+            self._clear_selection()
+            self._refresh()
+            return
+
         moves = self._current_moves()
         if self.selected_move_index is None or not 0 <= self.selected_move_index < len(moves):
             self.status_message = "请先选择一条合法走法。"
@@ -214,9 +247,15 @@ class MainWindow(tk.Frame):
         winner = self.state.get_winner()
         if winner is not None:
             self.timer.pause()
-            self.status_message = f"已执行：{format_move_label(move)}。{player_label(winner)}获胜。"
+            self.status_message = (
+                f"已执行：{format_move_label(move, distinguish_self_capture=True)}。"
+                f"{player_label(winner)}获胜。"
+            )
         else:
-            self.status_message = f"已执行：{format_move_label(move)}。请录入下一轮骰子。"
+            self.status_message = (
+                f"已执行：{format_move_label(move, distinguish_self_capture=True)}。"
+                "请录入下一轮骰子。"
+            )
         self._auto_save_current_game()
         if winner is not None and self._match is not None and not self._match.is_finished():
             reason = self._determine_winner_reason(winner)
@@ -225,6 +264,17 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _undo_move(self) -> None:
+        if not self._can_undo_move():
+            if self._match_is_finished():
+                self.status_message = "本轮已结束，不能悔棋。"
+            elif self._phase != "playing":
+                self.status_message = "当前不在对局中，不能悔棋。"
+            else:
+                self.status_message = "当前没有可悔棋的走法。"
+            self._clear_selection()
+            self._refresh()
+            return
+
         undone = self.state.undo_move()
         self._clear_selection()
         if undone is None:
@@ -234,11 +284,17 @@ class MainWindow(tk.Frame):
             self.timer.set_active_player(self.state.current_player)
             self._record_dirty = True
             self._awaiting_dice = True
-            self.status_message = f"已悔棋：{format_move_label(undone)}。计时不回退。"
+            self.status_message = (
+                f"已悔棋：{format_move_label(undone, distinguish_self_capture=True)}。"
+                "计时不回退。"
+            )
             self._auto_save_current_game()
         self._refresh()
 
     def _reset_game(self) -> None:
+        if not self._confirm_reset_game():
+            return
+
         self.state = create_default_state()
         self.record = GameRecord.from_state(self.state)
         self.timer.reset(current_player=self.state.current_player)
@@ -255,9 +311,23 @@ class MainWindow(tk.Frame):
         self.opening_panel.set_side_controls_enabled(True)
         self.status_message = "棋局已重置，请重新录入开局。"
         self._clear_auto_save()
-        clear_auto_save_match(path=self._auto_save_match_path)
+        self._clear_match_auto_save()
         self._show_setup_phase()
         self._refresh()
+
+    def _confirm_reset_game(self) -> bool:
+        active_match = self._match is not None and not self._match.is_finished()
+        if not active_match and not self._record_dirty:
+            return True
+
+        if active_match:
+            message = (
+                "当前正在比赛模式。重置棋局将放弃本轮比赛和当前记录，"
+                "并清理本轮自动保存。是否继续？"
+            )
+        else:
+            message = "当前记录尚未保存。重置棋局将放弃当前记录。是否继续？"
+        return messagebox.askyesno("确认重置棋局", message, parent=self)
 
     def _start_game_from_opening(self, selection: OpeningSelection) -> None:
         if self._match is not None:
@@ -290,7 +360,7 @@ class MainWindow(tk.Frame):
         self._phase = "playing"
         if self._match is not None:
             self._match.start_playing()
-            auto_save_match(self._match, path=self._auto_save_match_path)
+            self._auto_save_current_match()
         else:
             # 没有 MatchRecord：legacy 单盘 match 模式（沿用 R-1 行为）
             self._mode = "match"
@@ -327,11 +397,25 @@ class MainWindow(tk.Frame):
         except OSError as exc:
             self.status_message = f"自动保存清理失败：{exc}"
 
+    def _auto_save_current_match(self) -> None:
+        if self._match is None:
+            return
+        try:
+            auto_save_match(self._match, path=self._auto_save_match_path)
+        except OSError as exc:
+            self.status_message = f"整轮自动保存失败：{exc}"
+
+    def _clear_match_auto_save(self) -> None:
+        try:
+            clear_auto_save_match(path=self._auto_save_match_path)
+        except OSError as exc:
+            self.status_message = f"整轮自动保存清理失败：{exc}"
+
     def _clear_invalid_auto_save_files(self) -> None:
         if is_invalid_auto_save_file(path=self._auto_save_path):
             self._clear_auto_save()
         if is_invalid_match_auto_save_file(path=self._auto_save_match_path):
-            clear_auto_save_match(path=self._auto_save_match_path)
+            self._clear_match_auto_save()
 
     def _restore_auto_save_if_available(self) -> bool:
         self._clear_invalid_auto_save_files()
@@ -347,7 +431,7 @@ class MainWindow(tk.Frame):
         )
         if not should_restore:
             self._clear_auto_save()
-            clear_auto_save_match(path=self._auto_save_match_path)
+            self._clear_match_auto_save()
             return False
 
         if has_match:
@@ -359,7 +443,7 @@ class MainWindow(tk.Frame):
             match = load_auto_save_match(path=self._auto_save_match_path)
         except (OSError, ValueError) as exc:
             messagebox.showerror("恢复 match auto-save 失败", str(exc), parent=self)
-            clear_auto_save_match(path=self._auto_save_match_path)
+            self._clear_match_auto_save()
             self._clear_auto_save()
             return False
 
@@ -593,7 +677,7 @@ class MainWindow(tk.Frame):
         for index, move in enumerate(self._current_moves()):
             if move.from_pos == self.selected_position and move.to_pos == position:
                 self.selected_move_index = index
-                self.status_message = f"已选择：{format_move_label(move)}"
+                self.status_message = f"已选择：{format_move_label(move, distinguish_self_capture=True)}"
                 return True
 
         self.status_message = "目标格不是当前棋子的合法走法。"
@@ -612,16 +696,23 @@ class MainWindow(tk.Frame):
     def _refresh(self) -> None:
         moves = self._current_moves()
         selected_ids = self._selected_piece_ids()
-        move_labels = [format_move_label(move) for move in moves]
+        move_labels = [format_move_label(move, distinguish_self_capture=True) for move in moves]
         legal_destinations = self._legal_destinations_for_selection(moves)
         winner = self.state.get_winner()
+        can_enter_dice = self._can_enter_dice(winner)
+        can_select_moves = self._can_select_moves(winner)
+        selected_move_valid = (
+            self.selected_move_index is not None
+            and 0 <= self.selected_move_index < len(moves)
+        )
+        can_apply = can_select_moves and selected_move_valid
 
         self.match_mode_panel.set_current_player(player_label(self.state.current_player))
         self.match_mode_panel.set_phase(self._compute_phase_label(winner))
         self.match_mode_panel.set_selected_pieces(selected_ids)
         self.match_mode_panel.set_recommendation(self._recommendation_text(winner))
         self.match_mode_panel.set_record_dirty(self._record_dirty)
-        self.match_mode_panel.set_can_undo(bool(self.state.history))
+        self.match_mode_panel.set_can_undo(self._can_undo_move(winner))
         if self._match is not None:
             first_mover_label = (
                 "我方"
@@ -643,8 +734,10 @@ class MainWindow(tk.Frame):
         self.controls.set_moves(move_labels, self.selected_move_index)
         self.controls.set_winner(player_label(winner) if winner is not None else "未结束")
         self.controls.set_status(self.status_message)
-        self.controls.set_can_apply(winner is None and self.selected_move_index is not None)
-        self.controls.set_can_undo(bool(self.state.history))
+        self.controls.set_can_apply(can_apply)
+        self.controls.set_can_undo(self._can_undo_move(winner))
+        self.controls.set_dice_enabled(can_enter_dice)
+        self.controls.set_move_selection_enabled(can_select_moves)
         self.timer_panel.set_snapshot(self.timer.snapshot())
         if self._phase == "setup":
             self._refresh_setup_board()
@@ -664,12 +757,12 @@ class MainWindow(tk.Frame):
             )
 
     def _current_moves(self) -> list[Move]:
-        if self.state.get_winner() is not None:
+        if not self._can_select_moves():
             return []
         return self.state.legal_moves(self.state.current_player, self.current_dice)
 
     def _selected_piece_ids(self) -> list[int]:
-        if self.state.get_winner() is not None:
+        if not self._can_select_moves():
             return []
         return self.state.legal_piece_ids(self.state.current_player, self.current_dice)
 
@@ -682,7 +775,34 @@ class MainWindow(tk.Frame):
         self.selected_move_index = None
         self.selected_position = None
 
+    def _match_is_finished(self) -> bool:
+        return self._match is not None and self._match.is_finished()
+
+    def _can_enter_dice(self, winner: Player | None = None) -> bool:
+        if winner is None:
+            winner = self.state.get_winner()
+        return self._phase == "playing" and winner is None and not self._match_is_finished()
+
+    def _can_select_moves(self, winner: Player | None = None) -> bool:
+        return self._can_enter_dice(winner) and not self._awaiting_dice
+
+    def _can_undo_move(self, winner: Player | None = None) -> bool:
+        return self._phase == "playing" and not self._match_is_finished() and bool(self.state.history)
+
+    def _blocked_move_message(self) -> str:
+        if self._match_is_finished():
+            return "本轮已结束，不能继续选择或执行走法。"
+        if self._phase != "playing":
+            return "请先确认开局后再选择或执行走法。"
+        if self.state.get_winner() is not None:
+            return "对局已结束，不能继续选择或执行走法。"
+        if self._awaiting_dice:
+            return "请先录入骰子后再选择或执行走法。"
+        return "当前不能选择或执行走法。"
+
     def _compute_phase_label(self, winner: Player | None) -> str:
+        if self._match_is_finished():
+            return "本轮已结束"
         if winner is not None:
             return "对局已结束"
         if self._mode == "match" and self._our_side is not None and self.state.current_player is not self._our_side:
@@ -694,9 +814,19 @@ class MainWindow(tk.Frame):
         return "请选择走法"
 
     def _recommendation_text(self, winner: Player | None) -> str:
+        match = getattr(self, "_match", None)
+        if match is not None and match.is_finished():
+            return "本轮已结束"
         if winner is not None:
             return "对局已结束"
-        if self._awaiting_dice:
+        mode = getattr(self, "_mode", "debug")
+        our_side = getattr(self, "_our_side", None)
+        state = getattr(self, "state", None)
+        if mode == "match" and our_side is not None and state is not None and state.current_player is not our_side:
+            if getattr(self, "_awaiting_dice", True):
+                return "等待对方骰子"
+            return "等待对方走法"
+        if getattr(self, "_awaiting_dice", True):
             return "等待骰子"
 
         move = self._recommended_move()
@@ -805,6 +935,31 @@ class MainWindow(tk.Frame):
         self._our_side = our_side if mode == "match" else None
         self._refresh()
 
+    def _enter_debug_mode(self) -> None:
+        active_match = self._match is not None and not self._match.is_finished()
+        if active_match:
+            confirm = messagebox.askyesno(
+                "退出比赛模式",
+                "切换到调试模式将放弃本轮比赛和当前记录，并清理本轮自动保存。是否继续？",
+                parent=self,
+            )
+            if not confirm:
+                return
+            previous_status = self.status_message
+            self._exit_match_mode()
+            if self.status_message == previous_status:
+                self.status_message = "已退出比赛模式，当前为调试模式。"
+            self._refresh()
+            return
+
+        if self._match is not None:
+            self._exit_match_mode()
+            self.status_message = "已退出比赛模式，当前为调试模式。"
+            self._refresh()
+            return
+
+        self._set_mode("debug")
+
     def _build_menu(self, master: tk.Misc) -> None:
         if not isinstance(master, (tk.Tk, tk.Toplevel)):
             return
@@ -812,7 +967,7 @@ class MainWindow(tk.Frame):
         master.config(menu=menubar)
 
         mode_menu = tk.Menu(menubar, tearoff=0)
-        mode_menu.add_command(label="调试模式", command=lambda: self._set_mode("debug"))
+        mode_menu.add_command(label="调试模式", command=self._enter_debug_mode)
         mode_menu.add_command(label="比赛模式", command=self._enter_match_mode)
         menubar.add_cascade(label="模式", menu=mode_menu)
 
@@ -820,7 +975,7 @@ class MainWindow(tk.Frame):
         if self._match is not None and not self._match.is_finished():
             confirm = messagebox.askyesno(
                 "正在比赛模式",
-                "当前已处于比赛模式，是否结束当前轮次并重新开始？",
+                "当前已处于比赛模式。重新开始将放弃本轮比赛和当前记录，是否继续？",
                 parent=self,
             )
             if not confirm:
@@ -831,7 +986,7 @@ class MainWindow(tk.Frame):
         our_side, our_role = chosen
         # R-2 review Important #18：进入新一轮前清掉可能残留的旧 auto-save（单盘 + 整轮）。
         self._clear_auto_save()
-        clear_auto_save_match(path=self._auto_save_match_path)
+        self._clear_match_auto_save()
         self._match = MatchRecord(our_side=our_side, our_role=our_role)
         self._mode = "match"
         self._our_side = our_side
@@ -839,7 +994,7 @@ class MainWindow(tk.Frame):
         self._record_dirty = False
         self._match_finished_notified = False
         self._start_new_game_in_match()
-        auto_save_match(self._match, path=self._auto_save_match_path)
+        self._auto_save_current_match()
 
     def _exit_match_mode(self) -> None:
         """R-2 review Important #12/#17：集中清理 match 状态。
@@ -852,7 +1007,7 @@ class MainWindow(tk.Frame):
         self._mode = "debug"
         self._our_side = None
         self._match_finished_notified = False
-        clear_auto_save_match(path=self._auto_save_match_path)
+        self._clear_match_auto_save()
         self._clear_auto_save()
         self.opening_panel.set_side_controls_enabled(True)
 
@@ -944,7 +1099,7 @@ class MainWindow(tk.Frame):
             f"本盘 {first_mover} 先手，请录入本盘开局后开始。"
         )
         self._show_setup_phase()
-        auto_save_match(self._match, path=self._auto_save_match_path)
+        self._auto_save_current_match()
         self._refresh()
 
     def _finalize_match_game(self, winner: Player, *, reason: str) -> None:
@@ -961,7 +1116,7 @@ class MainWindow(tk.Frame):
         # R-2 review Important #13：先持久化 match auto-save（包含已结束盘），再清单盘 auto-save。
         # 中间崩溃时 match 已是 setup 含本盘成绩；下次启动会看到 has_game=True 但 state 已结束，
         # _restore_match_auto_save 里有专门的守卫会清掉它。
-        auto_save_match(self._match, path=self._auto_save_match_path)
+        self._auto_save_current_match()
         self._clear_auto_save()
         self._refresh()
         if self._match.is_finished():

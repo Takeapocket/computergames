@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ai.match import build_ai, starting_state_for
+from ai.match import _step_timed_out, build_ai, starting_state_for
 from ai.release_defaults import load_release_default_rollout_kwargs
 from ai.tactical import find_winning_moves
 from core.move import Move
@@ -521,8 +521,11 @@ def analyze_one_game(
         started = time.perf_counter()
         try:
             move = ai.choose_move(state, dice)
-        except Exception as exc:  # noqa: BLE001 - audit records crash class.
+        except Exception:  # noqa: BLE001 - audit records crashes.
             crashes += 1
+            elapsed_ms = (time.perf_counter() - started) * 1000.0
+            if _step_timed_out(ai, elapsed_ms):
+                timeouts += 1
             return {
                 "winner": active.opponent.value,
                 "subject_won": active.opponent is subject_player,
@@ -532,11 +535,24 @@ def analyze_one_game(
                 "crashes": crashes,
                 "timeouts": timeouts,
                 "subject_steps": subject_steps,
-                "termination_reason": f"crash:{type(exc).__name__}",
+                "termination_reason": "crash",
             }
         elapsed_ms = (time.perf_counter() - started) * 1000.0
-        if elapsed_ms > float(getattr(ai, "max_step_time_ms", 10**9)):
+        if _step_timed_out(ai, elapsed_ms):
             timeouts += 1
+
+        if move is None:
+            return {
+                "winner": active.opponent.value,
+                "subject_won": active.opponent is subject_player,
+                "subject_lost": active is subject_player,
+                "turns": turn,
+                "illegal_moves": illegal_moves,
+                "crashes": crashes,
+                "timeouts": timeouts,
+                "subject_steps": subject_steps,
+                "termination_reason": "no_move",
+            }
 
         if move not in legal:
             illegal_moves += 1
@@ -717,8 +733,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--score-margin", type=float, default=0.08)
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--max-examples", type=int, default=20)
-    parser.add_argument("--output", type=Path, default=Path("reports/p8_threat_defense_audit_20260517.md"))
-    parser.add_argument("--json-output", type=Path, default=Path("reports/p8_threat_defense_audit_20260517.json"))
+    parser.add_argument("--output", type=Path, default=ROOT / "reports/p8_threat_defense_audit_20260517.md")
+    parser.add_argument("--json-output", type=Path, default=ROOT / "reports/p8_threat_defense_audit_20260517.json")
     return parser
 
 

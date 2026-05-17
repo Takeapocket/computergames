@@ -228,6 +228,14 @@ def main(argv: list[str] | None = None) -> int:
     write_reports(payload, args.output, args.json_output)
     print(f"wrote {args.output}")
     print(f"wrote {args.json_output}")
+    hard_failures = []
+    if payload["exceptions"] > 0:
+        hard_failures.append(f"exceptions={payload['exceptions']}")
+    if payload["illegal_recommendations"] > 0:
+        hard_failures.append(f"illegal_recommendations={payload['illegal_recommendations']}")
+    if hard_failures:
+        print(f"[FAIL] timing gate: {', '.join(hard_failures)}", flush=True)
+        return 1
     return 0
 
 

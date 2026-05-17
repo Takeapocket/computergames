@@ -85,17 +85,27 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
         },
     },
     "rollout_32": {
-        "candidate": {"opponent": "rollout", "games_per_side": 100},
-        "promotion": {"opponent": "rollout", "games_per_side": 400},
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "games_per_side": 100,
+        },
+        "promotion": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "games_per_side": 400,
+        },
     },
     "rollout_risk_playout": {
         "candidate": {
             "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
             "games_per_side": 100,
             "candidate_kwargs": {"deadline_safety_ms": 30.0},
         },
         "promotion": {
             "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
             "games_per_side": 400,
             "candidate_kwargs": {"deadline_safety_ms": 30.0},
         },
@@ -103,11 +113,13 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
     "rollout_cutoff_eval": {
         "candidate": {
             "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
             "games_per_side": 100,
             "candidate_kwargs": {"deadline_safety_ms": 30.0},
         },
         "promotion": {
             "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
             "games_per_side": 400,
             "candidate_kwargs": {"deadline_safety_ms": 30.0},
         },
@@ -115,11 +127,13 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
     "rollout_zweistein_cutoff": {
         "candidate": {
             "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
             "games_per_side": 100,
             "candidate_kwargs": {"deadline_safety_ms": 30.0},
         },
         "promotion": {
             "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
             "games_per_side": 400,
             "candidate_kwargs": {"deadline_safety_ms": 30.0},
         },
@@ -130,6 +144,7 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
         "smoke": {"opponent": "greedy", "games_per_side": 50},
         "candidate": {
             "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
             "games_per_side": 400,
             "extra_gates": {"candidate_win_ci_lower": ("ge", 0.52)},
         },

@@ -7,6 +7,26 @@ from core.types import Player, Position
 from scripts import analyze_rollout_failures
 
 
+class _FixedDice:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+    def randint(self, lower: int, upper: int) -> int:
+        return self.value
+
+
+class _NoneMoveAI:
+    def choose_move(self, state, dice):
+        return None
+
+
+class _CrashingTimeoutAI:
+    max_step_time_ms = -1.0
+
+    def choose_move(self, state, dice):
+        raise RuntimeError("boom")
+
+
 def test_move_wins_immediately_detects_goal_corner() -> None:
     state = GameState.from_layout(
         red={6: Position(3, 3)},
@@ -92,3 +112,32 @@ def test_parse_seed_pool_rejects_empty_value() -> None:
         assert "at least one" in str(exc)
     else:
         raise AssertionError("expected empty seed pool to fail")
+
+
+def test_analyze_one_game_classifies_none_move_as_no_move_not_illegal() -> None:
+    result = analyze_rollout_failures.analyze_one_game(
+        subject_player=Player.RED,
+        subject_ai=_NoneMoveAI(),
+        opponent_ai=_NoneMoveAI(),
+        dice_rng=_FixedDice(1),
+        layout="balanced_v1",
+        max_turns=1,
+    )
+
+    assert result["termination_reason"] == "no_move"
+    assert result["illegal_moves"] == 0
+
+
+def test_analyze_one_game_counts_crash_timeout_like_match_harness() -> None:
+    result = analyze_rollout_failures.analyze_one_game(
+        subject_player=Player.RED,
+        subject_ai=_CrashingTimeoutAI(),
+        opponent_ai=_NoneMoveAI(),
+        dice_rng=_FixedDice(1),
+        layout="balanced_v1",
+        max_turns=1,
+    )
+
+    assert result["termination_reason"] == "crash"
+    assert result["crashes"] == 1
+    assert result["timeouts"] == 1

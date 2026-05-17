@@ -71,6 +71,9 @@ def opponent_winning_dice_set(state, *, opponent) -> set[int]:
     """
     from core.game_state import GameState
 
+    if state.get_winner() is not None:
+        return set()
+
     winning_dice: set[int] = set()
     snapshot = state.serialize()
     for d in range(1, 7):

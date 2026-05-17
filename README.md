@@ -89,14 +89,14 @@ replays/       auto_save 与对战 replay
 常用命令：
 
 ```powershell
-& ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red rollout --blue greedy_risk --games 200 --seed 2026
-& ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red greedy_risk --blue rollout --games 200 --seed 2026
+& ".venv/Scripts/python.exe" "scripts/bench_ai.py" --candidate rollout_adaptive_close_sample --stage candidate --report-name p72_candidate_rollout_adaptive_close_sample
+& ".venv/Scripts/python.exe" "scripts/bench_ai.py" --candidate rollout_zweistein_dp_cutoff --stage candidate --report-name p9_candidate_rollout_zweistein_dp_cutoff
 & ".venv/Scripts/python.exe" "scripts/tournament.py" --help
 ```
 
 默认 AI、参数或开局布局变更必须满足以下条件：
 
-- 直接对当前 release 默认 `rollout` 显式 kwargs 评测。
+- 直接对当前 release 默认 `rollout` 显式 kwargs 评测；`bench_ai.py` 的 candidate / promotion profile 会注入 `release/v1.0/default_params.json` 中的 rollout kwargs。
 - 使用双边对战数据，而不是单局印象。
 - 胜率、Wilson CI、非法走法、崩溃、真实 timeout telemetry、平均步时、最大步时均写入报告。
 - `illegal_moves = 0`、`crashes = 0`、真实 `timeouts = 0` 是晋升前置条件。

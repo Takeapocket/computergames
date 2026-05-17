@@ -33,10 +33,34 @@ EXPECTED_DEFAULT_PARAMS = {
     "promotion_report": "reports/ai_promotion_decision.md",
 }
 
+EXPECTED_RELEASE_CONFIG = {
+    "version": "1.0",
+    "default_ai": "rollout",
+    "default_layout": "balanced_v1",
+    "board_size": 5,
+    "time_limit_seconds": 240,
+    "max_games_per_match": 7,
+    "games_to_win_match": 4,
+    "offline_required": True,
+}
+
 DEFAULT_COMMANDS = (
     ("pytest -q", (sys.executable, "-m", "pytest", "-q")),
     ("scripts/smoke_test.py", (sys.executable, "scripts/smoke_test.py")),
     ("scripts/s2_rehearsal.py", (sys.executable, "scripts/s2_rehearsal.py")),
+    (
+        "scripts/timing_budget_probe.py --samples 16",
+        (
+            sys.executable,
+            "scripts/timing_budget_probe.py",
+            "--samples",
+            "16",
+            "--output",
+            "reports/preflight_timing_budget_probe.md",
+            "--json-output",
+            "reports/preflight_timing_budget_probe.json",
+        ),
+    ),
 )
 
 REQUIRED_FILES = (
@@ -45,8 +69,11 @@ REQUIRED_FILES = (
     "README.md",
     "docs/RULE_ASSUMPTIONS.md",
     "docs/PROJECT_BRIEF.md",
+    "release/v1.0/README.md",
     "release/v1.0/default_params.json",
     "release/v1.0/config.json",
+    "release/v1.0/test_report.md",
+    "release/v1.0/known_limitations.md",
     "scripts/smoke_test.py",
     "scripts/s2_rehearsal.py",
 )
@@ -87,10 +114,9 @@ def validate_release_files(project_root: Path = PROJECT_ROOT) -> None:
         raise PreflightError("default_params.json drifted from locked P3 rollout defaults")
 
     config = _read_json(project_root / "release" / "v1.0" / "config.json")
-    if config.get("default_ai") != "rollout":
-        raise PreflightError("config.json default_ai must be rollout")
-    if config.get("default_layout") != "balanced_v1":
-        raise PreflightError("config.json default_layout must be balanced_v1")
+    for key, expected in EXPECTED_RELEASE_CONFIG.items():
+        if config.get(key) != expected:
+            raise PreflightError(f"config.json {key} must be {expected!r}")
 
 
 def validate_gui_defaults() -> None:

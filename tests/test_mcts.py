@@ -121,6 +121,26 @@ def test_mcts_timeout_returns_legal_move_without_crash():
     assert move in state.legal_moves(state.current_player, 6)
 
 
+def test_mcts_stops_inside_iteration_when_deadline_expires(monkeypatch):
+    state = default_starting_state()
+    legal = state.legal_moves(state.current_player, 6)
+    times = iter([0.0, 0.0005, 0.002, 0.002])
+
+    def fake_perf_counter() -> float:
+        return next(times, 0.002)
+
+    def fail_if_leaf_is_reached(self, state: GameState, perspective: Player) -> float:
+        raise AssertionError("MCTS evaluated a leaf after the deadline")
+
+    monkeypatch.setattr("ai.mcts.time.perf_counter", fake_perf_counter)
+    monkeypatch.setattr(MCTSAI, "_leaf_score", fail_if_leaf_is_reached)
+    ai = MCTSAI(time_limit_ms=1.0, rng=random.Random(3))
+
+    move = ai.choose_move(state, 6)
+
+    assert move in legal
+
+
 def test_mcts_never_returns_illegal_move_over_many_states():
     rng = random.Random(99)
     state = default_starting_state()

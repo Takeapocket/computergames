@@ -4,7 +4,9 @@ import tempfile
 import tkinter as tk
 from pathlib import Path
 
-sys.path.insert(0, ".")
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # 先把 auto-save 路径换成临时目录，避免触发恢复 dialog
 _tmp = Path(tempfile.mkdtemp(prefix="r2-smoke-"))

@@ -9,6 +9,26 @@ from core.types import Player, Position
 from scripts import analyze_threat_defense
 
 
+class _FixedDice:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+    def randint(self, lower: int, upper: int) -> int:
+        return self.value
+
+
+class _NoneMoveAI:
+    def choose_move(self, state, dice):
+        return None
+
+
+class _CrashingTimeoutAI:
+    max_step_time_ms = -1.0
+
+    def choose_move(self, state, dice):
+        raise RuntimeError("boom")
+
+
 def test_opponent_winning_dice_after_move_detects_goal_threat() -> None:
     state = GameState.from_layout(
         red={6: Position(0, 0)},
@@ -417,3 +437,41 @@ def test_main_writes_smoke_reports(tmp_path) -> None:
         "low_confidence_threat_reducing_examples",
         "allowed_direct_loss_examples",
     }
+
+
+def test_analyze_one_game_classifies_none_move_as_no_move_not_illegal() -> None:
+    result = analyze_threat_defense.analyze_one_game(
+        subject_player=Player.RED,
+        subject_ai=_NoneMoveAI(),
+        opponent_ai=_NoneMoveAI(),
+        dice_rng=_FixedDice(1),
+        layout="balanced_v1",
+        max_turns=1,
+        top_k=5,
+    )
+
+    assert result["termination_reason"] == "no_move"
+    assert result["illegal_moves"] == 0
+
+
+def test_analyze_one_game_counts_crash_timeout_like_match_harness() -> None:
+    result = analyze_threat_defense.analyze_one_game(
+        subject_player=Player.RED,
+        subject_ai=_CrashingTimeoutAI(),
+        opponent_ai=_NoneMoveAI(),
+        dice_rng=_FixedDice(1),
+        layout="balanced_v1",
+        max_turns=1,
+        top_k=5,
+    )
+
+    assert result["termination_reason"] == "crash"
+    assert result["crashes"] == 1
+    assert result["timeouts"] == 1
+
+
+def test_default_report_paths_are_repo_relative() -> None:
+    args = analyze_threat_defense.build_parser().parse_args([])
+
+    assert args.output == analyze_threat_defense.ROOT / "reports/p8_threat_defense_audit_20260517.md"
+    assert args.json_output == analyze_threat_defense.ROOT / "reports/p8_threat_defense_audit_20260517.json"

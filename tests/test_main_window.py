@@ -52,6 +52,14 @@ def _record_with_one_move_and_timer_data():
     return record
 
 
+def _enable_move_selection(window: MainWindow, *, dice: int = 6) -> None:
+    window._phase = "playing"
+    window._awaiting_dice = False
+    window.current_dice = dice
+    window._show_playing_phase()
+    window._refresh()
+
+
 def test_tk_root_fixture_uses_hidden_toplevel(tk_root):
     assert tk_root.state() == "withdrawn"
 
@@ -132,6 +140,7 @@ def test_undo_button_disabled_when_history_empty(tk_root):
 def test_undo_button_enabled_after_move_applied(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
 
     moves = window._current_moves()
     assert moves, "setup: at least one legal move with default dice 6"
@@ -144,6 +153,7 @@ def test_undo_button_enabled_after_move_applied(tk_root):
 def test_undo_button_disabled_again_after_undo(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
 
     moves = window._current_moves()
     assert moves
@@ -165,6 +175,7 @@ def test_record_dirty_false_on_fresh_window(tk_root):
 def test_record_dirty_true_after_apply(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
 
     moves = window._current_moves()
     assert moves
@@ -178,6 +189,7 @@ def test_record_dirty_true_after_apply(tk_root):
 def test_record_dirty_true_after_undo(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
 
     moves = window._current_moves()
     assert moves
@@ -188,14 +200,16 @@ def test_record_dirty_true_after_undo(tk_root):
     assert window._record_dirty is True
 
 
-def test_record_dirty_false_after_reset(tk_root):
+def test_record_dirty_false_after_reset(tk_root, monkeypatch):
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
 
     moves = window._current_moves()
     assert moves
     window.selected_move_index = 0
     window._apply_selected_move()
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *args, **kwargs: True)
     window._reset_game()
 
     assert window._record_dirty is False
@@ -210,6 +224,7 @@ def test_apply_move_writes_auto_save(tk_root, monkeypatch):
     monkeypatch.setattr("gui.main_window.auto_save", fake_auto_save)
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
 
     moves = window._current_moves()
     assert moves
@@ -230,6 +245,7 @@ def test_undo_move_writes_auto_save_after_successful_undo(tk_root, monkeypatch):
     monkeypatch.setattr("gui.main_window.auto_save", fake_auto_save)
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
 
     moves = window._current_moves()
     assert moves
@@ -340,6 +356,7 @@ def test_phase_starts_in_awaiting_dice(tk_root):
 def test_phase_after_dice_input_is_select(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    window._phase = "playing"
 
     window._handle_dice_change("3")
 
@@ -350,6 +367,7 @@ def test_phase_after_dice_input_is_select(tk_root):
 def test_phase_returns_to_awaiting_dice_after_apply(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    window._phase = "playing"
     window._handle_dice_change("6")
 
     moves = window._current_moves()
@@ -360,14 +378,16 @@ def test_phase_returns_to_awaiting_dice_after_apply(tk_root):
     assert "录入骰子" in window.match_mode_panel.phase_var.get()
 
 
-def test_phase_returns_to_awaiting_dice_after_reset(tk_root):
+def test_phase_returns_to_awaiting_dice_after_reset(tk_root, monkeypatch):
     window = MainWindow(tk_root)
     window.pack()
+    window._phase = "playing"
     window._handle_dice_change("6")
     moves = window._current_moves()
     window.selected_move_index = 0
     window._apply_selected_move()
 
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *args, **kwargs: True)
     window._reset_game()
 
     assert window._awaiting_dice is True
@@ -499,6 +519,7 @@ def test_phase_in_match_opponent_turn_after_dice_input(tk_root):
     window = MainWindow(tk_root)
     window.pack()
     window._set_mode("match", our_side=Player.BLUE)
+    window._phase = "playing"
     window._handle_dice_change("3")
 
     assert "等待对方" in window.match_mode_panel.phase_var.get()
@@ -516,6 +537,8 @@ def test_apply_move_records_source_self_in_match_mode_my_turn(tk_root):
     window = MainWindow(tk_root)
     window.pack()
     window._set_mode("match", our_side=Player.RED)
+    window._phase = "playing"
+    window._handle_dice_change("6")
     moves = window._current_moves()
     assert moves
     window.selected_move_index = 0
@@ -529,6 +552,8 @@ def test_apply_move_records_source_opponent_in_match_mode_opponent_turn(tk_root)
     window = MainWindow(tk_root)
     window.pack()
     window._set_mode("match", our_side=Player.BLUE)
+    window._phase = "playing"
+    window._handle_dice_change("6")
     moves = window._current_moves()
     assert moves
     window.selected_move_index = 0
@@ -541,6 +566,7 @@ def test_apply_move_records_source_opponent_in_match_mode_opponent_turn(tk_root)
 def test_apply_move_records_source_unknown_in_debug_mode(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
     moves = window._current_moves()
     assert moves
     window.selected_move_index = 0
@@ -591,6 +617,7 @@ def test_match_mode_panel_waits_for_dice_before_showing_recommendation(tk_root):
 def test_match_mode_panel_displays_rollout_recommendation_after_dice_input(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    window._phase = "playing"
 
     window._handle_dice_change("6")
 
@@ -616,6 +643,7 @@ def test_recommendation_is_cached_until_state_or_dice_changes(tk_root):
     window.pack()
     ai = CountingAI()
     window._recommender = ai
+    window._phase = "playing"
 
     window._handle_dice_change("6")
     window._refresh()
@@ -631,6 +659,7 @@ def test_recommendation_is_cached_until_state_or_dice_changes(tk_root):
 def test_match_mode_panel_record_status_changes_on_apply(tk_root):
     window = MainWindow(tk_root)
     window.pack()
+    _enable_move_selection(window)
     moves = window._current_moves()
     assert moves
     window.selected_move_index = 0
@@ -725,6 +754,7 @@ def test_load_record_restores_match_side_from_metadata(tk_root, tmp_path, monkey
     assert window._mode == "match"
     assert window._our_side is Player.BLUE
 
+    window._handle_dice_change("6")
     window.selected_move_index = 0
     window._apply_selected_move()
 
@@ -792,3 +822,180 @@ def test_corrupt_single_game_auto_save_is_cleared_without_prompt(tk_root, monkey
     assert window._mode == "debug"
     assert window._phase == "setup"
     assert not auto_save_path.exists()
+
+
+def test_setup_phase_hides_moves_and_blocks_apply(tk_root):
+    window = MainWindow(tk_root)
+    window.pack()
+
+    window.selected_move_index = 0
+    before_history = len(window.state.history)
+    window._apply_selected_move()
+
+    assert window._phase == "setup"
+    assert window._current_moves() == []
+    assert window.controls.move_listbox.size() == 0
+    assert len(window.state.history) == before_history
+    assert "开局" in window.status_message
+
+
+def test_awaiting_dice_blocks_move_selection_and_apply(tk_root):
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._awaiting_dice = True
+    window.selected_move_index = 0
+
+    before_history = len(window.state.history)
+    window._handle_move_select(0)
+    window._apply_selected_move()
+
+    assert window.selected_move_index is None
+    assert window.selected_position is None
+    assert len(window.state.history) == before_history
+    assert "骰子" in window.status_message
+
+
+def test_finished_match_blocks_apply_even_with_stale_selection(tk_root):
+    from record.match_record import MatchRecord
+
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._awaiting_dice = False
+    window._mode = "match"
+    window._our_side = Player.RED
+    window._match = MatchRecord(
+        our_side=Player.RED,
+        our_role="甲",
+        games_won_us=4,
+        phase="finished",
+    )
+    window.selected_move_index = 0
+
+    before_history = len(window.state.history)
+    window._apply_selected_move()
+
+    assert len(window.state.history) == before_history
+    assert "本轮已结束" in window.status_message
+
+
+def test_finished_match_disables_operator_controls(tk_root):
+    from record.match_record import MatchRecord
+
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._awaiting_dice = False
+    window.state.apply_move(window.state.legal_moves(Player.RED, 6)[0], dice=6)
+    window._mode = "match"
+    window._our_side = Player.RED
+    window._match = MatchRecord(
+        our_side=Player.RED,
+        our_role="甲",
+        games_won_us=4,
+        phase="finished",
+    )
+    window.selected_move_index = 0
+
+    window._refresh()
+
+    assert window.controls.apply_button.cget("state") == tk.DISABLED
+    assert window.controls.undo_button.cget("state") == tk.DISABLED
+    assert window.controls.dice_spinbox.cget("state") == tk.DISABLED
+    assert window.controls.move_listbox.cget("state") == tk.DISABLED
+
+
+def test_reset_active_match_or_dirty_record_requires_confirmation(tk_root, monkeypatch):
+    from record.match_record import MatchRecord
+
+    window = MainWindow(tk_root)
+    window.pack()
+    match = MatchRecord(our_side=Player.RED, our_role="甲", phase="playing")
+    window._match = match
+    window._mode = "match"
+    window._our_side = Player.RED
+    window._record_dirty = True
+
+    prompts = []
+
+    def refuse_reset(title, message, **kwargs):
+        prompts.append((title, message))
+        return False
+
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", refuse_reset)
+
+    window._reset_game()
+
+    assert window._match is match
+    assert window._mode == "match"
+    assert window._record_dirty is True
+    assert prompts
+    assert "放弃本轮" in prompts[0][1]
+    assert "当前记录" in prompts[0][1]
+
+
+def test_debug_menu_confirms_before_exiting_active_match(tk_root, monkeypatch):
+    from record.match_record import MatchRecord
+
+    window = MainWindow(tk_root)
+    window.pack()
+    match = MatchRecord(our_side=Player.RED, our_role="甲", phase="playing")
+    window._match = match
+    window._mode = "match"
+    window._our_side = Player.RED
+
+    prompts = []
+
+    def refuse_exit(title, message, **kwargs):
+        prompts.append((title, message))
+        return False
+
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", refuse_exit)
+
+    menubar = tk_root.nametowidget(tk_root.cget("menu"))
+    mode_menu = tk_root.nametowidget(menubar.entrycget(1, "menu"))
+    mode_menu.invoke(0)
+
+    assert window._match is match
+    assert window._mode == "match"
+    assert prompts
+    assert "放弃本轮" in prompts[0][1]
+
+
+def test_operator_move_list_distinguishes_self_capture(tk_root):
+    from core.game_state import GameState
+    from core.types import Position
+    from record.game_record import GameRecord
+
+    state = GameState.from_layout(
+        red={1: Position(0, 0), 2: Position(0, 1)},
+        blue={1: Position(4, 4)},
+        current_player=Player.RED,
+    )
+    window = MainWindow(tk_root)
+    window.pack()
+    window.state = state
+    window.record = GameRecord.from_state(state)
+    window._phase = "playing"
+    window._awaiting_dice = False
+    window.current_dice = 1
+
+    window._refresh()
+
+    labels = window.controls.move_listbox.get(0, tk.END)
+    assert any("自吃" in label for label in labels)
+    assert not any("吃子" in label and "自吃" not in label for label in labels)
+
+
+def test_match_opponent_turn_recommendation_waits_for_opponent_move(tk_root):
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._set_mode("match", our_side=Player.BLUE)
+
+    window._handle_dice_change("6")
+
+    recommendation = window.match_mode_panel.recommendation_var.get()
+    assert "等待对方走法" in recommendation
+    assert "rollout" not in recommendation

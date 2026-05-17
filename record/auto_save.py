@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
 from core.types import Player
-from record.game_record import GameRecord
+from record.game_record import GameRecord, _atomic_write_text
 from record.match_record import MatchRecord
 
 
@@ -23,51 +21,56 @@ class TimerSnapshotLike(Protocol):
     paused: bool
 
 
-def _atomic_write_text(target: Path, text: str, *, encoding: str = "utf-8") -> None:
-    """R-2 review Critical #3：原子写。同目录写临时文件 + os.replace，避免中途崩溃损坏现有文件。"""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_path = tempfile.mkstemp(
-        prefix=".tmp-",
-        suffix=target.suffix or ".tmp",
-        dir=str(target.parent),
-    )
-    try:
-        with os.fdopen(fd, "w", encoding=encoding, newline="") as fh:
-            fh.write(text)
-        os.replace(tmp_path, target)
-    except BaseException:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-        raise
-
-
-def _is_valid_json_file(target: Path) -> bool:
-    """R-2 review Important #11：has_auto_save* 不能只看非空，还要保证能解析为 JSON 对象。"""
+def _load_json_payload(target: Path) -> Any:
     try:
         text = target.read_text(encoding="utf-8")
-    except OSError:
-        return False
+    except OSError as exc:
+        raise ValueError(f"cannot read auto-save file: {exc}") from exc
     if not text.strip():
-        return False
+        raise ValueError("auto-save file is empty")
+    return json.loads(text)
+
+
+def _validate_auto_save_payload(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        raise ValueError("auto-save payload must be a JSON object")
+    record = GameRecord.from_dict(payload)
+    timer_metadata = record.metadata.get(AUTO_SAVE_METADATA_KEY)
+    if not isinstance(timer_metadata, dict):
+        raise ValueError("invalid auto-save metadata")
+    _validate_timer_metadata(timer_metadata)
+
+
+def _validate_standard_match_auto_save(match: MatchRecord) -> None:
+    if match.total_games != 7 or match.target_wins != 4:
+        raise ValueError("standard 7-game match requires total_games=7 and target_wins=4")
+
+
+def _validate_match_auto_save_payload(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        raise ValueError("match auto-save payload must be a JSON object")
+    _validate_standard_match_auto_save(MatchRecord.from_dict(payload))
+
+
+def _is_valid_json_file(target: Path, validator: Callable[[Any], None]) -> bool:
+    """R-2/P6 恢复入口：JSON 语法和对应 auto-save schema 都必须有效。"""
     try:
-        json.loads(text)
-    except json.JSONDecodeError:
+        validator(_load_json_payload(target))
+    except (json.JSONDecodeError, TypeError, ValueError):
         return False
     return True
 
 
-def _is_invalid_json_file(path: Path) -> bool:
-    return path.is_file() and not _is_valid_json_file(path)
+def _is_invalid_json_file(path: Path, validator: Callable[[Any], None]) -> bool:
+    return path.is_file() and not _is_valid_json_file(path, validator)
 
 
 def is_invalid_auto_save_file(*, path: str | Path = AUTO_SAVE_PATH) -> bool:
-    return _is_invalid_json_file(Path(path))
+    return _is_invalid_json_file(Path(path), _validate_auto_save_payload)
 
 
 def is_invalid_match_auto_save_file(*, path: str | Path = AUTO_SAVE_MATCH_PATH) -> bool:
-    return _is_invalid_json_file(Path(path))
+    return _is_invalid_json_file(Path(path), _validate_match_auto_save_payload)
 
 
 def auto_save(
@@ -91,7 +94,7 @@ def has_auto_save(*, path: str | Path = AUTO_SAVE_PATH) -> bool:
     target = Path(path)
     if not target.is_file():
         return False
-    return _is_valid_json_file(target)
+    return _is_valid_json_file(target, _validate_auto_save_payload)
 
 
 def load_auto_save(*, path: str | Path = AUTO_SAVE_PATH) -> tuple[GameRecord, dict[str, Any]]:
@@ -144,11 +147,13 @@ def has_auto_save_match(*, path: str | Path = AUTO_SAVE_MATCH_PATH) -> bool:
     target = Path(path)
     if not target.is_file():
         return False
-    return _is_valid_json_file(target)
+    return _is_valid_json_file(target, _validate_match_auto_save_payload)
 
 
 def load_auto_save_match(*, path: str | Path = AUTO_SAVE_MATCH_PATH) -> MatchRecord:
-    return MatchRecord.load(path)
+    match = MatchRecord.load(path)
+    _validate_standard_match_auto_save(match)
+    return match
 
 
 def clear_auto_save_match(*, path: str | Path = AUTO_SAVE_MATCH_PATH) -> None:

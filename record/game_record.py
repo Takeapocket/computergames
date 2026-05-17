@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -12,6 +14,25 @@ from core.types import Player
 
 
 MoveSource = Literal["self", "opponent", "unknown"]
+
+
+def _atomic_write_text(target: Path, text: str, *, encoding: str = "utf-8") -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(
+        prefix=".tmp-",
+        suffix=target.suffix or ".tmp",
+        dir=str(target.parent),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding=encoding, newline="") as fh:
+            fh.write(text)
+        os.replace(tmp_path, target)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 @dataclass(frozen=True)
@@ -144,9 +165,24 @@ class GameRecord:
                 metadata=dict(metadata),
                 result=dict(result),
             )
-            for step in record.steps:
-                GameState.deserialize(step.state_after)
-            record.restore_state()
+            state = GameState.deserialize(record.initial_state)
+            for expected_turn, step in enumerate(record.steps, start=1):
+                if step.turn != expected_turn:
+                    raise ValueError(
+                        f"step turn must be continuous: expected {expected_turn}, got {step.turn}"
+                    )
+                if step.player is not step.move.player:
+                    raise ValueError(
+                        f"step player {step.player.value!r} differs from move player "
+                        f"{step.move.player.value!r}"
+                    )
+                state.apply_move(step.move, dice=step.dice)
+                expected_state_after = GameState.deserialize(step.state_after).serialize(
+                    include_history=False
+                )
+                actual_state_after = state.serialize(include_history=False)
+                if actual_state_after != expected_state_after:
+                    raise ValueError("step state_after does not match replayed state")
             return record
         except (AttributeError, KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"invalid game record data: {exc}") from exc
@@ -163,7 +199,7 @@ class GameRecord:
         return cls.from_dict(data)
 
     def save(self, path: str | Path) -> None:
-        Path(path).write_text(self.to_json(indent=2) + "\n", encoding="utf-8")
+        _atomic_write_text(Path(path), self.to_json(indent=2) + "\n")
 
     @classmethod
     def load(cls, path: str | Path) -> "GameRecord":

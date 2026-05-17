@@ -27,6 +27,8 @@ DEFAULT_BLUE_LAYOUT: dict[int, Position] = {
     6: Position(2, 4),
 }
 
+APP_TITLE = "爱恩斯坦棋离线 GUI 参赛程序"
+
 
 def create_default_state() -> GameState:
     return GameState.from_layout(
@@ -64,7 +66,7 @@ def main() -> None:
 
     args = parse_args()
     root = tk.Tk()
-    root.title("爱恩斯坦棋 - 最小 GUI")
+    root.title(APP_TITLE)
     root.minsize(800, 520)
 
     window = MainWindow(root, total_seconds=args.total_seconds)

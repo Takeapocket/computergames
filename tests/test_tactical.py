@@ -262,6 +262,18 @@ def test_opponent_winning_dice_set_works_on_post_apply_state():
         state.undo_move()
 
 
+def test_opponent_winning_dice_set_is_empty_after_game_already_won():
+    state = _state(
+        red={6: Position(4, 4)},
+        blue={5: Position(1, 0)},
+        current_player=Player.BLUE,
+    )
+
+    threats = opponent_winning_dice_set(state, opponent=Player.BLUE)
+
+    assert threats == set()
+
+
 # -------- find_neutralizing_moves --------
 
 def test_find_neutralizing_moves_uses_perspective_opponent():

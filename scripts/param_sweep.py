@@ -65,6 +65,7 @@ def summarize_candidate(
     games: int,
     illegal_moves: int,
     crashes: int,
+    timeouts: int,
     max_step_time_ms: float,
 ) -> str:
     """单候选 markdown 行（用于 report 主体）。"""
@@ -72,7 +73,7 @@ def summarize_candidate(
     params_str = ", ".join(f"{k}={v}" for k, v in params.items())
     return (
         f"- {rate:.1f}% (wins={wins}/{games}) "
-        f"illegal={illegal_moves} crashes={crashes} "
+        f"illegal={illegal_moves} crashes={crashes} timeouts={timeouts} "
         f"max_step_ms={max_step_time_ms:.1f} "
         f"| {params_str}"
     )
@@ -87,6 +88,7 @@ def _combine_stats(stats_list: list[dict]) -> dict:
         "games": games,
         "illegal_moves": sum(stats["illegal_moves"] for stats in stats_list),
         "crashes": sum(stats["crashes"] for stats in stats_list),
+        "timeouts": sum(stats.get("timeouts", 0) for stats in stats_list),
         "max_step_time_ms": max((stats["max_step_time_ms"] for stats in stats_list), default=0.0),
         "avg_step_time_ms": (total_step_time / step_count) if step_count else 0.0,
         "total_step_time_ms": total_step_time,
@@ -106,6 +108,7 @@ def _run_candidate(
     wins = 0
     illegal = 0
     crashes = 0
+    timeouts = 0
     step_times: list[float] = []
     for i in range(games):
         per_game_seed = master_seed * 100_000 + i
@@ -132,6 +135,7 @@ def _run_candidate(
             wins += 1
         illegal += result.illegal_moves
         crashes += result.crashes
+        timeouts += int(getattr(result, "timeouts", 0))
         step_times.extend(result.step_times_ms)
 
     return {
@@ -139,6 +143,7 @@ def _run_candidate(
         "games": games,
         "illegal_moves": illegal,
         "crashes": crashes,
+        "timeouts": timeouts,
         "max_step_time_ms": max(step_times) if step_times else 0.0,
         "avg_step_time_ms": (sum(step_times) / len(step_times)) if step_times else 0.0,
         "total_step_time_ms": sum(step_times),
@@ -255,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
             games=stats["games"],
             illegal_moves=stats["illegal_moves"],
             crashes=stats["crashes"],
+            timeouts=stats["timeouts"],
             max_step_time_ms=stats["max_step_time_ms"],
         ))
     lines.append("")
@@ -267,6 +273,7 @@ def main(argv: list[str] | None = None) -> int:
             games=stats["games"],
             illegal_moves=stats["illegal_moves"],
             crashes=stats["crashes"],
+            timeouts=stats["timeouts"],
             max_step_time_ms=stats["max_step_time_ms"],
         ))
     lines.append("")

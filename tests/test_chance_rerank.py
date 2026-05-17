@@ -6,6 +6,7 @@ import pytest
 from ai.chance_rerank import ExactOpponentDiceRerankAI, exact_opp1_zdp_value
 from ai.rollout_ai import RootMoveStats
 from core.game_state import GameState
+from core.move import Move
 from core.types import Player, Position
 
 
@@ -59,6 +60,26 @@ def test_exact_opp1_rerank_passthrough_when_base_has_no_root_stats() -> None:
 
     assert ai.choose_move(state, 1) == base_move
     assert ai.fire_counts["passthrough_no_stats"] == 1
+
+
+def test_exact_opp1_rerank_falls_back_when_base_returns_illegal_move() -> None:
+    state = _state_with_three_red_moves()
+    legal = state.legal_moves(Player.RED, 1)
+    sample = legal[0]
+    illegal = Move(
+        player=sample.player,
+        piece_id=sample.piece_id,
+        from_pos=sample.from_pos,
+        to_pos=Position(99, 99),
+        is_capture=False,
+        captured_piece=None,
+    )
+    ai = ExactOpponentDiceRerankAI(base=_FakeBase(move=illegal), rng=random.Random(1))
+
+    move = ai.choose_move(state, 1)
+
+    assert move in legal
+    assert ai.fire_counts["fallback_illegal_base"] == 1
 
 
 def test_exact_opp1_rerank_selects_topk_move_when_mixed_score_improves(monkeypatch) -> None:

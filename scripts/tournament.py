@@ -68,6 +68,7 @@ def _run_pair(
     draws = 0
     illegal = 0
     crashes = 0
+    timeouts = 0
     step_times: list[float] = []
 
     for i in range(games):
@@ -94,6 +95,7 @@ def _run_pair(
             draws += 1
         illegal += result.illegal_moves
         crashes += result.crashes
+        timeouts += int(getattr(result, "timeouts", 0))
         step_times.extend(result.step_times_ms)
 
     avg_step = sum(step_times) / len(step_times) if step_times else 0.0
@@ -105,6 +107,7 @@ def _run_pair(
         "draws": draws,
         "illegal_moves": illegal,
         "crashes": crashes,
+        "timeouts": timeouts,
         "average_step_time_ms": avg_step,
         "max_step_time_ms": max_step,
     }
@@ -123,6 +126,7 @@ def run_tournament(
     pair_stats: list[dict] = []
     total_illegal = 0
     total_crashes = 0
+    total_timeouts = 0
 
     for red in ais:
         for blue in ais:
@@ -144,6 +148,7 @@ def run_tournament(
             })
             total_illegal += stats["illegal_moves"]
             total_crashes += stats["crashes"]
+            total_timeouts += stats.get("timeouts", 0)
 
     metadata = {
         "ais": ais,
@@ -153,6 +158,7 @@ def run_tournament(
         "max_turns": max_turns,
         "illegal_moves_total": total_illegal,
         "crashes_total": total_crashes,
+        "timeouts_total": total_timeouts,
         "pairs": pair_stats,
     }
     return matrix, metadata
@@ -196,7 +202,8 @@ def main(argv: list[str] | None = None) -> int:
         f"layout: {args.starting_layout}\n"
         f"wall_seconds: {metadata['wall_seconds']}\n"
         f"illegal_moves_total: {metadata['illegal_moves_total']}\n"
-        f"crashes_total: {metadata['crashes_total']}\n\n"
+        f"crashes_total: {metadata['crashes_total']}\n"
+        f"timeouts_total: {metadata['timeouts_total']}\n\n"
         f"行 = Red 方 AI；列 = Blue 方 AI；值 = Red 视角胜率（按对应有序对 `--games` 局）。\n\n"
         f"{body}\n\n"
         "## Per-pair metadata\n\n"

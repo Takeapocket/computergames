@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from core.game_state import GameState
@@ -168,7 +170,8 @@ def test_has_auto_save_match_empty_file_is_false(tmp_path):
 
 def test_atomic_write_preserves_existing_file_on_failure(tmp_path, monkeypatch):
     """中途崩溃（os.replace 之前）不应破坏原文件。"""
-    import record.auto_save as auto_save_mod
+    import os
+
     from record.auto_save import auto_save
 
     path = tmp_path / "auto_save.json"
@@ -179,12 +182,10 @@ def test_atomic_write_preserves_existing_file_on_failure(tmp_path, monkeypatch):
     original = path.read_text(encoding="utf-8")
 
     # 模拟 _atomic_write_text 内部失败：把 os.replace 替换成抛 OSError
-    real_replace = auto_save_mod.os.replace
-
     def boom(src, dst):  # noqa: ANN001
         raise OSError("disk full simulation")
 
-    monkeypatch.setattr(auto_save_mod.os, "replace", boom)
+    monkeypatch.setattr(os, "replace", boom)
     with pytest.raises(OSError, match="disk full"):
         auto_save(record, snapshot, path=path)
 
@@ -193,8 +194,6 @@ def test_atomic_write_preserves_existing_file_on_failure(tmp_path, monkeypatch):
     # 同目录无残留 .tmp- 临时文件
     tmps = [p for p in path.parent.iterdir() if p.name.startswith(".tmp-")]
     assert tmps == []
-
-    monkeypatch.setattr(auto_save_mod.os, "replace", real_replace)
 
 
 def test_has_auto_save_rejects_corrupt_json(tmp_path):
@@ -206,12 +205,63 @@ def test_has_auto_save_rejects_corrupt_json(tmp_path):
     assert has_auto_save(path=path) is False
 
 
+@pytest.mark.parametrize("payload", ["{}", "[]"])
+def test_has_auto_save_rejects_semantically_invalid_json(tmp_path, payload):
+    from record.auto_save import has_auto_save, is_invalid_auto_save_file
+
+    path = tmp_path / "auto_save.json"
+    path.write_text(payload, encoding="utf-8")
+
+    assert has_auto_save(path=path) is False
+    assert is_invalid_auto_save_file(path=path) is True
+
+
+def test_has_auto_save_rejects_record_without_timer_metadata(tmp_path):
+    from record.auto_save import has_auto_save, is_invalid_auto_save_file
+
+    path = tmp_path / "auto_save.json"
+    path.write_text(make_record_with_one_step().to_json(indent=2), encoding="utf-8")
+
+    assert has_auto_save(path=path) is False
+    assert is_invalid_auto_save_file(path=path) is True
+
+
 def test_has_auto_save_match_rejects_corrupt_json(tmp_path):
     from record.auto_save import has_auto_save_match
 
     path = tmp_path / "auto_save_match.json"
     path.write_text("not even json", encoding="utf-8")
     assert has_auto_save_match(path=path) is False
+
+
+@pytest.mark.parametrize("payload", ["{}", "[]"])
+def test_has_auto_save_match_rejects_semantically_invalid_json(tmp_path, payload):
+    from record.auto_save import has_auto_save_match, is_invalid_match_auto_save_file
+
+    path = tmp_path / "auto_save_match.json"
+    path.write_text(payload, encoding="utf-8")
+
+    assert has_auto_save_match(path=path) is False
+    assert is_invalid_match_auto_save_file(path=path) is True
+
+
+def test_auto_save_match_rejects_total_games_drift(tmp_path):
+    from record.auto_save import (
+        has_auto_save_match,
+        is_invalid_match_auto_save_file,
+        load_auto_save_match,
+    )
+
+    path = tmp_path / "auto_save_match.json"
+    payload = _make_match().to_dict()
+    payload["total_games"] = 9
+    payload["target_wins"] = 5
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert has_auto_save_match(path=path) is False
+    assert is_invalid_match_auto_save_file(path=path) is True
+    with pytest.raises(ValueError, match="standard 7-game match"):
+        load_auto_save_match(path=path)
 
 
 def test_is_invalid_auto_save_file_detects_corrupt_json(tmp_path):
@@ -240,7 +290,8 @@ def test_is_invalid_match_auto_save_file_detects_corrupt_json(tmp_path):
 
 def test_auto_save_match_atomic_write_preserves_existing(tmp_path, monkeypatch):
     """match auto-save 也走原子写。"""
-    import record.auto_save as auto_save_mod
+    import os
+
     from record.auto_save import auto_save_match
     from record.match_record import MatchRecord
 
@@ -253,7 +304,7 @@ def test_auto_save_match_atomic_write_preserves_existing(tmp_path, monkeypatch):
     def boom(src, dst):  # noqa: ANN001
         raise OSError("simulated failure")
 
-    monkeypatch.setattr(auto_save_mod.os, "replace", boom)
+    monkeypatch.setattr(os, "replace", boom)
     with pytest.raises(OSError):
         auto_save_match(match, path=path)
     assert path.read_text(encoding="utf-8") == original

@@ -18,6 +18,16 @@ class Move:
     def __post_init__(self) -> None:
         object.__setattr__(self, "player", Player.from_value(self.player))
 
+    def copy(self) -> "Move":
+        return Move(
+            player=self.player,
+            piece_id=self.piece_id,
+            from_pos=self.from_pos,
+            to_pos=self.to_pos,
+            is_capture=self.is_capture,
+            captured_piece=self.captured_piece.copy() if self.captured_piece is not None else None,
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "player": self.player.value,

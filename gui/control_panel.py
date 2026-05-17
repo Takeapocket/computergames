@@ -67,12 +67,17 @@ class ControlPanel(tk.Frame):
         self.dice_var.set(str(dice))
 
     def set_moves(self, labels: Sequence[str], selected_index: int | None) -> None:
+        previous_state = str(self.move_listbox.cget("state"))
+        if previous_state == tk.DISABLED:
+            self.move_listbox.configure(state=tk.NORMAL)
         self.move_listbox.delete(0, tk.END)
         for label in labels:
             self.move_listbox.insert(tk.END, label)
         if selected_index is not None and 0 <= selected_index < len(labels):
             self.move_listbox.selection_set(selected_index)
             self.move_listbox.see(selected_index)
+        if previous_state == tk.DISABLED:
+            self.move_listbox.configure(state=tk.DISABLED)
 
     def set_winner(self, value: str) -> None:
         self.winner_var.set(f"胜负：{value}")
@@ -85,6 +90,12 @@ class ControlPanel(tk.Frame):
 
     def set_can_undo(self, enabled: bool) -> None:
         self.undo_button.configure(state=tk.NORMAL if enabled else tk.DISABLED)
+
+    def set_dice_enabled(self, enabled: bool) -> None:
+        self.dice_spinbox.configure(state=tk.NORMAL if enabled else tk.DISABLED)
+
+    def set_move_selection_enabled(self, enabled: bool) -> None:
+        self.move_listbox.configure(state=tk.NORMAL if enabled else tk.DISABLED)
 
     def _emit_dice_change(self, event: tk.Event | None = None) -> None:
         self._on_dice_change(self.dice_var.get())

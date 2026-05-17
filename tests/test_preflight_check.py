@@ -8,26 +8,27 @@ import pytest
 from scripts import preflight_check
 
 
-def _write_release_files(root: Path, *, default_layout: str = "balanced_v1") -> None:
+def _write_release_files(root: Path, *, default_layout: str = "balanced_v1", config_overrides: dict | None = None) -> None:
     release_dir = root / "release" / "v1.0"
     release_dir.mkdir(parents=True)
+    config = {
+        "version": "1.0",
+        "default_ai": "rollout",
+        "default_layout": default_layout,
+        "board_size": 5,
+        "time_limit_seconds": 240,
+        "max_games_per_match": 7,
+        "games_to_win_match": 4,
+        "offline_required": True,
+    }
+    if config_overrides:
+        config.update(config_overrides)
     (release_dir / "default_params.json").write_text(
         json.dumps(preflight_check.EXPECTED_DEFAULT_PARAMS),
         encoding="utf-8",
     )
     (release_dir / "config.json").write_text(
-        json.dumps(
-            {
-                "version": "1.0",
-                "default_ai": "rollout",
-                "default_layout": default_layout,
-                "board_size": 5,
-                "time_limit_seconds": 240,
-                "max_games_per_match": 7,
-                "games_to_win_match": 4,
-                "offline_required": True,
-            }
-        ),
+        json.dumps(config),
         encoding="utf-8",
     )
 
@@ -55,6 +56,44 @@ def test_validate_release_files_rejects_layout_drift(tmp_path) -> None:
         preflight_check.validate_release_files(tmp_path)
 
 
+@pytest.mark.parametrize(
+    ("key", "bad_value"),
+    [
+        ("board_size", 6),
+        ("time_limit_seconds", 180),
+        ("max_games_per_match", 5),
+        ("games_to_win_match", 3),
+        ("offline_required", False),
+    ],
+)
+def test_validate_release_files_rejects_competition_config_drift(tmp_path, key, bad_value) -> None:
+    _write_release_files(tmp_path, config_overrides={key: bad_value})
+
+    with pytest.raises(preflight_check.PreflightError, match=key):
+        preflight_check.validate_release_files(tmp_path)
+
+
+def test_required_files_include_release_signoff_docs() -> None:
+    assert "release/v1.0/README.md" in preflight_check.REQUIRED_FILES
+    assert "release/v1.0/test_report.md" in preflight_check.REQUIRED_FILES
+    assert "release/v1.0/known_limitations.md" in preflight_check.REQUIRED_FILES
+
+
+def test_default_commands_include_small_timing_probe_gate() -> None:
+    timing_commands = [
+        tuple(args)
+        for _label, args in preflight_check.DEFAULT_COMMANDS
+        if "scripts/timing_budget_probe.py" in args
+    ]
+
+    assert len(timing_commands) == 1
+    timing_command = timing_commands[0]
+    samples_index = timing_command.index("--samples")
+    assert int(timing_command[samples_index + 1]) <= 24
+    assert "--output" in timing_command
+    assert "--json-output" in timing_command
+
+
 def test_run_external_checks_reports_ok_lines(tmp_path, capsys) -> None:
     calls: list[tuple[str, ...]] = []
 
@@ -71,3 +110,31 @@ def test_run_external_checks_reports_ok_lines(tmp_path, capsys) -> None:
     assert result == 0
     assert calls == [("python", "-m", "pytest", "-q")]
     assert "[OK] unit" in capsys.readouterr().out
+
+
+def test_main_success_output_includes_ready_for_match(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(preflight_check, "validate_project_root", lambda project_root: None)
+    monkeypatch.setattr(preflight_check, "validate_release_files", lambda project_root: None)
+    monkeypatch.setattr(preflight_check, "validate_gui_defaults", lambda: None)
+    monkeypatch.setattr(preflight_check, "run_external_checks", lambda project_root: 0)
+
+    assert preflight_check.main() == 0
+
+    output = capsys.readouterr().out
+    assert "[OK] release defaults locked" in output
+    assert "READY FOR MATCH" in output
+
+
+def test_main_failure_output_omits_ready_for_match(monkeypatch, capsys) -> None:
+    def fail_release_files(project_root):
+        raise preflight_check.PreflightError("time_limit_seconds drifted")
+
+    monkeypatch.setattr(preflight_check, "validate_project_root", lambda project_root: None)
+    monkeypatch.setattr(preflight_check, "validate_release_files", fail_release_files)
+    monkeypatch.setattr(preflight_check, "validate_gui_defaults", lambda: None)
+
+    assert preflight_check.main() == 1
+
+    output = capsys.readouterr().out
+    assert "[FAIL] release defaults locked: time_limit_seconds drifted" in output
+    assert "READY FOR MATCH" not in output

@@ -36,6 +36,7 @@ def test_summarize_candidate_formats_win_rate():
         games=20,
         illegal_moves=0,
         crashes=0,
+        timeouts=0,
         max_step_time_ms=3.0,
     )
 
@@ -50,10 +51,12 @@ def test_summarize_candidate_marks_illegal_or_crashes():
         games=20,
         illegal_moves=1,
         crashes=0,
+        timeouts=2,
         max_step_time_ms=3.0,
     )
 
     assert "illegal=1" in row
+    assert "timeouts=2" in row
 
 
 def test_run_candidate_can_score_candidate_as_blue(monkeypatch):
@@ -71,6 +74,7 @@ def test_run_candidate_can_score_candidate_as_blue(monkeypatch):
             winner=Player.BLUE,
             illegal_moves=0,
             crashes=0,
+            timeouts=1,
             step_times_ms=[1.0, 3.0],
         )
 
@@ -90,6 +94,7 @@ def test_run_candidate_can_score_candidate_as_blue(monkeypatch):
     assert built == [("greedy_risk", {}), ("greedy_risk", params)]
     assert stats["wins"] == 1
     assert stats["games"] == 1
+    assert stats["timeouts"] == 1
     assert stats["avg_step_time_ms"] == 2.0
 
 
@@ -103,6 +108,7 @@ def test_run_bilateral_candidate_combines_red_and_blue_orientations(monkeypatch)
             "games": games,
             "illegal_moves": 0,
             "crashes": 0,
+            "timeouts": 1 if candidate_player is Player.RED else 2,
             "max_step_time_ms": 4.0 if candidate_player is Player.RED else 5.0,
             "avg_step_time_ms": 2.0,
             "total_step_time_ms": 4.0,
@@ -122,7 +128,38 @@ def test_run_bilateral_candidate_combines_red_and_blue_orientations(monkeypatch)
     assert calls == [Player.RED, Player.BLUE]
     assert stats["wins"] == 3
     assert stats["games"] == 6
+    assert stats["timeouts"] == 3
     assert stats["max_step_time_ms"] == 5.0
+
+
+def test_combine_stats_sums_timeouts():
+    stats = param_sweep._combine_stats(
+        [
+            {
+                "wins": 1,
+                "games": 2,
+                "illegal_moves": 0,
+                "crashes": 1,
+                "timeouts": 2,
+                "max_step_time_ms": 4.0,
+                "total_step_time_ms": 6.0,
+                "step_time_count": 3,
+            },
+            {
+                "wins": 2,
+                "games": 2,
+                "illegal_moves": 1,
+                "crashes": 0,
+                "timeouts": 3,
+                "max_step_time_ms": 5.0,
+                "total_step_time_ms": 4.0,
+                "step_time_count": 2,
+            },
+        ]
+    )
+
+    assert stats["timeouts"] == 5
+    assert stats["avg_step_time_ms"] == 2.0
 
 
 def test_param_sweep_promotion_gate_lines_match_ai_strengthening_spec():

@@ -13,6 +13,7 @@ from ai.zweistein_dp import (
     zweistein_dp_win_prob,
 )
 from core.game_state import GameState
+from core.rules import legal_piece_ids_for_dice
 from core.types import Player, Position
 
 
@@ -96,6 +97,20 @@ def test_zweistein_dp_terminal_probabilities_are_exact() -> None:
 
     assert zweistein_dp_win_prob(red_wins, Player.RED) == 1.0
     assert zweistein_dp_win_prob(red_wins, Player.BLUE) == 0.0
+
+
+def test_zweistein_dp_uses_core_dead_piece_dice_fallback_for_single_survivor() -> None:
+    state = GameState.from_layout(
+        red={1: Position(4, 3)},
+        blue={1: Position(0, 4)},
+        current_player=Player.RED,
+    )
+
+    assert [
+        legal_piece_ids_for_dice(state.pieces[Player.RED], dice)
+        for dice in range(1, 7)
+    ] == [[1], [1], [1], [1], [1], [1]]
+    assert zweistein_dp_win_prob(state, Player.RED) == pytest.approx(1.0)
 
 
 def test_zweistein_dp_score_matches_probability_scale() -> None:

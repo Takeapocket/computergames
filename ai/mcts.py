@@ -157,7 +157,9 @@ class MCTSAI:
                 break
             if time.perf_counter() >= deadline:
                 break
-            depth = self._iterate(root, root_player, sim)
+            depth = self._iterate(root, root_player, sim, deadline)
+            if depth is None:
+                break
             iterations += 1
             if depth > max_depth:
                 max_depth = depth
@@ -182,10 +184,12 @@ class MCTSAI:
         root: DecisionNode,
         root_player: Player,
         state: GameState,
-    ) -> int:
+        deadline: float,
+    ) -> int | None:
         """执行一次 selection + (lazy) expansion + evaluation + backprop。
 
         返回这次迭代到达的最大深度（不含 root），供报告统计。
+        若迭代中途超时，返回 None，调用方使用已有统计或合法 fallback。
         """
         history_size_before = len(state.history)
         path: list[DecisionNode | ChanceNode] = [root]
@@ -195,6 +199,8 @@ class MCTSAI:
 
         try:
             while True:
+                if time.perf_counter() >= deadline:
+                    return None
                 # 1) 先判终局：从根出发可能很快遇到现成胜负局。
                 winner = state.get_winner()
                 if winner is not None:
@@ -202,12 +208,16 @@ class MCTSAI:
                     break
 
                 if isinstance(node, DecisionNode):
+                    if time.perf_counter() >= deadline:
+                        return None
                     if not node.expanded:
                         node.unexpanded_moves = list(
                             state.legal_moves(node.player, node.dice)
                         )
                         node.expanded = True
 
+                    if time.perf_counter() >= deadline:
+                        return None
                     if not node.children and not node.unexpanded_moves:
                         # 当前方无合法走法 → 当前方判负（与 play_one_game 的 forfeit 一致）。
                         value = (
@@ -217,6 +227,8 @@ class MCTSAI:
                         )
                         break
 
+                    if time.perf_counter() >= deadline:
+                        return None
                     if node.unexpanded_moves:
                         move = node.unexpanded_moves.pop()
                         state.apply_move(move, dice=node.dice)
@@ -225,21 +237,35 @@ class MCTSAI:
                         path.append(chance)
                         depth += 1
 
+                        if time.perf_counter() >= deadline:
+                            return None
                         terminal = state.get_winner()
                         if terminal is not None:
                             value = WIN_VALUE if terminal is root_player else -WIN_VALUE
                         else:
+                            if time.perf_counter() >= deadline:
+                                return None
                             raw = self._leaf_score(state, root_player)
+                            if time.perf_counter() >= deadline:
+                                return None
                             value = _normalize(raw, self.scale)
                         break
 
+                    if time.perf_counter() >= deadline:
+                        return None
                     move, chance = self._select_uct_child(node, root_player=root_player)
+                    if time.perf_counter() >= deadline:
+                        return None
                     state.apply_move(move, dice=node.dice)
                     path.append(chance)
                     node = chance
                     depth += 1
+                    if time.perf_counter() >= deadline:
+                        return None
                 else:
                     # ChanceNode：均匀采样骰子，进入或创建对手的 DecisionNode。
+                    if time.perf_counter() >= deadline:
+                        return None
                     new_dice = self._rng.randint(1, 6)
                     child = node.children.get(new_dice)
                     if child is None:
@@ -249,6 +275,8 @@ class MCTSAI:
                     path.append(child)
                     node = child
                     depth += 1
+                    if time.perf_counter() >= deadline:
+                        return None
         finally:
             # 任何路径异常都要把 state 还原到 root 局面。
             while len(state.history) > history_size_before:

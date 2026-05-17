@@ -18,13 +18,10 @@
 ### 1.1 工程验证
 
 ```powershell
-& ".venv/Scripts/python.exe" -m pytest -q
-& ".venv/Scripts/python.exe" "scripts/smoke_test.py"
-& ".venv/Scripts/python.exe" "scripts/r2_smoke.py"
-& ".venv/Scripts/python.exe" "scripts/s2_rehearsal.py"
+& ".venv/Scripts/python.exe" "scripts/preflight_check.py"
 ```
 
-四个命令都必须 0 退出码，pytest 必须全过。任何一个失败 → 立即按 `docs/EMERGENCY_GUIDE.md` §不能启动 或对应章节修复，不带病上场。
+成功标准：最后必须看到 `READY FOR MATCH`。该命令会检查 release 配置锁、完整 pytest、smoke、S2 rehearsal 和小样本 timing gate；失败立即修复或切换到已复验备机。
 
 ### 1.2 GUI 冒烟
 
@@ -66,11 +63,10 @@ Remove-Item -ErrorAction SilentlyContinue replays/auto_save_match.json
 ### 2.2 工程二次验证
 
 ```powershell
-& ".venv/Scripts/python.exe" "scripts/smoke_test.py"
-& ".venv/Scripts/python.exe" "scripts/r2_smoke.py"
+& ".venv/Scripts/python.exe" "scripts/preflight_check.py"
 ```
 
-只跑 smoke + r2_smoke 即可（pytest 留给赛前一晚跑过的结果）。失败立即切备机。
+成功标准同样是 `READY FOR MATCH`。如果现场时间不足，优先使用赛前已完整通过 preflight 的备机，不在比赛开始前临时跳过失败项。
 
 ### 2.3 启动主程序
 
@@ -170,6 +166,7 @@ playing 阶段每一轮（双方各走一步前后）的操作：
 
 | 用途 | 命令 |
 |---|---|
+| 赛前主检查 | `& ".venv/Scripts/python.exe" "scripts/preflight_check.py"` |
 | 完整 pytest | `& ".venv/Scripts/python.exe" -m pytest -q` |
 | 基础冒烟 | `& ".venv/Scripts/python.exe" "scripts/smoke_test.py"` |
 | R-2 七盘制冒烟 | `& ".venv/Scripts/python.exe" "scripts/r2_smoke.py"` |

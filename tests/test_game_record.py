@@ -182,6 +182,37 @@ def test_save_and_load_preserve_record_data(tmp_path):
     assert restored.to_dict() == record.to_dict()
 
 
+def test_save_creates_parent_directories(tmp_path):
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    path = tmp_path / "nested" / "manual" / "game_record.json"
+
+    record.save(path)
+
+    assert GameRecord.load(path).to_dict() == record.to_dict()
+
+
+def test_save_preserves_existing_file_when_replace_fails(tmp_path, monkeypatch):
+    import os
+
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    path = tmp_path / "game_record.json"
+    path.write_text('{"old": true}', encoding="utf-8")
+    original = path.read_text(encoding="utf-8")
+
+    def boom(src, dst):  # noqa: ANN001
+        raise OSError("disk full simulation")
+
+    monkeypatch.setattr(os, "replace", boom)
+
+    with pytest.raises(OSError, match="disk full"):
+        record.save(path)
+
+    assert path.read_text(encoding="utf-8") == original
+    assert [p for p in path.parent.iterdir() if p.name.startswith(".tmp-")] == []
+
+
 def test_from_dict_rejects_invalid_record_data():
     with pytest.raises(ValueError, match="record"):
         GameRecord.from_dict({"initial_state": {}, "steps": "invalid"})
@@ -275,6 +306,42 @@ def test_from_dict_rejects_corrupt_intermediate_state_after():
     raw = record.to_dict()
     # 损坏第一步（中间步）的 state_after，让最后一步看起来仍合法。
     raw["steps"][0]["state_after"] = {"current_player": "red", "pieces": "garbage"}
+
+    with pytest.raises(ValueError, match="record"):
+        GameRecord.from_dict(raw)
+
+
+def test_from_dict_rejects_non_continuous_turns():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+    raw = record.to_dict()
+    raw["steps"][0]["turn"] = 2
+
+    with pytest.raises(ValueError, match="record"):
+        GameRecord.from_dict(raw)
+
+
+def test_from_dict_rejects_step_player_that_differs_from_move_player():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+    raw = record.to_dict()
+    raw["steps"][0]["player"] = "blue"
+
+    with pytest.raises(ValueError, match="record"):
+        GameRecord.from_dict(raw)
+
+
+def test_from_dict_rejects_state_after_that_differs_from_replay():
+    state = make_state(red={1: Position(0, 0)}, blue={1: Position(4, 4)})
+    record = GameRecord.from_state(state)
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=move, state_after=state)
+    raw = record.to_dict()
+    raw["steps"][0]["state_after"]["current_player"] = "red"
 
     with pytest.raises(ValueError, match="record"):
         GameRecord.from_dict(raw)

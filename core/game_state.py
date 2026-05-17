@@ -65,6 +65,8 @@ class GameState:
         return moves
 
     def apply_move(self, move: Move, dice: int) -> Move:
+        if self.get_winner() is not None:
+            raise ValueError("game is already finished")
         if move.player is not self.current_player:
             raise ValueError("move player must match current player")
 
@@ -76,9 +78,9 @@ class GameState:
             captured.alive = False
 
         piece.position = matching_move.to_pos
-        self.history.append(matching_move)
+        self.history.append(matching_move.copy())
         self.current_player = self.current_player.opponent
-        return matching_move
+        return matching_move.copy()
 
     def undo_move(self) -> Move | None:
         if not self.history:
@@ -141,7 +143,11 @@ class GameState:
 
         legal_moves = self.legal_moves(move.player, dice)
         for legal_move in legal_moves:
-            if legal_move.from_pos == move.from_pos and legal_move.to_pos == move.to_pos:
+            if (
+                legal_move.piece_id == move.piece_id
+                and legal_move.from_pos == move.from_pos
+                and legal_move.to_pos == move.to_pos
+            ):
                 return legal_move
         raise ValueError("move is not legal")
 

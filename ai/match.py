@@ -192,11 +192,16 @@ def play_one_game(
     - AI 返回 ``None`` 或返回的走法不在 legal_moves 中：分别计 no-move 与 illegal_moves；当前方判负。
     - 达到 ``max_turns``：winner=None（draw）。
 
-    ``starting_state`` 默认为 ``default_starting_state()``；测试可注入任意起始局面。
+    ``starting_state`` 默认为 ``default_starting_state()``；测试可注入任意起始局面，
+    入口会复制该状态，避免一次对局污染后续复用。
     """
     from record.game_record import GameRecord
 
-    state = starting_state if starting_state is not None else default_starting_state()
+    state = (
+        GameState.deserialize(starting_state.serialize())
+        if starting_state is not None
+        else default_starting_state()
+    )
     record = GameRecord.from_state(state)
     illegal_moves = 0
     crashes = 0

@@ -31,6 +31,30 @@ def test_resolve_profile_uses_release_default_rollout_kwargs_for_mcts_p4():
         assert profile["games_per_side"] == games_per_side
 
 
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "rollout_32",
+        "rollout_risk_playout",
+        "rollout_cutoff_eval",
+        "rollout_zweistein_cutoff",
+        "rollout_tactical",
+        "rollout_adaptive_close_sample",
+        "rollout_zweistein_dp_cutoff",
+        "rollout_exact_opp1_zdp",
+    ],
+)
+def test_candidate_profiles_with_rollout_opponents_use_release_default_kwargs(kind) -> None:
+    for stage in ("candidate", "promotion"):
+        profile = bench_ai.CANDIDATE_PROFILES.get(kind, {}).get(stage)
+        if not profile:
+            continue
+        if profile.get("opponent") != "rollout":
+            continue
+
+        assert profile["opponent_kwargs"] == bench_ai.RELEASE_DEFAULT_ROLLOUT_KWARGS
+
+
 def test_rollout_adaptive_close_sample_profile_uses_release_default_opponent() -> None:
     profile = bench_ai.CANDIDATE_PROFILES["rollout_adaptive_close_sample"]["candidate"]
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from scripts import timing_budget_probe
 
 
@@ -102,3 +104,71 @@ def test_write_reports_lists_fallback_samples(tmp_path) -> None:
     assert "## Flagged Samples" in markdown
     assert "index=7" in markdown
     assert "fallback=True" in markdown
+
+
+def _probe_payload(*, illegal_recommendations: int = 0, exceptions: int = 0) -> dict:
+    return {
+        "sample_count": 1,
+        "avg_ms": 10.0,
+        "p50_ms": 10.0,
+        "p95_ms": 10.0,
+        "p99_ms": 10.0,
+        "max_ms": 10.0,
+        "rollout_timed_out_count": 0,
+        "rollout_used_fallback_count": 0,
+        "illegal_recommendations": illegal_recommendations,
+        "exceptions": exceptions,
+        "samples": [],
+    }
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["exceptions", "illegal_recommendations"],
+)
+def test_main_returns_nonzero_when_hard_timing_gate_fails(monkeypatch, tmp_path, field) -> None:
+    payload = _probe_payload(**{field: 1})
+    written: list[dict] = []
+
+    monkeypatch.setattr(timing_budget_probe, "load_release_default_ai_config", lambda: ("rollout", {}))
+    monkeypatch.setattr(timing_budget_probe, "collect_samples", lambda **kwargs: payload)
+    monkeypatch.setattr(timing_budget_probe, "write_reports", lambda payload, output, json_output: written.append(payload))
+
+    exit_code = timing_budget_probe.main(
+        [
+            "--samples",
+            "1",
+            "--output",
+            str(tmp_path / "probe.md"),
+            "--json-output",
+            str(tmp_path / "probe.json"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert written[0][field] == 1
+
+
+def test_main_allows_timeout_and_fallback_samples_by_default(monkeypatch, tmp_path) -> None:
+    payload = {
+        **_probe_payload(),
+        "rollout_timed_out_count": 1,
+        "rollout_used_fallback_count": 1,
+    }
+
+    monkeypatch.setattr(timing_budget_probe, "load_release_default_ai_config", lambda: ("rollout", {}))
+    monkeypatch.setattr(timing_budget_probe, "collect_samples", lambda **kwargs: payload)
+    monkeypatch.setattr(timing_budget_probe, "write_reports", lambda payload, output, json_output: None)
+
+    exit_code = timing_budget_probe.main(
+        [
+            "--samples",
+            "1",
+            "--output",
+            str(tmp_path / "probe.md"),
+            "--json-output",
+            str(tmp_path / "probe.json"),
+        ]
+    )
+
+    assert exit_code == 0

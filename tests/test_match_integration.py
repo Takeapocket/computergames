@@ -227,6 +227,7 @@ def test_reset_game_clears_match_state(tk_root, monkeypatch):
     _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
 
     assert window._match is not None
+    monkeypatch.setattr("gui.main_window.messagebox.askyesno", lambda *args, **kwargs: True)
     window._reset_game()
 
     assert window._match is None
@@ -754,3 +755,75 @@ def test_finished_match_with_corrupt_single_game_clears_both_files(tk_root, monk
     assert window._match is None
     assert not has_auto_save(path=game_path)
     assert not has_auto_save_match(path=match_path)
+
+
+def test_timeout_finished_game_record_is_not_mutated_by_late_undo(tk_root, monkeypatch):
+    window = MainWindow(tk_root)
+    window.pack()
+    _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
+    _fill_opening_and_confirm(window, our_side=Player.RED)
+
+    window._handle_dice_change("6")
+    window._handle_move_select(0)
+    window._apply_selected_move()
+    assert len(window.record.steps) == 1
+
+    monkeypatch.setattr(window, "_show_round_finished_dialog", window._start_new_game_in_match)
+    window._handle_timeout(window.state.current_player)
+
+    assert window._match is not None
+    finished_game = window._match.games[-1]
+    step_count = len(finished_game.steps)
+    history_count = len(window.state.history)
+
+    window._undo_move()
+
+    assert window._phase == "setup"
+    assert len(window.state.history) == history_count
+    assert len(finished_game.steps) == step_count
+
+
+def test_finalize_match_game_catches_match_auto_save_oserror(tk_root, monkeypatch):
+    window = MainWindow(tk_root)
+    window.pack()
+    _enter_match(window, monkeypatch, our_side=Player.RED, our_role="甲")
+    _fill_opening_and_confirm(window, our_side=Player.RED)
+    monkeypatch.setattr(window, "_show_round_finished_dialog", lambda: None)
+
+    def fail_auto_save_match(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("gui.main_window.auto_save_match", fail_auto_save_match)
+
+    try:
+        window._finalize_match_game(Player.RED, reason="target_corner")
+    except OSError as exc:
+        pytest.fail(f"finalize should keep GUI alive when match auto-save fails: {exc}")
+
+    assert window._match is not None
+    assert window._match.games_won_us == 1
+    assert "整轮自动保存失败" in window.status_message
+
+
+def test_exit_match_mode_catches_clear_match_auto_save_oserror(tk_root, monkeypatch):
+    from record.match_record import MatchRecord
+
+    window = MainWindow(tk_root)
+    window.pack()
+    window._match = MatchRecord(our_side=Player.RED, our_role="甲", phase="playing")
+    window._mode = "match"
+    window._our_side = Player.RED
+
+    def fail_clear_match(*args, **kwargs):
+        raise OSError("locked")
+
+    monkeypatch.setattr("gui.main_window.clear_auto_save_match", fail_clear_match)
+
+    try:
+        window._exit_match_mode()
+    except OSError as exc:
+        pytest.fail(f"exit should keep GUI alive when match auto-save cleanup fails: {exc}")
+
+    assert window._match is None
+    assert window._mode == "debug"
+    assert "整轮自动保存清理失败" in window.status_message

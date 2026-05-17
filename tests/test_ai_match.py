@@ -172,6 +172,32 @@ def test_play_one_game_random_vs_random_terminates_with_winner_or_draw():
     assert len(result.record.steps) == result.turns
 
 
+def test_play_one_game_copies_starting_state_for_reuse():
+    starting_state = default_starting_state()
+    before = starting_state.serialize()
+
+    first = play_one_game(
+        red_ai=RandomAI(rng=random.Random(1)),
+        blue_ai=RandomAI(rng=random.Random(2)),
+        dice_rng=random.Random(3),
+        max_turns=1,
+        starting_state=starting_state,
+    )
+    second = play_one_game(
+        red_ai=RandomAI(rng=random.Random(1)),
+        blue_ai=RandomAI(rng=random.Random(2)),
+        dice_rng=random.Random(3),
+        max_turns=1,
+        starting_state=starting_state,
+    )
+
+    assert starting_state.serialize() == before
+    assert first.turns == second.turns == 1
+    assert [step.move.to_dict() for step in first.record.steps] == [
+        step.move.to_dict() for step in second.record.steps
+    ]
+
+
 def test_play_one_game_is_deterministic_with_same_seeds():
     def run():
         return play_one_game(
