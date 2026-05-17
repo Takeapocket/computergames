@@ -81,12 +81,14 @@ def test_release_docs_promote_preflight_as_match_gate() -> None:
         assert "READY FOR MATCH" in text
 
 
-def test_release_report_records_current_p6_to_p9_preflight_state() -> None:
+def test_release_report_records_current_preflight_state() -> None:
     text = (PROJECT_ROOT / "release/v1.0/test_report.md").read_text(encoding="utf-8")
 
-    assert "614 passed" in text
+    assert "699 passed" in text
     for phase in ("P6", "P7", "P8", "P9"):
         assert phase in text
+    assert "R-4" in text
+    assert "launcher" in text
     assert "READY FOR MATCH" in text
 
 

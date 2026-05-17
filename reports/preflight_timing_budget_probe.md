@@ -5,11 +5,11 @@
 - ai_kind: `rollout`
 - default_layout: `balanced_v1`
 - sample_count: `16`
-- avg_ms: `393.53`
-- p50_ms: `451.11`
-- p95_ms: `647.59`
-- p99_ms: `674.60`
-- max_ms: `681.35`
+- avg_ms: `375.10`
+- p50_ms: `420.98`
+- p95_ms: `607.08`
+- p99_ms: `608.81`
+- max_ms: `609.25`
 - rollout_timed_out_count: `0`
 - rollout_used_fallback_count: `0`
 - illegal_recommendations: `0`
