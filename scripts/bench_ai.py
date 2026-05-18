@@ -31,6 +31,7 @@ if str(ROOT) not in sys.path:
 
 from ai.match import (
     STARTING_LAYOUT_ID,
+    STRONG_ROLLOUT_DEFAULTS,
     ai_version_signature,
     build_ai,
     play_one_game,
@@ -163,7 +164,79 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
             "games_per_side": 400,
         },
     },
+    "rollout_strong_48": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_strong_64": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_strong_64_loweps": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_strong_96": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
     "rollout_root_racing": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_paired": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_common_random": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_self_capture_guard": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_material_guard": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
+    "rollout_self_capture_guard_strict": {
         "candidate": {
             "opponent": "rollout",
             "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
@@ -207,6 +280,13 @@ OP_CHECK = {
     "lt": lambda a, t: a < t,
     "le": lambda a, t: a <= t,
     "ge": lambda a, t: a >= t,
+}
+PAIRED_ROLLOUT_CANDIDATES = {"rollout_paired", "rollout_common_random"}
+STRONG_ROLLOUT_CANDIDATES = set(STRONG_ROLLOUT_DEFAULTS)
+SELF_CAPTURE_GUARD_CANDIDATES = {
+    "rollout_self_capture_guard",
+    "rollout_material_guard",
+    "rollout_self_capture_guard_strict",
 }
 
 
@@ -252,6 +332,16 @@ def _candidate_telemetry(ai) -> dict[str, int]:
     return out
 
 
+def _thinking_seconds_by_color(result) -> dict[Player, float]:
+    totals = {Player.RED: 0.0, Player.BLUE: 0.0}
+    record = getattr(result, "record", None)
+    steps = list(getattr(record, "steps", []) or [])
+    step_times = list(getattr(result, "step_times_ms", []) or [])
+    for step, elapsed_ms in zip(steps, step_times):
+        totals[Player.from_value(step.player)] += float(elapsed_ms) / 1000.0
+    return totals
+
+
 def _aggregate(results, candidate_side: Player) -> dict:
     games = len(results)
     if games == 0:
@@ -264,6 +354,8 @@ def _aggregate(results, candidate_side: Player) -> dict:
     total_crashes = 0
     total_timeouts = 0
     all_step_times: list[float] = []
+    red_thinking_seconds: list[float] = []
+    blue_thinking_seconds: list[float] = []
     telemetry: dict[str, list[int]] = {}
     for r, t in results:
         if r.winner is None:
@@ -277,9 +369,14 @@ def _aggregate(results, candidate_side: Player) -> dict:
         total_crashes += r.crashes
         total_timeouts += int(getattr(r, "timeouts", 0))
         all_step_times.extend(r.step_times_ms)
+        thinking = _thinking_seconds_by_color(r)
+        red_thinking_seconds.append(thinking[Player.RED])
+        blue_thinking_seconds.append(thinking[Player.BLUE])
         for k, v in t.items():
             telemetry.setdefault(k, []).append(v)
-    avg_step = sum(all_step_times) / len(all_step_times) if all_step_times else 0.0
+    total_step_time = sum(all_step_times)
+    step_count = len(all_step_times)
+    avg_step = total_step_time / step_count if step_count else 0.0
     p95_step = _percentile(all_step_times, 0.95)
     p99_step = _percentile(all_step_times, 0.99)
     max_step = max(all_step_times) if all_step_times else 0.0
@@ -295,10 +392,22 @@ def _aggregate(results, candidate_side: Player) -> dict:
         "illegal_moves": total_illegal,
         "crashes": total_crashes,
         "timeouts": total_timeouts,
+        "total_step_time_ms": total_step_time,
+        "step_count": step_count,
         "average_step_time_ms": avg_step,
         "p95_step_time_ms": p95_step,
         "p99_step_time_ms": p99_step,
         "max_step_time_ms": max_step,
+        "max_red_thinking_seconds": max(red_thinking_seconds) if red_thinking_seconds else 0.0,
+        "max_blue_thinking_seconds": max(blue_thinking_seconds) if blue_thinking_seconds else 0.0,
+        "avg_red_thinking_seconds": (
+            sum(red_thinking_seconds) / len(red_thinking_seconds)
+            if red_thinking_seconds else 0.0
+        ),
+        "avg_blue_thinking_seconds": (
+            sum(blue_thinking_seconds) / len(blue_thinking_seconds)
+            if blue_thinking_seconds else 0.0
+        ),
     }
     if "iterations" in telemetry:
         summary["avg_iterations"] = sum(telemetry["iterations"]) / len(telemetry["iterations"])
@@ -361,10 +470,23 @@ def _combine(red_summary: dict, blue_summary: dict) -> dict:
     timeouts = red_summary.get("timeouts", 0) + blue_summary.get("timeouts", 0)
     red_games = red_summary["games"]
     blue_games = blue_summary["games"]
-    avg_step = (
-        red_summary["average_step_time_ms"] * red_games
-        + blue_summary["average_step_time_ms"] * blue_games
+    average_turns = (
+        red_summary.get("average_turns", 0.0) * red_games
+        + blue_summary.get("average_turns", 0.0) * blue_games
     ) / games
+    total_step_time = (
+        red_summary.get("total_step_time_ms", 0.0)
+        + blue_summary.get("total_step_time_ms", 0.0)
+    )
+    step_count = int(red_summary.get("step_count", 0)) + int(blue_summary.get("step_count", 0))
+    avg_step = (
+        total_step_time / step_count
+        if step_count
+        else (
+            red_summary["average_step_time_ms"] * red_games
+            + blue_summary["average_step_time_ms"] * blue_games
+        ) / games
+    )
     p95_step = max(red_summary.get("p95_step_time_ms", 0.0), blue_summary.get("p95_step_time_ms", 0.0))
     p99_step = max(red_summary.get("p99_step_time_ms", 0.0), blue_summary.get("p99_step_time_ms", 0.0))
     max_step = max(red_summary["max_step_time_ms"], blue_summary["max_step_time_ms"])
@@ -377,10 +499,29 @@ def _combine(red_summary: dict, blue_summary: dict) -> dict:
         "illegal_moves": illegal,
         "crashes": crashes,
         "timeouts": timeouts,
+        "average_turns": average_turns,
+        "total_step_time_ms": total_step_time,
+        "step_count": step_count,
         "average_step_time_ms": avg_step,
         "p95_step_time_ms": p95_step,
         "p99_step_time_ms": p99_step,
         "max_step_time_ms": max_step,
+        "max_red_thinking_seconds": max(
+            red_summary.get("max_red_thinking_seconds", 0.0),
+            blue_summary.get("max_red_thinking_seconds", 0.0),
+        ),
+        "max_blue_thinking_seconds": max(
+            red_summary.get("max_blue_thinking_seconds", 0.0),
+            blue_summary.get("max_blue_thinking_seconds", 0.0),
+        ),
+        "avg_red_thinking_seconds": (
+            red_summary.get("avg_red_thinking_seconds", 0.0) * red_games
+            + blue_summary.get("avg_red_thinking_seconds", 0.0) * blue_games
+        ) / games,
+        "avg_blue_thinking_seconds": (
+            red_summary.get("avg_blue_thinking_seconds", 0.0) * red_games
+            + blue_summary.get("avg_blue_thinking_seconds", 0.0) * blue_games
+        ) / games,
     }
     if "avg_iterations" in red_summary or "avg_iterations" in blue_summary:
         red_iters = red_summary.get("avg_iterations", 0.0) * red_games
@@ -431,6 +572,195 @@ def _evaluate_gates(combined: dict, gates: dict) -> tuple[bool, list[str]]:
     return (not failures), failures
 
 
+def _paired_rollout_decision(
+    candidate_kind: str,
+    stage: str,
+    combined: dict,
+    gates_ok: bool,
+) -> dict | None:
+    if candidate_kind not in PAIRED_ROLLOUT_CANDIDATES or stage != "candidate":
+        return None
+    win_rate = combined.get("candidate_win_rate", 0.0)
+    stable = (
+        combined.get("illegal_moves", 0) == 0
+        and combined.get("crashes", 0) == 0
+        and combined.get("timeouts", 0) == 0
+    )
+    if win_rate < 0.52:
+        status = "stop"
+        suggest_expansion = False
+        recommendation = "不默认启用，不扩样。"
+    elif win_rate < 0.55:
+        status = "signal_insufficient"
+        suggest_expansion = False
+        recommendation = "有信号但不足；50+50 可选但不默认。"
+    elif stable:
+        status = "expand_50x2"
+        suggest_expansion = True
+        recommendation = "达到 55% 且稳定性为 0，可扩到 50+50；今晚不自动 promotion。"
+    else:
+        status = "blocked_by_stability"
+        suggest_expansion = False
+        recommendation = "胜率达到 55%，但稳定性门禁未清零；不扩样。"
+    return {
+        "candidate_gate_pass": gates_ok,
+        "status": status,
+        "candidate_win_rate": win_rate,
+        "wilson_ci95": combined.get("candidate_win_ci95", [0.0, 0.0]),
+        "illegal_moves": combined.get("illegal_moves", 0),
+        "crashes": combined.get("crashes", 0),
+        "timeouts": combined.get("timeouts", 0),
+        "average_step_time_ms": combined.get("average_step_time_ms", 0.0),
+        "max_step_time_ms": combined.get("max_step_time_ms", 0.0),
+        "default_config_changed": False,
+        "core_rules_changed": False,
+        "suggest_expansion": suggest_expansion,
+        "recommendation": recommendation,
+    }
+
+
+def _self_capture_guard_decision(
+    candidate_kind: str,
+    stage: str,
+    combined: dict,
+    gates_ok: bool,
+) -> dict | None:
+    if candidate_kind not in SELF_CAPTURE_GUARD_CANDIDATES or stage != "candidate":
+        return None
+    win_rate = combined.get("candidate_win_rate", 0.0)
+    stable = (
+        combined.get("illegal_moves", 0) == 0
+        and combined.get("crashes", 0) == 0
+        and combined.get("timeouts", 0) == 0
+    )
+    if win_rate < 0.52:
+        status = "stop"
+        suggest_expansion = False
+        reason = f"candidate_win_rate {win_rate*100:.1f}% < 52%，按 P11 停止规则不扩样。"
+    elif win_rate < 0.55:
+        status = "signal_insufficient"
+        suggest_expansion = False
+        reason = f"candidate_win_rate {win_rate*100:.1f}% < 55%，不满足 candidate 门禁。"
+    elif stable:
+        status = "expand_50x2"
+        suggest_expansion = True
+        reason = "候选达到 55% 且稳定性为 0，可扩样复验；本轮不默认启用。"
+    else:
+        status = "blocked_by_stability"
+        suggest_expansion = False
+        reason = "候选胜率达到 55%，但 illegal/crash/timeout 未清零，不扩样。"
+    return {
+        "default_enabled": False,
+        "summary": "不默认启用",
+        "status": status,
+        "candidate_gate_pass": gates_ok,
+        "candidate_win_rate": win_rate,
+        "wilson_ci95": combined.get("candidate_win_ci95", [0.0, 0.0]),
+        "illegal_moves": combined.get("illegal_moves", 0),
+        "crashes": combined.get("crashes", 0),
+        "timeouts": combined.get("timeouts", 0),
+        "average_step_time_ms": combined.get("average_step_time_ms", 0.0),
+        "max_step_time_ms": combined.get("max_step_time_ms", 0.0),
+        "default_config_changed": False,
+        "core_rules_changed": False,
+        "suggest_expansion": suggest_expansion,
+        "reason": reason,
+    }
+
+
+def _strong_rollout_decision(
+    candidate_kind: str,
+    stage: str,
+    combined: dict,
+    gates_ok: bool,
+) -> dict | None:
+    if candidate_kind not in STRONG_ROLLOUT_CANDIDATES or stage != "candidate":
+        return None
+    win_rate = combined.get("candidate_win_rate", 0.0)
+    ci_low, ci_high = combined.get("candidate_win_ci95", [0.0, 0.0])
+    stable = (
+        combined.get("illegal_moves", 0) == 0
+        and combined.get("crashes", 0) == 0
+        and combined.get("timeouts", 0) == 0
+        and combined.get("max_step_time_ms", 0.0) <= 5000.0
+    )
+    max_side_thinking = max(
+        combined.get("max_red_thinking_seconds", 0.0),
+        combined.get("max_blue_thinking_seconds", 0.0),
+    )
+    timing_risk = max_side_thinking > 180.0
+    games = int(combined.get("games", 0))
+    passed_52 = win_rate >= 0.52
+    passed_55 = win_rate >= 0.55
+    passed_50x2 = (
+        games >= 100
+        and passed_55
+        and ci_low >= 0.50
+        and gates_ok
+        and stable
+        and not timing_risk
+    )
+
+    if not passed_52:
+        status = "stop"
+        suggest_expansion = False
+        recommendation = "不默认启用，不扩样。"
+    elif not passed_55:
+        status = "signal_insufficient"
+        suggest_expansion = False
+        recommendation = "有信号但不足；最多只跑 50+50 复验，不默认启用。"
+    elif not stable:
+        status = "blocked_by_stability"
+        suggest_expansion = False
+        recommendation = "胜率达到 55%，但 illegal/crash/timeout/max step 门禁未清零，不扩样。"
+    elif not gates_ok:
+        status = "blocked_by_candidate_gate"
+        suggest_expansion = False
+        recommendation = "胜率达到 55%，但 candidate gate 未通过；不扩样，不默认启用。"
+    elif timing_risk:
+        status = "timing_risk"
+        suggest_expansion = False
+        recommendation = "胜率达到 55%，但单方思考时间存在 timing risk；不默认启用。"
+    elif games >= 100 and ci_low < 0.50:
+        status = "no_promotion_ci"
+        suggest_expansion = False
+        recommendation = "50+50 胜率达到 55%，但 Wilson lower < 50%；不 promotion。"
+    elif games >= 100:
+        status = "passed_50x2_gate"
+        suggest_expansion = False
+        recommendation = "50+50 过门槛；仅建议明天继续 100+100，不默认启用，等用户确认。"
+    else:
+        status = "expand_50x2"
+        suggest_expansion = True
+        recommendation = "通过 55% 初筛；建议扩到 50+50，不默认启用。"
+
+    return {
+        "candidate_gate_pass": gates_ok,
+        "status": status,
+        "candidate_win_rate": win_rate,
+        "wilson_ci95": [ci_low, ci_high],
+        "passed_52_gate": passed_52,
+        "passed_55_gate": passed_55,
+        "passed_50x2_gate": passed_50x2,
+        "illegal_moves": combined.get("illegal_moves", 0),
+        "crashes": combined.get("crashes", 0),
+        "timeouts": combined.get("timeouts", 0),
+        "average_step_time_ms": combined.get("average_step_time_ms", 0.0),
+        "p95_step_time_ms": combined.get("p95_step_time_ms", 0.0),
+        "p99_step_time_ms": combined.get("p99_step_time_ms", 0.0),
+        "max_step_time_ms": combined.get("max_step_time_ms", 0.0),
+        "max_red_thinking_seconds": combined.get("max_red_thinking_seconds", 0.0),
+        "max_blue_thinking_seconds": combined.get("max_blue_thinking_seconds", 0.0),
+        "avg_red_thinking_seconds": combined.get("avg_red_thinking_seconds", 0.0),
+        "avg_blue_thinking_seconds": combined.get("avg_blue_thinking_seconds", 0.0),
+        "timing_risk": timing_risk,
+        "default_config_changed": False,
+        "core_rules_changed": False,
+        "suggest_expansion": suggest_expansion,
+        "recommendation": recommendation,
+    }
+
+
 def _resolve_profile(candidate_kind: str, stage: str) -> dict:
     return CANDIDATE_PROFILES.get(candidate_kind, {}).get(stage, {})
 
@@ -440,6 +770,8 @@ def _resolve_starting_layout(profile: dict, explicit_layout: str | None) -> str:
 
 
 def _resolve_gates(candidate_kind: str, stage: str) -> dict:
+    if candidate_kind in STRONG_ROLLOUT_CANDIDATES and stage == "candidate":
+        return dict(STAGE_GATES["candidate"])
     gates = dict(STAGE_GATES[stage])
     extra = _resolve_profile(candidate_kind, stage).get("extra_gates")
     if extra:
@@ -474,6 +806,9 @@ def _write_markdown(
     gates: dict,
     elapsed_seconds: float,
     generated_at: str,
+    paired_rollout_decision: dict | None = None,
+    strong_rollout_decision: dict | None = None,
+    self_capture_guard_decision: dict | None = None,
 ) -> None:
     has_telemetry = "avg_iterations" in combined or "max_depth" in combined
 
@@ -526,6 +861,105 @@ def _write_markdown(
         lines.append("失败原因：")
         for f in failures:
             lines.append(f"- {f}")
+
+    if paired_rollout_decision is not None:
+        ci_low, ci_high = paired_rollout_decision["wilson_ci95"]
+        lines.extend([
+            "",
+            "## P12 paired rollout 决策",
+            "",
+            f"- candidate gate：{'PASS' if paired_rollout_decision['candidate_gate_pass'] else 'FAIL'}",
+            f"- candidate win rate：{paired_rollout_decision['candidate_win_rate']*100:.1f}%",
+            f"- Wilson 95% CI：[{ci_low*100:.1f}%, {ci_high*100:.1f}%]",
+            "- illegal/crash/timeout："
+            f"{paired_rollout_decision['illegal_moves']} / "
+            f"{paired_rollout_decision['crashes']} / "
+            f"{paired_rollout_decision['timeouts']}",
+            "- avg/max step time："
+            f"{paired_rollout_decision['average_step_time_ms']:.1f}ms / "
+            f"{paired_rollout_decision['max_step_time_ms']:.1f}ms",
+            "- 是否修改默认配置：没有",
+            "- 是否修改 core 规则：没有",
+            f"- 是否建议扩样：{'是' if paired_rollout_decision['suggest_expansion'] else '否'}",
+            f"- 结论：{paired_rollout_decision['recommendation']}",
+        ])
+
+    if self_capture_guard_decision is not None:
+        ci_low, ci_high = self_capture_guard_decision["wilson_ci95"]
+        lines.extend([
+            "",
+            "## P11 self-capture guard 决策",
+            "",
+            f"**默认启用决策：{self_capture_guard_decision['summary']}。**",
+            f"- candidate gate：{'PASS' if self_capture_guard_decision['candidate_gate_pass'] else 'FAIL'}",
+            f"- candidate win rate：{self_capture_guard_decision['candidate_win_rate']*100:.1f}%",
+            f"- Wilson 95% CI：[{ci_low*100:.1f}%, {ci_high*100:.1f}%]",
+            "- illegal/crash/timeout："
+            f"{self_capture_guard_decision['illegal_moves']} / "
+            f"{self_capture_guard_decision['crashes']} / "
+            f"{self_capture_guard_decision['timeouts']}",
+            "- avg/max step time："
+            f"{self_capture_guard_decision['average_step_time_ms']:.1f}ms / "
+            f"{self_capture_guard_decision['max_step_time_ms']:.1f}ms",
+            "- 是否修改默认配置：没有",
+            "- 是否修改 core 规则：没有",
+            f"- 是否建议扩样：{'是' if self_capture_guard_decision['suggest_expansion'] else '否'}",
+            f"- 结论：{self_capture_guard_decision['reason']}",
+        ])
+
+    if strong_rollout_decision is not None:
+        ci_low, ci_high = strong_rollout_decision["wilson_ci95"]
+        lines.extend([
+            "",
+            "## P14 strong rollout 决策",
+            "",
+            f"- candidate gate：{'PASS' if strong_rollout_decision['candidate_gate_pass'] else 'FAIL'}",
+            f"- 52% 门槛：{'PASS' if strong_rollout_decision['passed_52_gate'] else 'FAIL'}",
+            f"- 55% 门槛：{'PASS' if strong_rollout_decision['passed_55_gate'] else 'FAIL'}",
+            f"- 50+50 门槛：{'PASS' if strong_rollout_decision['passed_50x2_gate'] else '未执行或未通过'}",
+            f"- candidate win rate：{strong_rollout_decision['candidate_win_rate']*100:.1f}%",
+            f"- Wilson 95% CI：[{ci_low*100:.1f}%, {ci_high*100:.1f}%]",
+            "- illegal/crash/timeout："
+            f"{strong_rollout_decision['illegal_moves']} / "
+            f"{strong_rollout_decision['crashes']} / "
+            f"{strong_rollout_decision['timeouts']}",
+            "- avg/p95/p99/max step ms："
+            f"{strong_rollout_decision['average_step_time_ms']:.1f} / "
+            f"{strong_rollout_decision['p95_step_time_ms']:.1f} / "
+            f"{strong_rollout_decision['p99_step_time_ms']:.1f} / "
+            f"{strong_rollout_decision['max_step_time_ms']:.1f}",
+            "- per-side thinking time："
+            f"max_red_thinking_seconds={strong_rollout_decision['max_red_thinking_seconds']:.1f}, "
+            f"max_blue_thinking_seconds={strong_rollout_decision['max_blue_thinking_seconds']:.1f}, "
+            f"avg_red_thinking_seconds={strong_rollout_decision['avg_red_thinking_seconds']:.1f}, "
+            f"avg_blue_thinking_seconds={strong_rollout_decision['avg_blue_thinking_seconds']:.1f}",
+            f"- timing risk：{'是' if strong_rollout_decision['timing_risk'] else '否'}",
+            "- 当前 release 默认配置：未修改",
+            "- core 规则语义：未修改",
+            f"- 是否建议扩样：{'是' if strong_rollout_decision['suggest_expansion'] else '否'}",
+            f"- 结论：{strong_rollout_decision['recommendation']}",
+        ])
+
+    lines.extend([
+        "",
+        "## 步时与包干估算",
+        "",
+        f"- total_step_time_ms：{combined.get('total_step_time_ms', 0.0):.1f}",
+        f"- average_turns：{combined.get('average_turns', 0.0):.2f}",
+        "- avg/p95/p99/max step ms："
+        f"{combined['average_step_time_ms']:.1f} / "
+        f"{combined['p95_step_time_ms']:.1f} / "
+        f"{combined['p99_step_time_ms']:.1f} / "
+        f"{combined['max_step_time_ms']:.1f}",
+        "- max_red_thinking_seconds："
+        f"{combined.get('max_red_thinking_seconds', 0.0):.1f}",
+        "- max_blue_thinking_seconds："
+        f"{combined.get('max_blue_thinking_seconds', 0.0):.1f}",
+        "- avg_red_thinking_seconds："
+        f"{combined.get('avg_red_thinking_seconds', 0.0):.1f}",
+        "- avg_blue_thinking_seconds："
+        f"{combined.get('avg_blue_thinking_seconds', 0.0):.1f}",
+    ])
 
     lines.extend([
         "",
@@ -718,6 +1152,24 @@ def main(argv: list[str] | None = None) -> int:
 
     combined = _combine(red_summary, blue_summary)
     gates_ok, failures = _evaluate_gates(combined, gates)
+    paired_rollout_decision = _paired_rollout_decision(
+        args.candidate,
+        args.stage,
+        combined,
+        gates_ok,
+    )
+    strong_rollout_decision = _strong_rollout_decision(
+        args.candidate,
+        args.stage,
+        combined,
+        gates_ok,
+    )
+    self_capture_guard_decision = _self_capture_guard_decision(
+        args.candidate,
+        args.stage,
+        combined,
+        gates_ok,
+    )
 
     summary = {
         **build_provenance(
@@ -751,6 +1203,12 @@ def main(argv: list[str] | None = None) -> int:
         "max_turns": args.max_turns,
         "wall_seconds": round(elapsed, 3),
     }
+    if paired_rollout_decision is not None:
+        summary["paired_rollout_decision"] = paired_rollout_decision
+    if strong_rollout_decision is not None:
+        summary["strong_rollout_decision"] = strong_rollout_decision
+    if self_capture_guard_decision is not None:
+        summary["decision"] = self_capture_guard_decision
 
     generated_at = summary["generated_at"]
     report_path: str | None = None
@@ -784,6 +1242,9 @@ def main(argv: list[str] | None = None) -> int:
             gates=gates,
             elapsed_seconds=elapsed,
             generated_at=generated_at,
+            paired_rollout_decision=paired_rollout_decision,
+            strong_rollout_decision=strong_rollout_decision,
+            self_capture_guard_decision=self_capture_guard_decision,
         )
         summary["report_path"] = report_path
         summary["markdown_path"] = md_path

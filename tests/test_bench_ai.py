@@ -40,6 +40,11 @@ def test_resolve_profile_uses_release_default_rollout_kwargs_for_mcts_p4():
         "rollout_zweistein_cutoff",
         "rollout_tactical",
         "rollout_adaptive_close_sample",
+        "rollout_paired",
+        "rollout_common_random",
+        "rollout_self_capture_guard",
+        "rollout_material_guard",
+        "rollout_self_capture_guard_strict",
         "rollout_zweistein_dp_cutoff",
         "rollout_exact_opp1_zdp",
     ],
@@ -262,6 +267,18 @@ def test_combine_uses_conservative_step_time_percentiles():
     assert combined["p99_step_time_ms"] == 100.0
 
 
+def test_combine_weights_average_step_time_by_step_count():
+    red = bench_ai._aggregate([(_R(Player.RED, step_times=[100.0]), {})], candidate_side=Player.RED)
+    blue = bench_ai._aggregate([(_R(Player.BLUE, step_times=[1.0, 1.0, 1.0, 1.0, 1.0]), {})], candidate_side=Player.BLUE)
+
+    combined = bench_ai._combine(red, blue)
+
+    assert red["step_count"] == 1
+    assert blue["step_count"] == 5
+    assert combined["step_count"] == 6
+    assert combined["average_step_time_ms"] == pytest.approx(105.0 / 6.0)
+
+
 def test_aggregate_includes_telemetry_when_present():
     results = [
         (_R(Player.RED), {"iterations": 100, "max_depth": 5}),
@@ -327,6 +344,89 @@ def test_write_markdown_records_effective_kwargs_and_ai_signatures(tmp_path: Pat
     assert '- 对手参数（有效）：`{}`' in text
     assert '"name": "rollout_zweistein_cutoff"' in text
     assert '"name": "rollout"' in text
+
+
+def test_self_capture_guard_decision_is_reproducible_for_p11_candidates() -> None:
+    combined = {
+        "candidate_win_rate": 0.40,
+        "candidate_win_ci95": [0.27, 0.54],
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "average_step_time_ms": 181.2,
+        "max_step_time_ms": 704.5,
+    }
+
+    decision = bench_ai._self_capture_guard_decision(
+        "rollout_self_capture_guard",
+        "candidate",
+        combined,
+        gates_ok=False,
+    )
+
+    assert decision == {
+        "default_enabled": False,
+        "summary": "不默认启用",
+        "status": "stop",
+        "candidate_gate_pass": False,
+        "candidate_win_rate": 0.40,
+        "wilson_ci95": [0.27, 0.54],
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "average_step_time_ms": 181.2,
+        "max_step_time_ms": 704.5,
+        "default_config_changed": False,
+        "core_rules_changed": False,
+        "suggest_expansion": False,
+        "reason": "candidate_win_rate 40.0% < 52%，按 P11 停止规则不扩样。",
+    }
+
+
+def test_write_markdown_records_self_capture_guard_decision(tmp_path: Path):
+    red = bench_ai._aggregate([(_R(Player.RED), {})], candidate_side=Player.RED)
+    blue = bench_ai._aggregate([(_R(Player.BLUE), {})], candidate_side=Player.BLUE)
+    combined = bench_ai._combine(red, blue)
+    decision = bench_ai._self_capture_guard_decision(
+        "rollout_material_guard",
+        "candidate",
+        combined,
+        gates_ok=False,
+    )
+    md_path = tmp_path / "report.md"
+
+    bench_ai._write_markdown(
+        md_path,
+        candidate_kind="rollout_material_guard",
+        stage="candidate",
+        opponent_kind="rollout",
+        args=argparse.Namespace(
+            seed=2026,
+            games_per_side=1,
+            max_turns=12,
+            starting_layout="balanced_v1",
+            candidate_arg=[],
+            opponent_arg=[],
+        ),
+        candidate_kwargs={},
+        opponent_kwargs={},
+        candidate_signature={"name": "rollout_material_guard"},
+        opponent_signature={"name": "rollout"},
+        red_summary=red,
+        blue_summary=blue,
+        combined=combined,
+        gates_ok=False,
+        failures=["candidate_win_rate 50.0% lt 55.0%"],
+        gates=bench_ai.STAGE_GATES["candidate"],
+        elapsed_seconds=0.1,
+        generated_at="2026-05-18T00:00:00+08:00",
+        self_capture_guard_decision=decision,
+    )
+
+    text = md_path.read_text(encoding="utf-8")
+    assert "## P11 self-capture guard 决策" in text
+    assert "**默认启用决策：不默认启用。**" in text
+    assert "- 是否修改默认配置：没有" in text
 
 
 # -------- _candidate_telemetry --------

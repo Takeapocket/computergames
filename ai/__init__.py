@@ -11,7 +11,8 @@ from ai.greedy_ai import GreedyAI
 from ai.chance_rerank import ExactOpponentDiceRerankAI
 from ai.mcts import MCTSAI
 from ai.random_ai import RandomAI, choose_random_move
-from ai.rollout_ai import RolloutAI
+from ai.rollout_ai import RolloutAI, RolloutPairedAI
+from ai.self_capture_guard import SelfCaptureGuardAI
 from ai.tactical import TacticalAI
 from ai.zweistein_ai import ZweisteinGreedyAI
 
@@ -34,6 +35,8 @@ __all__ = [
     "MCTSAI",
     "RandomAI",
     "RolloutAI",
+    "RolloutPairedAI",
+    "SelfCaptureGuardAI",
     "TacticalAI",
     "ZweisteinGreedyAI",
     "choose_random_move",

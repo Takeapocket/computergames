@@ -1,0 +1,163 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-18T22:24:07",
+  "git_revision": "dd5f22bd0aeb6f2ecdded0bf6fe94b1fffa5c079",
+  "git_dirty": true,
+  "command": "python scripts/bench_ai.py --candidate rollout_self_capture_guard --stage candidate --report-name p11_candidate_rollout_self_capture_guard_20260518",
+  "python_version": "3.11.9",
+  "starting_layout_id": "balanced_v1",
+  "experiment": "rollout_self_capture_guard_candidate",
+  "candidate": "rollout_self_capture_guard",
+  "candidate_kwargs": {},
+  "stage": "candidate",
+  "opponent": "rollout",
+  "opponent_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "games_per_side": 25,
+  "red_direction": {
+    "label": "candidate_red_vs_rollout_blue",
+    "summary": {
+      "games": 25,
+      "candidate_wins": 11,
+      "opponent_wins": 14,
+      "draws": 0,
+      "candidate_win_rate": 0.44,
+      "candidate_win_ci95": [
+        0.2666537494700256,
+        0.6293298298043557
+      ],
+      "average_turns": 19.32,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 311.7923018636204,
+      "p95_step_time_ms": 657.16280000197,
+      "p99_step_time_ms": 722.8810000015073,
+      "max_step_time_ms": 723.5903999971924,
+      "fire_kept_self_score_gap": 40,
+      "fire_override_self_to_non_self_low_material": 3,
+      "fire_kept_self_no_alt": 6
+    }
+  },
+  "blue_direction": {
+    "label": "rollout_red_vs_candidate_blue",
+    "summary": {
+      "games": 25,
+      "candidate_wins": 9,
+      "opponent_wins": 16,
+      "draws": 0,
+      "candidate_win_rate": 0.36,
+      "candidate_win_ci95": [
+        0.20247656431735636,
+        0.5548184539895337
+      ],
+      "average_turns": 18.24,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 306.9350162279654,
+      "p95_step_time_ms": 651.1335000031977,
+      "p99_step_time_ms": 724.2225000009057,
+      "max_step_time_ms": 724.4454999963637,
+      "fire_kept_self_score_gap": 27,
+      "fire_override_self_to_enemy_capture": 2,
+      "fire_kept_self_no_alt": 5,
+      "fire_override_self_to_non_self_low_material": 3,
+      "fire_kept_self_unsafe_alt": 1
+    }
+  },
+  "combined": {
+    "games": 50,
+    "candidate_wins": 20,
+    "candidate_win_rate": 0.4,
+    "candidate_win_ci95": [
+      0.2760818978624575,
+      0.5381881089724063
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_step_time_ms": 309.3636590457929,
+    "p95_step_time_ms": 657.16280000197,
+    "p99_step_time_ms": 724.2225000009057,
+    "max_step_time_ms": 724.4454999963637,
+    "fire_kept_self_score_gap": 67,
+    "fire_kept_self_unsafe_alt": 1,
+    "fire_override_self_to_non_self_low_material": 6,
+    "fire_override_self_to_enemy_capture": 2,
+    "fire_kept_self_no_alt": 11
+  },
+  "gates_pass": false,
+  "gate_failures": [
+    "candidate_win_rate = 40.0%（要求 ≥ 55.0%）"
+  ],
+  "decision": {
+    "default_enabled": false,
+    "summary": "不默认启用",
+    "status": "stop",
+    "candidate_gate_pass": false,
+    "candidate_win_rate": 0.4,
+    "wilson_ci95": [
+      0.2760818978624575,
+      0.5381881089724063
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_step_time_ms": 309.3636590457929,
+    "max_step_time_ms": 724.4454999963637,
+    "default_config_changed": false,
+    "core_rules_changed": false,
+    "suggest_expansion": false,
+    "reason": "candidate_win_rate 40.0% < 52%，按 P11 停止规则不扩样。"
+  },
+  "ai_versions": {
+    "candidate": {
+      "name": "rollout_self_capture_guard",
+      "base": {
+        "name": "rollout",
+        "rollouts_per_move": 32,
+        "max_rollout_turns": 80,
+        "max_step_time_ms": 750.0,
+        "epsilon": 0.1,
+        "close_sample_margin": 0.08,
+        "close_sample_rollouts_per_move": 32,
+        "low_confidence_margin": 0.08,
+        "playout_policy": "greedy_risk",
+        "cutoff_eval": "zweistein",
+        "deadline_safety_ms": 30.0
+      },
+      "enemy_capture_margin": 0.08,
+      "non_self_low_material_margin": 0.12,
+      "prefer_enemy_capture_margin": 0.0,
+      "low_material_threshold": 3,
+      "max_score_gap_for_override": 0.12,
+      "require_safe_alternative": true
+    },
+    "opponent": {
+      "name": "rollout",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 290.607
+}
