@@ -306,13 +306,13 @@ def test_build_ai_rollout_adaptive_close_sample_overrides_only_close_sampling() 
     ai = build_ai("rollout_adaptive_close_sample", seed=2026)
 
     assert ai.name == "rollout_adaptive_close_sample"
-    assert ai.rollouts_per_move == 32
+    assert ai.rollouts_per_move == 64
     assert ai.max_rollout_turns == 80
-    assert ai.max_step_time_ms == 750.0
-    assert ai.epsilon == 0.1
+    assert ai.max_step_time_ms == 2000.0
+    assert ai.epsilon == 0.05
     assert ai.playout_policy == "greedy_risk"
     assert ai.cutoff_eval == "zweistein"
-    assert ai.deadline_safety_ms == 30.0
+    assert ai.deadline_safety_ms == 80.0
     assert ai.close_sample_margin == 0.06
     assert ai.close_sample_rollouts_per_move == 64
     assert ai.low_confidence_margin == 0.06

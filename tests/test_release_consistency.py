@@ -13,16 +13,16 @@ from tests.tk_support import make_hidden_tk_root
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED_RECOMMENDER_KWARGS = {
-    "rollouts_per_move": 32,
+    "rollouts_per_move": 64,
     "max_rollout_turns": 80,
-    "max_step_time_ms": 750.0,
-    "epsilon": 0.1,
+    "max_step_time_ms": 2000.0,
+    "epsilon": 0.05,
     "close_sample_margin": 0.08,
-    "close_sample_rollouts_per_move": 32,
+    "close_sample_rollouts_per_move": 96,
     "low_confidence_margin": 0.08,
     "playout_policy": "greedy_risk",
     "cutoff_eval": "zweistein",
-    "deadline_safety_ms": 30.0,
+    "deadline_safety_ms": 80.0,
 }
 
 EXPECTED_DEFAULT_PARAMS = {
@@ -37,7 +37,7 @@ def _read_json(relative_path: str) -> dict[str, object]:
     return json.loads((PROJECT_ROOT / relative_path).read_text(encoding="utf-8"))
 
 
-def test_gui_default_recommender_is_locked_to_p3_rollout() -> None:
+def test_gui_default_recommender_is_locked_to_p14_rollout() -> None:
     assert main_window.DEFAULT_RECOMMENDER_KIND == "rollout"
     assert main_window.DEFAULT_RECOMMENDER_KWARGS == EXPECTED_RECOMMENDER_KWARGS
 
@@ -68,7 +68,7 @@ def test_opening_panel_initial_layout_is_balanced_v1(tmp_path) -> None:
 
 def test_release_readme_documents_default_ai_and_layout() -> None:
     readme = (PROJECT_ROOT / "release/v1.0/README.md").read_text(encoding="utf-8")
-    assert "我方推荐 AI = `rollout` kind + P3 promotion 显式参数" in readme
+    assert "我方推荐 AI = `rollout` kind + P14 promotion 显式参数" in readme
     assert "默认 `balanced_v1`" in readme
 
 
@@ -84,12 +84,42 @@ def test_release_docs_promote_preflight_as_match_gate() -> None:
 def test_release_report_records_current_preflight_state() -> None:
     text = (PROJECT_ROOT / "release/v1.0/test_report.md").read_text(encoding="utf-8")
 
-    assert "699 passed" in text
-    for phase in ("P6", "P7", "P8", "P9"):
+    assert "862 passed" in text
+    for phase in ("P6", "P7", "P8", "P9", "P14"):
         assert phase in text
     assert "R-4" in text
     assert "launcher" in text
+    assert "rollout_timed_out_count" in text
     assert "READY FOR MATCH" in text
+
+
+def test_project_entry_docs_document_p14_default_rollout() -> None:
+    docs = {
+        "PROJECT_MEMORY.md": (PROJECT_ROOT / "PROJECT_MEMORY.md").read_text(encoding="utf-8"),
+        "PROJECT_PHASES.md": (PROJECT_ROOT / "PROJECT_PHASES.md").read_text(encoding="utf-8"),
+        "docs/PROJECT_BRIEF.md": (PROJECT_ROOT / "docs/PROJECT_BRIEF.md").read_text(encoding="utf-8"),
+    }
+
+    for path, text in docs.items():
+        assert "P14" in text, path
+        assert "64 rollout / move" in text, path
+        assert "2000ms step deadline" in text, path
+        assert "epsilon 0.05" in text, path
+        assert "deadline_safety_ms=80.0" in text or "80ms deadline safety" in text, path
+        assert "当前 GUI/release 默认仍是 `rollout` kind + P3 promotion" not in text, path
+        assert "默认 AI 仍是 `rollout` kind + P3 promotion" not in text, path
+
+
+def test_p14_reports_record_user_signoff_for_default_replacement() -> None:
+    report = (PROJECT_ROOT / "reports/p14_candidate_rollout_strong_64_loweps_confirm_20260518.md").read_text(
+        encoding="utf-8"
+    )
+    decision = (PROJECT_ROOT / "reports/ai_promotion_decision.md").read_text(encoding="utf-8")
+
+    assert "用户确认" in report
+    assert "受控默认替换" in report
+    assert "用户确认" in decision
+    assert "受控默认替换" in decision
 
 
 def test_release_readme_uses_controlled_rollback_language() -> None:

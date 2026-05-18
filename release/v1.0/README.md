@@ -50,7 +50,7 @@
 4. 选择我方开局布局（默认 `balanced_v1`，可用 `aggressive_v1` / `defensive_v1` / 自定义）。
 5. 录入对方开局，点击"确认开局"进入 playing 阶段。
 6. 每回合：先录入骰子，再录入对方走法（若对方先手），或读取我方推荐走法并执行。
-7. 我方推荐 AI = `rollout` kind + P3 promotion 显式参数（详见 `default_params.json`）。
+7. 我方推荐 AI = `rollout` kind + P14 promotion 显式参数（详见 `default_params.json`）。
 8. 单盘结束后 dialog 提示胜方，进入下一盘开局录入。
 9. 任一方 4 胜后 dialog 提示整轮胜方，停止开新盘。
 
@@ -75,8 +75,8 @@
 
 - 名称：`rollout`
 - 实现：`ai/rollout_ai.py`（有时间上限的平面 rollout，fallback 为 `greedy_risk`）
-- 参数：见 `default_params.json`；v1.0 默认使用 P3 promotion 参数：32 rollout / move、80 half-turn cutoff、750ms step deadline、epsilon 0.10、risk-aware playout、Zweistein cutoff、30ms deadline safety。
-- 晋升状态：已按 `reports/ai_promotion_decision.md` 的 800 局双边门禁数据晋升。
+- 参数：见 `default_params.json`；v1.0 默认使用 P14 promotion 参数：64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety。
+- 晋升状态：已按 `reports/ai_promotion_decision.md` 的 P14 双轮 50+50 复验数据晋升。
 - adaptive rollout 是显式实验候选，不是 v1.0 默认参数；它 direct vs old rollout 800 局合并胜率 59.00%，未过 60% 默认晋升线。
 - AI 候选实验入口保留在 `scripts/param_sweep.py` / `scripts/search_openings.py` / `scripts/tournament.py`
 

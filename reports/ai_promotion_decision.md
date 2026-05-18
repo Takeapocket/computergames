@@ -185,3 +185,25 @@ Traceability:
 - `reports/adaptive_rollout_2026-05-15.md`
 - `release/v1.0/default_params.json`
 - `gui/main_window.py`
+
+## 2026-05-18 P14 Promotion Decision: rollout_strong_64_loweps
+
+- candidate: `rollout_strong_64_loweps`
+- comparison: vs current release default `rollout`
+- first 50+50: 59/100
+- confirm 50+50 seed=33026: 59/100
+- combined: 118/200 = 59.0%
+- Wilson CI: [52.1%, 65.6%]
+- illegal/crash/timeout: 0/0/0
+- avg/p95/p99/max step ms: 557.0 / 1770.3 / 1920.4 / 1920.8
+- max per-side thinking red/blue: 11.4s / 10.9s
+- gate note: strong rollout candidates use stability + max-step + per-side thinking budget gates; they intentionally do not reuse the ordinary candidate `average_step_time_ms <= 500` cap because this profile has a 2000ms per-step search deadline and remains far below the 4-minute per-side budget.
+- user confirmation: 2026-05-18 用户确认将该候选作为工作默认。
+- decision: 受控默认替换，promote as GUI/release working default kwargs
+- implementation note: kind remains `"rollout"`; only kwargs changed
+- fallback: `greedy_risk` remains emergency fallback
+- traceability:
+  - `reports/p14_candidate_rollout_strong_64_loweps_20260518.md`
+  - `reports/p14_candidate_rollout_strong_64_loweps_20260518.json`
+  - `reports/p14_candidate_rollout_strong_64_loweps_confirm_20260518.md`
+  - `reports/p14_candidate_rollout_strong_64_loweps_confirm_20260518.json`

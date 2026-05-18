@@ -14,16 +14,16 @@ from scripts import bench_ai
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED_RELEASE_DEFAULT_ROLLOUT_KWARGS = {
-    "rollouts_per_move": 32,
+    "rollouts_per_move": 64,
     "max_rollout_turns": 80,
-    "max_step_time_ms": 750.0,
-    "epsilon": 0.1,
+    "max_step_time_ms": 2000.0,
+    "epsilon": 0.05,
     "close_sample_margin": 0.08,
-    "close_sample_rollouts_per_move": 32,
+    "close_sample_rollouts_per_move": 96,
     "low_confidence_margin": 0.08,
     "playout_policy": "greedy_risk",
     "cutoff_eval": "zweistein",
-    "deadline_safety_ms": 30.0,
+    "deadline_safety_ms": 80.0,
 }
 
 STRONG_ROLLOUT_EXPECTED = {
@@ -301,11 +301,11 @@ def test_strong_rollout_decision_blocks_failed_candidate_gate() -> None:
     assert "candidate gate" in decision["recommendation"]
 
 
-def test_strong_rollout_candidate_gates_keep_release_average_step_cap() -> None:
+def test_strong_rollout_candidate_gates_use_timing_budget_gate() -> None:
     gates = bench_ai._resolve_gates("rollout_strong_64", "candidate")
 
     assert gates["candidate_win_rate"] == ("ge", 0.55)
-    assert gates["average_step_time_ms"] == ("le", 500.0)
+    assert "average_step_time_ms" not in gates
     assert gates["max_step_time_ms"] == ("le", 5000.0)
 
 

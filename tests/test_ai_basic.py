@@ -290,16 +290,16 @@ def test_build_ai_rollout_zweistein_dp_cutoff_uses_release_defaults_with_dp_cuto
     signature = ai_version_signature(ai)
 
     assert ai.name == "rollout_zweistein_dp_cutoff"
-    assert ai.rollouts_per_move == 32
+    assert ai.rollouts_per_move == 64
     assert ai.max_rollout_turns == 80
-    assert ai.max_step_time_ms == 750.0
-    assert ai.epsilon == 0.1
+    assert ai.max_step_time_ms == 2000.0
+    assert ai.epsilon == 0.05
     assert ai.close_sample_margin == 0.08
-    assert ai.close_sample_rollouts_per_move == 32
+    assert ai.close_sample_rollouts_per_move == 96
     assert ai.low_confidence_margin == 0.08
     assert ai.playout_policy == "greedy_risk"
     assert ai.cutoff_eval == "zweistein_dp"
-    assert ai.deadline_safety_ms == 30.0
+    assert ai.deadline_safety_ms == 80.0
     assert signature["cutoff_eval"] == "zweistein_dp"
 
 
@@ -311,7 +311,7 @@ def test_build_ai_rollout_exact_opp1_zdp_signature_records_wrapper_and_base():
     assert ai.top_k == 3
     assert ai.exact_mix == 0.35
     assert ai.min_time_remaining_ms == 20.0
-    assert ai.max_step_time_ms == 750.0
+    assert ai.max_step_time_ms == 2000.0
     assert signature["name"] == "rollout_exact_opp1_zdp"
     assert signature["base"]["name"] == "rollout"
     assert signature["base"]["cutoff_eval"] == "zweistein"
