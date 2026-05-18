@@ -102,6 +102,8 @@ def test_aggregate_candidate_results_calculates_combined_fields() -> None:
     assert result["candidate_as_blue"]["games"] == 2
     assert "candidate_wins" not in result["candidate_as_red"]
     assert "candidate_wins" not in result["candidate_as_blue"]
+    assert "step_times_ms" not in result["candidate_as_red"]
+    assert "step_times_ms" not in result["candidate_as_blue"]
     assert "total_step_time_ms" not in result["candidate_as_red"]
     assert "step_time_count" not in result["candidate_as_red"]
     assert "total_step_time_ms" not in result["candidate_as_blue"]
@@ -112,7 +114,36 @@ def test_aggregate_candidate_results_calculates_combined_fields() -> None:
     assert result["average_turns"] == 14.0
     assert result["average_step_time_ms"] == 4.2
     assert result["max_step_time_ms"] == 10.0
+    assert result["candidate_as_red"]["average_step_time_ms"] == 3.0
+    assert result["candidate_as_red"]["max_step_time_ms"] == 5.0
+    assert result["candidate_as_blue"]["average_step_time_ms"] == 6.0
+    assert result["candidate_as_blue"]["max_step_time_ms"] == 10.0
     assert len(result["seeds_used"]) == 4
+
+
+def test_aggregate_candidate_result_can_keep_step_times_when_not_compact() -> None:
+    candidate = sol.generate_candidates(mode="curated", max_candidates=1, seed=2026)[0]
+
+    result = sol.aggregate_candidate_result(
+        candidate=candidate,
+        games_per_side=1,
+        red_results=[
+            (
+                FakeResult(Player.RED, 10, step_times_ms=[1.0, 3.0]),
+                sol.GameSeeds("candidate_as_red", 0, 1, 3, 4, 5),
+            ),
+        ],
+        blue_results=[
+            (
+                FakeResult(Player.BLUE, 12, step_times_ms=[2.0]),
+                sol.GameSeeds("candidate_as_blue", 0, 2, 6, 7, 8),
+            ),
+        ],
+        compact=False,
+    )
+
+    assert result["candidate_as_red"]["step_times_ms"] == [1.0, 3.0]
+    assert result["candidate_as_blue"]["step_times_ms"] == [2.0]
 
 
 def test_layout_to_json_uses_list_coordinates() -> None:
@@ -146,6 +177,16 @@ def test_generate_candidates_rejects_zero_max_candidates() -> None:
         assert str(exc) == "max_candidates must be >= 1"
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_parse_args_defaults_to_small_compact_probe() -> None:
+    args = sol.parse_args([])
+
+    assert args.max_candidates == 8
+    assert args.games_per_side == 1
+    assert args.max_planned_games == 32
+    assert args.compact is True
+    assert sol.parse_args(["--no-compact"]).compact is False
 
 
 def test_generate_candidates_are_valid_and_blue_is_mirror() -> None:
@@ -235,6 +276,28 @@ def test_validate_run_limits_rejects_large_non_dry_run() -> None:
         sol.validate_run_limits(candidate_count=81, games_per_side=1, dry_run=False)
 
 
+def test_validate_run_limits_uses_configurable_max_planned_games() -> None:
+    sol.validate_run_limits(
+        candidate_count=16,
+        games_per_side=1,
+        dry_run=False,
+        max_planned_games=32,
+    )
+    with pytest.raises(ValueError, match="exceeds planned-game limit \\(32\\)"):
+        sol.validate_run_limits(
+            candidate_count=17,
+            games_per_side=1,
+            dry_run=False,
+            max_planned_games=32,
+        )
+    sol.validate_run_limits(
+        candidate_count=17,
+        games_per_side=1,
+        dry_run=False,
+        max_planned_games=64,
+    )
+
+
 def test_validate_run_limits_allows_large_dry_run() -> None:
     sol.validate_run_limits(candidate_count=720, games_per_side=1, dry_run=True)
 
@@ -279,6 +342,31 @@ def test_load_resume_state_rejects_incompatible_parameters(tmp_path) -> None:
     output.write_text(json.dumps({**payload, "seed": 9999}), encoding="utf-8")
 
     with pytest.raises(ValueError, match="incompatible resume output"):
+        sol.load_resume_payload(
+            output,
+            expected=payload,
+            no_resume=False,
+        )
+
+
+def test_load_resume_state_rejects_different_compact_mode(tmp_path) -> None:
+    output = tmp_path / "screen.json"
+    payload = sol.new_run_payload(
+        argv=[],
+        mode="curated",
+        max_candidates=4,
+        candidate_count=4,
+        games_per_side=1,
+        seed=2026,
+        baseline_layout="balanced_v1",
+        max_turns=200,
+        ai_kind="rollout",
+        ai_kwargs={"rollouts_per_move": 32},
+        compact=True,
+    )
+    output.write_text(json.dumps({**payload, "compact": False}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="compact differs"):
         sol.load_resume_payload(
             output,
             expected=payload,
@@ -449,6 +537,63 @@ def test_run_screening_resumes_completed_candidate_and_writes_summary(tmp_path, 
     assert "这是小样本筛选，不是布局晋升证据，不修改 GUI/release 默认布局。" in summary.read_text(encoding="utf-8")
 
 
+def test_run_screening_records_wall_seconds_and_prints_progress(tmp_path, monkeypatch, capsys) -> None:
+    output = tmp_path / "screen.json"
+    summary = tmp_path / "screen.md"
+    seen_compact: list[bool] = []
+
+    def fake_run_candidate(**kwargs):
+        candidate = kwargs["candidate"]
+        seen_compact.append(kwargs["compact"])
+        return {
+            "candidate_id": candidate.candidate_id,
+            "source": candidate.source,
+            "red_layout": sol.layout_to_json(candidate.red_layout),
+            "blue_layout": sol.layout_to_json(candidate.blue_layout),
+            "games_per_side": 1,
+            "candidate_wins_as_red": 1,
+            "candidate_wins_as_blue": 0,
+            "combined_candidate_wins": 1,
+            "combined_games": 2,
+            "combined_win_rate": 0.5,
+            "illegal_moves": 0,
+            "crashes": 0,
+            "timeouts": 0,
+            "average_turns": 10.0,
+            "average_step_time_ms": 1.0,
+            "max_step_time_ms": 2.0,
+            "seeds_used": [],
+            "candidate_as_red": {},
+            "candidate_as_blue": {},
+        }
+
+    monkeypatch.setattr(sol, "run_candidate", fake_run_candidate)
+    monkeypatch.setattr(sol, "load_release_default_ai_config", lambda: ("rollout", {"rollouts_per_move": 32}))
+
+    exit_code = sol.main(
+        [
+            "--max-candidates",
+            "1",
+            "--games-per-side",
+            "1",
+            "--output",
+            str(output),
+            "--summary",
+            str(summary),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    written = json.loads(output.read_text(encoding="utf-8"))
+    summary_text = summary.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert seen_compact == [True]
+    assert isinstance(written["wall_seconds"], float)
+    assert written["wall_seconds"] >= 0.0
+    assert "progress: 1/1 curated_000" in captured.out
+    assert "wall_seconds:" in summary_text
+
+
 def test_run_screening_refreshes_metadata_when_resume_expands_candidates(tmp_path, monkeypatch) -> None:
     output = tmp_path / "screen.json"
     summary = tmp_path / "screen.md"
@@ -598,6 +743,7 @@ def test_write_summary_sorts_top_candidates(tmp_path) -> None:
         ai_kwargs={"rollouts_per_move": 32},
     )
     assert payload["ai_kwargs_source"] == "release/v1.0/default_params.json"
+    payload["wall_seconds"] = 12.5
     payload["results"] = [
         {
             "candidate_id": "curated_000",
@@ -637,6 +783,7 @@ def test_write_summary_sorts_top_candidates(tmp_path) -> None:
     assert text.index("curated_001") < text.index("curated_000")
     assert "| rank | candidate_id | win_rate | wins/games |" in text
     assert "ai_kwargs_source: release/v1.0/default_params.json" in text
+    assert "wall_seconds: 12.5" in text
 
 
 def test_dry_run_does_not_call_play_one_game_or_write_outputs(tmp_path, monkeypatch, capsys) -> None:

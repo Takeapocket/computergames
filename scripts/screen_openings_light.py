@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 
 import itertools
 import random
@@ -18,7 +19,9 @@ DEFAULT_SUMMARY = ROOT / "reports" / "opening_light_screen.md"
 SCHEMA_VERSION = 1
 
 METADATA_KEYS = {"ai", "fallback_ai", "promotion_report"}
-MAX_DEFAULT_PLANNED_GAMES = 160
+DEFAULT_MAX_CANDIDATES = 8
+DEFAULT_GAMES_PER_SIDE = 1
+DEFAULT_MAX_PLANNED_GAMES = 32
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -232,6 +235,8 @@ def new_run_payload(
     max_turns: int,
     ai_kind: str,
     ai_kwargs: Mapping[str, Any],
+    max_planned_games: int = DEFAULT_MAX_PLANNED_GAMES,
+    compact: bool = True,
 ) -> dict[str, Any]:
     now = utc_now()
     return {
@@ -243,12 +248,15 @@ def new_run_payload(
         "max_candidates": max_candidates,
         "candidate_count": candidate_count,
         "games_per_side": games_per_side,
+        "max_planned_games": max_planned_games,
+        "compact": compact,
         "seed": seed,
         "baseline_layout": baseline_layout,
         "max_turns": max_turns,
         "ai_kind": ai_kind,
         "ai_kwargs_source": "release/v1.0/default_params.json",
         "ai_kwargs": dict(ai_kwargs),
+        "wall_seconds": 0.0,
         "results": [],
     }
 
@@ -275,6 +283,7 @@ def validate_resume_compatible(
         "seed",
         "baseline_layout",
         "games_per_side",
+        "compact",
         "max_turns",
         "ai_kind",
         "ai_kwargs",
@@ -315,11 +324,17 @@ def role_stats(
     *,
     results: Iterable[tuple[Any, GameSeeds]],
     candidate_winner: Player,
+    compact: bool = True,
 ) -> dict[str, Any]:
     rows = list(results)
     wins = sum(1 for result, _seeds in rows if result.winner is candidate_winner)
     games = len(rows)
-    return {
+    step_times = [
+        float(step_time)
+        for result, _seeds in rows
+        for step_time in (getattr(result, "step_times_ms", None) or [])
+    ]
+    stats = {
         "games": games,
         "wins": wins,
         "win_rate": wins / games if games else 0.0,
@@ -327,13 +342,13 @@ def role_stats(
         "crashes": sum(int(getattr(result, "crashes", 0)) for result, _seeds in rows),
         "timeouts": sum(int(getattr(result, "timeouts", 0)) for result, _seeds in rows),
         "turns": [int(getattr(result, "turns", 0)) for result, _seeds in rows],
-        "step_times_ms": [
-            float(step_time)
-            for result, _seeds in rows
-            for step_time in (getattr(result, "step_times_ms", None) or [])
-        ],
+        "average_step_time_ms": sum(step_times) / len(step_times) if step_times else 0.0,
+        "max_step_time_ms": max(step_times) if step_times else 0.0,
         "seeds_used": [seeds_to_json(seeds) for _result, seeds in rows],
     }
+    if not compact:
+        stats["step_times_ms"] = step_times
+    return stats
 
 
 def aggregate_candidate_result(
@@ -342,13 +357,20 @@ def aggregate_candidate_result(
     games_per_side: int,
     red_results: Iterable[tuple[Any, GameSeeds]],
     blue_results: Iterable[tuple[Any, GameSeeds]],
+    compact: bool = True,
 ) -> dict[str, Any]:
-    red = role_stats(results=red_results, candidate_winner=Player.RED)
-    blue = role_stats(results=blue_results, candidate_winner=Player.BLUE)
+    red_rows = list(red_results)
+    blue_rows = list(blue_results)
+    red = role_stats(results=red_rows, candidate_winner=Player.RED, compact=compact)
+    blue = role_stats(results=blue_rows, candidate_winner=Player.BLUE, compact=compact)
     combined_games = red["games"] + blue["games"]
     combined_wins = red["wins"] + blue["wins"]
     turns = [*red["turns"], *blue["turns"]]
-    step_times = [*red["step_times_ms"], *blue["step_times_ms"]]
+    step_times = [
+        float(step_time)
+        for result, _seeds in [*red_rows, *blue_rows]
+        for step_time in (getattr(result, "step_times_ms", None) or [])
+    ]
 
     return {
         "candidate_id": candidate.candidate_id,
@@ -430,6 +452,7 @@ def run_candidate(
     ai_kind: str | None = None,
     ai_kwargs: Mapping[str, Any] | None = None,
     max_turns: int = 200,
+    compact: bool = True,
 ) -> dict[str, Any]:
     if ai_kind is None or ai_kwargs is None:
         default_kind, default_kwargs = load_release_default_ai_config()
@@ -464,6 +487,7 @@ def run_candidate(
         games_per_side=games_per_side,
         red_results=red_results,
         blue_results=blue_results,
+        compact=compact,
     )
 
 
@@ -478,19 +502,26 @@ def load_release_default_ai_config(
     return "rollout", kwargs
 
 
-def validate_run_limits(candidate_count: int, games_per_side: int, dry_run: bool) -> None:
+def validate_run_limits(
+    candidate_count: int,
+    games_per_side: int,
+    dry_run: bool,
+    max_planned_games: int = DEFAULT_MAX_PLANNED_GAMES,
+) -> None:
     if games_per_side < 1:
         raise ValueError("games_per_side must be >= 1")
     if games_per_side > 500:
         raise ValueError(
             "games_per_side must be <= 500 to keep deterministic seed ranges isolated"
         )
+    if max_planned_games < 1:
+        raise ValueError("max_planned_games must be >= 1")
 
     planned_games = candidate_count * games_per_side * 2
-    if not dry_run and planned_games > MAX_DEFAULT_PLANNED_GAMES:
+    if not dry_run and planned_games > max_planned_games:
         raise ValueError(
-            f"planned games ({planned_games}) exceeds default limit "
-            f"({MAX_DEFAULT_PLANNED_GAMES}); use dry-run or reduce candidates/games"
+            f"planned games ({planned_games}) exceeds planned-game limit "
+            f"({max_planned_games}); use --max-planned-games, dry-run, or reduce candidates/games"
         )
 
 
@@ -544,6 +575,9 @@ def write_summary(path: Path, payload: Mapping[str, Any]) -> None:
         f"- mode: {payload.get('mode', '')}",
         f"- candidate_count: {payload.get('candidate_count', 0)}",
         f"- games_per_side: {payload.get('games_per_side', 0)}",
+        f"- max_planned_games: {payload.get('max_planned_games', '')}",
+        f"- compact: {payload.get('compact', '')}",
+        f"- wall_seconds: {payload.get('wall_seconds', 0.0)}",
         f"- seed: {payload.get('seed', '')}",
         f"- baseline_layout: {payload.get('baseline_layout', '')}",
         f"- max_turns: {payload.get('max_turns', '')}",
@@ -608,8 +642,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         description="Screen lightweight opening layouts with release default AI."
     )
     parser.add_argument("--mode", choices=("curated", "full"), default="curated")
-    parser.add_argument("--max-candidates", type=int, default=32)
-    parser.add_argument("--games-per-side", type=int, default=2)
+    parser.add_argument("--max-candidates", type=int, default=DEFAULT_MAX_CANDIDATES)
+    parser.add_argument("--games-per-side", type=int, default=DEFAULT_GAMES_PER_SIDE)
+    parser.add_argument("--max-planned-games", type=int, default=DEFAULT_MAX_PLANNED_GAMES)
+    parser.add_argument("--compact", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--baseline-layout", default="balanced_v1")
     parser.add_argument("--max-turns", type=int, default=200)
@@ -621,6 +657,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    started_at = time.perf_counter()
     args = parse_args(argv)
     candidates = generate_candidates(
         mode=args.mode,
@@ -631,6 +668,7 @@ def main(argv: list[str] | None = None) -> int:
         candidate_count=len(candidates),
         games_per_side=args.games_per_side,
         dry_run=args.dry_run,
+        max_planned_games=args.max_planned_games,
     )
     if args.baseline_layout not in PRESETS:
         raise ValueError(f"unknown baseline_layout: {args.baseline_layout}")
@@ -646,6 +684,8 @@ def main(argv: list[str] | None = None) -> int:
         max_candidates=args.max_candidates,
         candidate_count=len(candidates),
         games_per_side=args.games_per_side,
+        max_planned_games=args.max_planned_games,
+        compact=args.compact,
         seed=args.seed,
         baseline_layout=args.baseline_layout,
         max_turns=args.max_turns,
@@ -682,7 +722,10 @@ def main(argv: list[str] | None = None) -> int:
             ai_kind=ai_kind,
             ai_kwargs=ai_kwargs,
             max_turns=args.max_turns,
+            compact=args.compact,
         )
+        payload["wall_seconds"] = round(time.perf_counter() - started_at, 3)
+        result = results[candidate.candidate_id]
         payload["results"] = [
             results[candidate.candidate_id]
             for candidate in candidates
@@ -690,7 +733,17 @@ def main(argv: list[str] | None = None) -> int:
         ]
         payload["updated_at"] = utc_now()
         atomic_write_json(args.output, payload)
+        wins = int(result.get("combined_candidate_wins", 0))
+        games = int(result.get("combined_games", 0))
+        win_rate = float(result.get("combined_win_rate", 0.0))
+        print(
+            f"progress: {candidate_index + 1}/{len(candidates)} "
+            f"{candidate.candidate_id} wins={wins}/{games} "
+            f"win_rate={win_rate:.3f} wall_seconds={payload['wall_seconds']:.3f}",
+            flush=True,
+        )
 
+    payload["wall_seconds"] = round(time.perf_counter() - started_at, 3)
     payload["results"] = [
         results[candidate.candidate_id]
         for candidate in candidates

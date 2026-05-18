@@ -1,0 +1,147 @@
+{
+  "report_path": "reports/opening_duel_curated_008_8g_20260518.md",
+  "generated_at": "2026-05-18T13:49:57",
+  "argv": [
+    "--candidate-report",
+    "reports/opening_light_screen.json",
+    "--candidate-section",
+    "results",
+    "--candidate-index",
+    "8",
+    "--games-per-side",
+    "4",
+    "--seed-pool",
+    "24026",
+    "--output",
+    "reports/opening_duel_curated_008_8g_20260518.md",
+    "--json-output",
+    "reports/opening_duel_curated_008_8g_20260518.json",
+    "--decision-reason",
+    "Top candidate from opening_light_screen 16x1; small expansion only, not promotion evidence."
+  ],
+  "candidate": {
+    "source_report": "reports/opening_light_screen.json",
+    "source_section": "results",
+    "source_index": 8,
+    "style": "unknown",
+    "red_layout": {
+      "1": [
+        0,
+        0
+      ],
+      "2": [
+        1,
+        1
+      ],
+      "3": [
+        0,
+        2
+      ],
+      "4": [
+        1,
+        0
+      ],
+      "5": [
+        0,
+        1
+      ],
+      "6": [
+        2,
+        0
+      ]
+    },
+    "blue_layout": {
+      "1": [
+        4,
+        4
+      ],
+      "2": [
+        3,
+        3
+      ],
+      "3": [
+        4,
+        2
+      ],
+      "4": [
+        3,
+        4
+      ],
+      "5": [
+        4,
+        3
+      ],
+      "6": [
+        2,
+        4
+      ]
+    }
+  },
+  "baseline_layout_id": "balanced_v1",
+  "games_per_side": 4,
+  "seed_pool": [
+    24026
+  ],
+  "max_turns": 200,
+  "ai_kind": "rollout",
+  "ai_kwargs_source": "release/v1.0/default_params.json",
+  "ai_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "stats": {
+    "wins": 4,
+    "games": 8,
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "max_step_time_ms": 720.2883999998448,
+    "avg_step_time_ms": 306.01872702700535,
+    "total_step_time_ms": 45290.77159999679,
+    "step_time_count": 148,
+    "candidate_as_red": {
+      "wins": 1,
+      "games": 4,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.0508000000809,
+      "avg_step_time_ms": 286.83070759491704,
+      "total_step_time_ms": 22659.625899998446,
+      "step_time_count": 79
+    },
+    "candidate_as_blue": {
+      "wins": 3,
+      "games": 4,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.2883999998448,
+      "avg_step_time_ms": 327.9876188405557,
+      "total_step_time_ms": 22631.145699998342,
+      "step_time_count": 69
+    },
+    "seed_count": 1,
+    "seeds": [
+      24026
+    ]
+  },
+  "candidate_win_rate": 0.5,
+  "candidate_win_ci95": [
+    0.21521252682444186,
+    0.7847874731755582
+  ],
+  "decision": {
+    "promote_layout": false,
+    "reason": "Top candidate from opening_light_screen 16x1; small expansion only, not promotion evidence."
+  },
+  "wall_seconds": 45.3
+}

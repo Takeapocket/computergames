@@ -1,0 +1,151 @@
+{
+  "report_path": "reports/opening_duel_curated_003_24g_20260518.md",
+  "generated_at": "2026-05-18T13:52:53",
+  "argv": [
+    "--candidate-report",
+    "reports/opening_light_screen.json",
+    "--candidate-section",
+    "results",
+    "--candidate-index",
+    "3",
+    "--games-per-side",
+    "4",
+    "--seed-pool",
+    "25026,25027,25028",
+    "--output",
+    "reports/opening_duel_curated_003_24g_20260518.md",
+    "--json-output",
+    "reports/opening_duel_curated_003_24g_20260518.json",
+    "--decision-reason",
+    "curated_003 survived 16x1 and 8-game expansion; 24-game seed-pool probe only, not promotion evidence."
+  ],
+  "candidate": {
+    "source_report": "reports/opening_light_screen.json",
+    "source_section": "results",
+    "source_index": 3,
+    "style": "unknown",
+    "red_layout": {
+      "1": [
+        2,
+        0
+      ],
+      "2": [
+        1,
+        1
+      ],
+      "3": [
+        0,
+        2
+      ],
+      "4": [
+        1,
+        0
+      ],
+      "5": [
+        0,
+        1
+      ],
+      "6": [
+        0,
+        0
+      ]
+    },
+    "blue_layout": {
+      "1": [
+        2,
+        4
+      ],
+      "2": [
+        3,
+        3
+      ],
+      "3": [
+        4,
+        2
+      ],
+      "4": [
+        3,
+        4
+      ],
+      "5": [
+        4,
+        3
+      ],
+      "6": [
+        4,
+        4
+      ]
+    }
+  },
+  "baseline_layout_id": "balanced_v1",
+  "games_per_side": 4,
+  "seed_pool": [
+    25026,
+    25027,
+    25028
+  ],
+  "max_turns": 200,
+  "ai_kind": "rollout",
+  "ai_kwargs_source": "release/v1.0/default_params.json",
+  "ai_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "stats": {
+    "wins": 12,
+    "games": 24,
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "max_step_time_ms": 720.3702000001613,
+    "avg_step_time_ms": 310.12647720589325,
+    "total_step_time_ms": 126531.60270000444,
+    "step_time_count": 408,
+    "candidate_as_red": {
+      "wins": 7,
+      "games": 12,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.3186000001551,
+      "avg_step_time_ms": 323.66993480664,
+      "total_step_time_ms": 58584.258200001845,
+      "step_time_count": 181
+    },
+    "candidate_as_blue": {
+      "wins": 5,
+      "games": 12,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "max_step_time_ms": 720.3702000001613,
+      "avg_step_time_ms": 299.3275088105841,
+      "total_step_time_ms": 67947.3445000026,
+      "step_time_count": 227
+    },
+    "seed_count": 3,
+    "seeds": [
+      25026,
+      25027,
+      25028
+    ]
+  },
+  "candidate_win_rate": 0.5,
+  "candidate_win_ci95": [
+    0.31427131627763083,
+    0.6857286837223692
+  ],
+  "decision": {
+    "promote_layout": false,
+    "reason": "curated_003 survived 16x1 and 8-game expansion; 24-game seed-pool probe only, not promotion evidence."
+  },
+  "wall_seconds": 126.56
+}
