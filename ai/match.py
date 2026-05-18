@@ -418,6 +418,21 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
                 "low_confidence_margin": 0.06,
             }),
         )
+    if kind == "rollout_root_racing":
+        from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
+        from ai.rollout_ai import RolloutRootRacingAI
+
+        return RolloutRootRacingAI(
+            rng=rng,
+            name="rollout_root_racing",
+            **_merged({
+                **RELEASE_DEFAULT_ROLLOUT_KWARGS,
+                "racing_initial_rollouts_per_move": 6,
+                "racing_survivor_count": 4,
+                "racing_final_survivor_count": 2,
+                "racing_batch_rollouts_per_move": 2,
+            }),
+        )
     if kind == "rollout_exact_opp1_zdp":
         from ai.chance_rerank import ExactOpponentDiceRerankAI
         from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
@@ -545,6 +560,10 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "playout_policy",
         "cutoff_eval",
         "deadline_safety_ms",
+        "racing_initial_rollouts_per_move",
+        "racing_survivor_count",
+        "racing_final_survivor_count",
+        "racing_batch_rollouts_per_move",
         "leaf_evaluator",
         "c_uct",
         "scale",

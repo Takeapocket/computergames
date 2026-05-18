@@ -340,3 +340,168 @@ class RolloutAI:
                 move = policy.choose_move(state, dice) or self._rng.choice(legal)
             state.apply_move(move, dice=dice)
         return state.get_winner()
+
+
+class RolloutRootRacingAI(RolloutAI):
+    """在根节点用 racing 分配 rollout 预算的显式实验候选。"""
+
+    def __init__(
+        self,
+        *,
+        racing_initial_rollouts_per_move: int = 6,
+        racing_survivor_count: int = 4,
+        racing_final_survivor_count: int = 2,
+        racing_batch_rollouts_per_move: int = 2,
+        rng: random.Random | None = None,
+        name: str = "rollout_root_racing",
+        **kwargs,
+    ) -> None:
+        initial = max(1, int(racing_initial_rollouts_per_move))
+        super().__init__(rng=rng, name=name, **kwargs)
+        self.racing_initial_rollouts_per_move = initial
+        self.racing_survivor_count = max(1, int(racing_survivor_count))
+        self.racing_final_survivor_count = max(
+            1,
+            min(int(racing_final_survivor_count), self.racing_survivor_count),
+        )
+        self.racing_batch_rollouts_per_move = max(1, int(racing_batch_rollouts_per_move))
+
+    def choose_move(self, state: GameState, dice: int) -> Move | None:
+        self.last_root_stats = []
+        self.last_diagnostics = []
+        self.last_score_margin = None
+        self.last_low_confidence = False
+        self.last_timed_out = False
+        self.last_used_fallback = False
+        legal = state.legal_moves(state.current_player, dice)
+        if not legal:
+            return None
+
+        step_budget_ms = max(0.0, self.max_step_time_ms - self.deadline_safety_ms)
+        deadline = time.perf_counter() + step_budget_ms / 1000.0
+        perspective = state.current_player
+        fallback = GreedyAI(
+            rng=random.Random(self._rng.randrange(2**31)),
+            name="rollout_fallback",
+            expected_risk_weight=EXPECTED_RISK_WEIGHT,
+            expected_win_risk_weight=EXPECTED_WIN_RISK_WEIGHT,
+        )
+        fallback_move = fallback.choose_move(state, dice) or self._rng.choice(legal)
+        scores = [_RolloutMoveScore(move=move) for move in legal]
+        total_visit_budget = max(
+            self.racing_initial_rollouts_per_move * len(scores),
+            self.rollouts_per_move * len(scores),
+        )
+
+        for score in scores:
+            timed_out = self._sample_move_score(
+                score,
+                state=state,
+                dice=dice,
+                perspective=perspective,
+                deadline=deadline,
+                target_visits=self.racing_initial_rollouts_per_move,
+            )
+            if timed_out:
+                self.fallback_count += 1
+                self.last_timed_out = True
+                self.last_used_fallback = True
+                self._record_diagnostics(scores)
+                return fallback_move
+
+        if self._visit_budget_reached(scores, total_visit_budget):
+            self._record_diagnostics(scores)
+            self._record_confidence(scores)
+            return self._best_score(scores).move
+
+        active = self._select_survivors(scores, self.racing_survivor_count)
+        if len(active) > self.racing_final_survivor_count:
+            active = self._sample_active_round(
+                active,
+                all_scores=scores,
+                total_visit_budget=total_visit_budget,
+                state=state,
+                dice=dice,
+                perspective=perspective,
+                deadline=deadline,
+            )
+            if self.last_timed_out:
+                self._record_diagnostics(scores)
+                self._record_confidence(scores)
+                return self._best_score(active).move
+            if self._visit_budget_reached(scores, total_visit_budget):
+                self._record_diagnostics(scores)
+                self._record_confidence(scores)
+                return self._best_score(active).move
+            active = self._select_survivors(active, self.racing_final_survivor_count)
+
+        while active:
+            if self._visit_budget_reached(scores, total_visit_budget):
+                self._record_diagnostics(scores)
+                self._record_confidence(scores)
+                return self._best_score(active).move
+            if time.perf_counter() >= deadline:
+                self.last_timed_out = True
+                self._record_diagnostics(scores)
+                self._record_confidence(scores)
+                return self._best_score(active).move
+            active = self._sample_active_round(
+                active,
+                all_scores=scores,
+                total_visit_budget=total_visit_budget,
+                state=state,
+                dice=dice,
+                perspective=perspective,
+                deadline=deadline,
+            )
+            if self.last_timed_out:
+                self._record_diagnostics(scores)
+                self._record_confidence(scores)
+                return self._best_score(active).move
+
+        self._record_diagnostics(scores)
+        self._record_confidence(scores)
+        return self._best_score(scores).move
+
+    def _select_survivors(
+        self,
+        scores: list[_RolloutMoveScore],
+        count: int,
+    ) -> list[_RolloutMoveScore]:
+        ranked = self._ranked_scores([score for score in scores if score.visits > 0])
+        return ranked[: min(max(1, count), len(ranked))]
+
+    def _visit_budget_reached(
+        self,
+        scores: list[_RolloutMoveScore],
+        total_visit_budget: int,
+    ) -> bool:
+        return sum(score.visits for score in scores) >= total_visit_budget
+
+    def _sample_active_round(
+        self,
+        active: list[_RolloutMoveScore],
+        *,
+        all_scores: list[_RolloutMoveScore],
+        total_visit_budget: int,
+        state: GameState,
+        dice: int,
+        perspective: Player,
+        deadline: float,
+    ) -> list[_RolloutMoveScore]:
+        for score in active:
+            remaining = total_visit_budget - sum(item.visits for item in all_scores)
+            if remaining <= 0:
+                break
+            timed_out = self._sample_move_score(
+                score,
+                state=state,
+                dice=dice,
+                perspective=perspective,
+                deadline=deadline,
+                target_visits=score.visits + min(self.racing_batch_rollouts_per_move, remaining),
+            )
+            if timed_out:
+                self.last_timed_out = True
+                break
+        return self._ranked_scores(active)

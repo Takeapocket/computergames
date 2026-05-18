@@ -163,6 +163,14 @@ CANDIDATE_PROFILES: dict[str, dict[str, dict]] = {
             "games_per_side": 400,
         },
     },
+    "rollout_root_racing": {
+        "candidate": {
+            "opponent": "rollout",
+            "opponent_kwargs": RELEASE_DEFAULT_ROLLOUT_KWARGS,
+            "starting_layout": "balanced_v1",
+            "games_per_side": 25,
+        },
+    },
     "rollout_zweistein_dp_cutoff": {
         "candidate": {
             "opponent": "rollout",
