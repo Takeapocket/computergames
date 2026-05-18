@@ -1,0 +1,730 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-18T01:42:16+00:00",
+  "updated_at": "2026-05-18T01:48:05+00:00",
+  "argv": [
+    "--max-candidates",
+    "4",
+    "--games-per-side",
+    "1",
+    "--output",
+    "reports/opening_light_screen_smoke.json",
+    "--summary",
+    "reports/opening_light_screen_smoke.md"
+  ],
+  "mode": "curated",
+  "max_candidates": 4,
+  "candidate_count": 4,
+  "games_per_side": 1,
+  "seed": 2026,
+  "baseline_layout": "balanced_v1",
+  "max_turns": 200,
+  "ai_kind": "rollout",
+  "ai_kwargs_source": "release/v1.0/default_params.json",
+  "ai_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "results": [
+    {
+      "candidate_id": "curated_000",
+      "source": "preset:balanced_v1",
+      "games_per_side": 1,
+      "red_layout": {
+        "1": [
+          0,
+          0
+        ],
+        "2": [
+          0,
+          1
+        ],
+        "3": [
+          0,
+          2
+        ],
+        "4": [
+          1,
+          0
+        ],
+        "5": [
+          1,
+          1
+        ],
+        "6": [
+          2,
+          0
+        ]
+      },
+      "blue_layout": {
+        "1": [
+          4,
+          4
+        ],
+        "2": [
+          4,
+          3
+        ],
+        "3": [
+          4,
+          2
+        ],
+        "4": [
+          3,
+          4
+        ],
+        "5": [
+          3,
+          3
+        ],
+        "6": [
+          2,
+          4
+        ]
+      },
+      "candidate_wins_as_red": 1,
+      "candidate_wins_as_blue": 0,
+      "combined_candidate_wins": 1,
+      "combined_games": 2,
+      "combined_win_rate": 0.5,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_turns": 24.0,
+      "average_step_time_ms": 289.85381458369375,
+      "max_step_time_ms": 720.0722999987192,
+      "seeds_used": [
+        {
+          "role": "candidate_as_red",
+          "game_index": 0,
+          "base_seed": 202600000,
+          "dice_seed": 607800000,
+          "red_seed": 607800001,
+          "blue_seed": 607800002
+        },
+        {
+          "role": "candidate_as_blue",
+          "game_index": 0,
+          "base_seed": 202600001,
+          "dice_seed": 607800003,
+          "red_seed": 607800004,
+          "blue_seed": 607800005
+        }
+      ],
+      "candidate_as_red": {
+        "games": 1,
+        "wins": 1,
+        "win_rate": 1.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          25
+        ],
+        "step_times_ms": [
+          631.5824000048451,
+          580.0979000050575,
+          595.9501000033924,
+          512.9830000078073,
+          548.7091999966651,
+          720.0722999987192,
+          492.5041999958921,
+          437.96280000242405,
+          411.54960000130814,
+          366.2546999985352,
+          354.08319999987725,
+          327.34570000320673,
+          296.6271000041161,
+          527.3327000031713,
+          199.7747999994317,
+          100.76060000574216,
+          132.84600000770297,
+          86.06990000407677,
+          95.44599999208003,
+          78.95680000365246,
+          50.32510000455659,
+          42.80799999833107,
+          53.036099998280406,
+          14.944999988074414,
+          33.583600001293235
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_red",
+            "game_index": 0,
+            "base_seed": 202600000,
+            "dice_seed": 607800000,
+            "red_seed": 607800001,
+            "blue_seed": 607800002
+          }
+        ]
+      },
+      "candidate_as_blue": {
+        "games": 1,
+        "wins": 0,
+        "win_rate": 0.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          23
+        ],
+        "step_times_ms": [
+          597.6292999985162,
+          571.9157999992603,
+          525.6269999954384,
+          521.2674000067636,
+          494.761699999799,
+          484.3988999928115,
+          406.167799999821,
+          689.5160999993095,
+          323.9749999920605,
+          277.0278999960283,
+          239.864299990586,
+          65.82309999794234,
+          198.8922000018647,
+          186.30520001170225,
+          148.46579999721143,
+          166.1333999945782,
+          47.033499999088235,
+          71.26620000053663,
+          69.6477000019513,
+          51.162700008717366,
+          41.71900000073947,
+          22.86630000162404,
+          19.91000000271015
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_blue",
+            "game_index": 0,
+            "base_seed": 202600001,
+            "dice_seed": 607800003,
+            "red_seed": 607800004,
+            "blue_seed": 607800005
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": "curated_001",
+      "source": "preset:aggressive_v1",
+      "games_per_side": 1,
+      "red_layout": {
+        "1": [
+          1,
+          1
+        ],
+        "2": [
+          0,
+          2
+        ],
+        "3": [
+          2,
+          0
+        ],
+        "4": [
+          0,
+          1
+        ],
+        "5": [
+          1,
+          0
+        ],
+        "6": [
+          0,
+          0
+        ]
+      },
+      "blue_layout": {
+        "1": [
+          3,
+          3
+        ],
+        "2": [
+          4,
+          2
+        ],
+        "3": [
+          2,
+          4
+        ],
+        "4": [
+          4,
+          3
+        ],
+        "5": [
+          3,
+          4
+        ],
+        "6": [
+          4,
+          4
+        ]
+      },
+      "candidate_wins_as_red": 0,
+      "candidate_wins_as_blue": 1,
+      "combined_candidate_wins": 1,
+      "combined_games": 2,
+      "combined_win_rate": 0.5,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_turns": 21.0,
+      "average_step_time_ms": 293.7914761898269,
+      "max_step_time_ms": 680.1093999965815,
+      "seeds_used": [
+        {
+          "role": "candidate_as_red",
+          "game_index": 0,
+          "base_seed": 202601000,
+          "dice_seed": 607803000,
+          "red_seed": 607803001,
+          "blue_seed": 607803002
+        },
+        {
+          "role": "candidate_as_blue",
+          "game_index": 0,
+          "base_seed": 202601001,
+          "dice_seed": 607803003,
+          "red_seed": 607803004,
+          "blue_seed": 607803005
+        }
+      ],
+      "candidate_as_red": {
+        "games": 1,
+        "wins": 0,
+        "win_rate": 0.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          16
+        ],
+        "step_times_ms": [
+          586.1530000111088,
+          527.4430999998003,
+          515.7882999919821,
+          478.79559999273624,
+          440.02870000258554,
+          680.1093999965815,
+          391.2872999935644,
+          370.4550999973435,
+          332.54990000568796,
+          330.91910000075586,
+          294.7844000009354,
+          528.6388999957126,
+          197.5259000028018,
+          41.24320000119042,
+          102.83519999939017,
+          2.3584999871673062
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_red",
+            "game_index": 0,
+            "base_seed": 202601000,
+            "dice_seed": 607803000,
+            "red_seed": 607803001,
+            "blue_seed": 607803002
+          }
+        ]
+      },
+      "candidate_as_blue": {
+        "games": 1,
+        "wins": 1,
+        "win_rate": 1.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          26
+        ],
+        "step_times_ms": [
+          589.0620999998646,
+          515.312499992433,
+          465.3711999999359,
+          461.7586000094889,
+          419.21480000019073,
+          442.30579999566544,
+          461.506499996176,
+          406.19470000092406,
+          355.58010000386275,
+          344.47790001286194,
+          239.15490000217687,
+          203.97289999527857,
+          348.81949999544304,
+          198.2022999873152,
+          165.88770000089426,
+          116.3788999983808,
+          115.67990000185091,
+          275.73099998699035,
+          150.83600000070874,
+          63.50129999918863,
+          43.71519999403972,
+          33.63530000206083,
+          40.63980000501033,
+          43.590300003415905,
+          14.567400008672848,
+          3.2298000005539507
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_blue",
+            "game_index": 0,
+            "base_seed": 202601001,
+            "dice_seed": 607803003,
+            "red_seed": 607803004,
+            "blue_seed": 607803005
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": "curated_002",
+      "source": "preset:defensive_v1",
+      "games_per_side": 1,
+      "red_layout": {
+        "1": [
+          0,
+          1
+        ],
+        "2": [
+          1,
+          0
+        ],
+        "3": [
+          0,
+          0
+        ],
+        "4": [
+          0,
+          2
+        ],
+        "5": [
+          2,
+          0
+        ],
+        "6": [
+          1,
+          1
+        ]
+      },
+      "blue_layout": {
+        "1": [
+          4,
+          3
+        ],
+        "2": [
+          3,
+          4
+        ],
+        "3": [
+          4,
+          4
+        ],
+        "4": [
+          4,
+          2
+        ],
+        "5": [
+          2,
+          4
+        ],
+        "6": [
+          3,
+          3
+        ]
+      },
+      "candidate_wins_as_red": 0,
+      "candidate_wins_as_blue": 0,
+      "combined_candidate_wins": 0,
+      "combined_games": 2,
+      "combined_win_rate": 0.0,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_turns": 18.5,
+      "average_step_time_ms": 270.90937567629373,
+      "max_step_time_ms": 591.9996999873547,
+      "seeds_used": [
+        {
+          "role": "candidate_as_red",
+          "game_index": 0,
+          "base_seed": 202602000,
+          "dice_seed": 607806000,
+          "red_seed": 607806001,
+          "blue_seed": 607806002
+        },
+        {
+          "role": "candidate_as_blue",
+          "game_index": 0,
+          "base_seed": 202602001,
+          "dice_seed": 607806003,
+          "red_seed": 607806004,
+          "blue_seed": 607806005
+        }
+      ],
+      "candidate_as_red": {
+        "games": 1,
+        "wins": 0,
+        "win_rate": 0.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          18
+        ],
+        "step_times_ms": [
+          570.501800000784,
+          591.9996999873547,
+          546.8442999990657,
+          447.0488000079058,
+          410.90950000216253,
+          372.5616000010632,
+          363.5228999919491,
+          273.64509999461006,
+          239.43400000280235,
+          216.16580001136754,
+          205.68189999903552,
+          154.44630000274628,
+          106.82450000604149,
+          91.03419999883045,
+          82.0705999940401,
+          62.50780000118539,
+          15.364200007752515,
+          20.42240000446327
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_red",
+            "game_index": 0,
+            "base_seed": 202602000,
+            "dice_seed": 607806000,
+            "red_seed": 607806001,
+            "blue_seed": 607806002
+          }
+        ]
+      },
+      "candidate_as_blue": {
+        "games": 1,
+        "wins": 0,
+        "win_rate": 0.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          19
+        ],
+        "step_times_ms": [
+          575.5606000020634,
+          521.0869000002276,
+          505.9733999951277,
+          477.9796999937389,
+          432.5276000017766,
+          390.75569999113213,
+          378.82640000316314,
+          346.5321999974549,
+          289.4459000090137,
+          292.42040000099223,
+          248.0991000047652,
+          223.98490000341553,
+          161.7553000105545,
+          122.06359999254346,
+          115.13820000982378,
+          98.71449999627657,
+          27.5608999945689,
+          41.6347999998834,
+          2.601400003186427
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_blue",
+            "game_index": 0,
+            "base_seed": 202602001,
+            "dice_seed": 607806003,
+            "red_seed": 607806004,
+            "blue_seed": 607806005
+          }
+        ]
+      }
+    },
+    {
+      "candidate_id": "curated_003",
+      "source": "heuristic:low_ids_forward",
+      "games_per_side": 1,
+      "red_layout": {
+        "1": [
+          2,
+          0
+        ],
+        "2": [
+          1,
+          1
+        ],
+        "3": [
+          0,
+          2
+        ],
+        "4": [
+          1,
+          0
+        ],
+        "5": [
+          0,
+          1
+        ],
+        "6": [
+          0,
+          0
+        ]
+      },
+      "blue_layout": {
+        "1": [
+          2,
+          4
+        ],
+        "2": [
+          3,
+          3
+        ],
+        "3": [
+          4,
+          2
+        ],
+        "4": [
+          3,
+          4
+        ],
+        "5": [
+          4,
+          3
+        ],
+        "6": [
+          4,
+          4
+        ]
+      },
+      "candidate_wins_as_red": 1,
+      "candidate_wins_as_blue": 1,
+      "combined_candidate_wins": 2,
+      "combined_games": 2,
+      "combined_win_rate": 1.0,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_turns": 18.5,
+      "average_step_time_ms": 285.08060540676723,
+      "max_step_time_ms": 610.174499990535,
+      "seeds_used": [
+        {
+          "role": "candidate_as_red",
+          "game_index": 0,
+          "base_seed": 202603000,
+          "dice_seed": 607809000,
+          "red_seed": 607809001,
+          "blue_seed": 607809002
+        },
+        {
+          "role": "candidate_as_blue",
+          "game_index": 0,
+          "base_seed": 202603001,
+          "dice_seed": 607809003,
+          "red_seed": 607809004,
+          "blue_seed": 607809005
+        }
+      ],
+      "candidate_as_red": {
+        "games": 1,
+        "wins": 1,
+        "win_rate": 1.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          21
+        ],
+        "step_times_ms": [
+          594.7812000085833,
+          558.9810999954352,
+          471.13470001204405,
+          477.3667000117712,
+          466.40170000318903,
+          385.27959999919403,
+          368.26220000511967,
+          333.28350000374485,
+          290.7497999985935,
+          385.1576000015484,
+          310.2118000097107,
+          303.6850000062259,
+          242.07690000184812,
+          186.80549999407958,
+          113.70300000999123,
+          62.4892999912845,
+          23.92790000885725,
+          41.53539999970235,
+          11.411600004066713,
+          3.7314999935915694,
+          2.679500001249835
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_red",
+            "game_index": 0,
+            "base_seed": 202603000,
+            "dice_seed": 607809000,
+            "red_seed": 607809001,
+            "blue_seed": 607809002
+          }
+        ]
+      },
+      "candidate_as_blue": {
+        "games": 1,
+        "wins": 1,
+        "win_rate": 1.0,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "turns": [
+          16
+        ],
+        "step_times_ms": [
+          610.174499990535,
+          531.1262000032002,
+          477.8596000105608,
+          485.6842000008328,
+          501.7920999962371,
+          440.20009999803733,
+          321.39299999107607,
+          276.3381999975536,
+          564.8454000038328,
+          203.81239999551326,
+          179.55950000032317,
+          133.8038000103552,
+          62.854200004949234,
+          60.10459999379236,
+          62.29899999743793,
+          2.4800999963190407
+        ],
+        "seeds_used": [
+          {
+            "role": "candidate_as_blue",
+            "game_index": 0,
+            "base_seed": 202603001,
+            "dice_seed": 607809003,
+            "red_seed": 607809004,
+            "blue_seed": 607809005
+          }
+        ]
+      }
+    }
+  ]
+}
