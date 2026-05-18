@@ -99,6 +99,28 @@ def test_default_commands_include_small_timing_probe_gate() -> None:
     assert "--json-output" in timing_command
 
 
+def test_default_pytest_command_uses_project_local_basetemp() -> None:
+    pytest_commands = [
+        tuple(args)
+        for _label, args in preflight_check.DEFAULT_COMMANDS
+        if "-m" in args and "pytest" in args
+    ]
+
+    assert len(pytest_commands) == 1
+    pytest_command = pytest_commands[0]
+    assert "-p" in pytest_command
+    assert "no:cacheprovider" in pytest_command
+    assert "--tb=short" in pytest_command
+    assert "--maxfail=1" in pytest_command
+    assert "--basetemp" in pytest_command
+    assert pytest_command[-1] == preflight_check.PYTEST_BASETEMP_TOKEN
+
+
+def test_validate_runtime_environment_rejects_non_venv_python(tmp_path) -> None:
+    with pytest.raises(preflight_check.PreflightError, match="project venv"):
+        preflight_check.validate_runtime_environment(tmp_path)
+
+
 def test_run_external_checks_reports_ok_lines(tmp_path, capsys) -> None:
     calls: list[tuple[str, ...]] = []
 
@@ -115,6 +137,51 @@ def test_run_external_checks_reports_ok_lines(tmp_path, capsys) -> None:
     assert result == 0
     assert calls == [("python", "-m", "pytest", "-q")]
     assert "[OK] unit" in capsys.readouterr().out
+
+
+def test_run_external_checks_expands_runtime_basetemp(tmp_path) -> None:
+    calls: list[tuple[str, ...]] = []
+
+    def fake_run(args, cwd):
+        calls.append(tuple(args))
+        return 0
+
+    result = preflight_check.run_external_checks(
+        tmp_path,
+        runner=fake_run,
+        commands=(("pytest", ("python", "-m", "pytest", "--basetemp", preflight_check.PYTEST_BASETEMP_TOKEN)),),
+    )
+
+    assert result == 0
+    args = calls[0]
+    basetemp = Path(args[args.index("--basetemp") + 1])
+    assert basetemp.parent == tmp_path / ".local-temp"
+    assert basetemp.name.startswith("pytest-")
+    assert preflight_check.PYTEST_BASETEMP_TOKEN not in args
+
+
+def test_subprocess_runner_uses_project_local_temp(tmp_path, monkeypatch) -> None:
+    captured = {}
+
+    def fake_run(args, cwd, check, env):
+        captured["args"] = tuple(args)
+        captured["cwd"] = cwd
+        captured["check"] = check
+        captured["env"] = env
+
+        class Result:
+            returncode = 0
+
+        return Result()
+
+    monkeypatch.setattr(preflight_check.subprocess, "run", fake_run)
+
+    assert preflight_check._subprocess_runner(("python", "-V"), tmp_path) == 0
+    assert captured["cwd"] == tmp_path
+    assert captured["check"] is False
+    assert captured["env"]["TEMP"] == str(tmp_path / ".local-temp")
+    assert captured["env"]["TMP"] == str(tmp_path / ".local-temp")
+    assert (tmp_path / ".local-temp").is_dir()
 
 
 def test_main_success_output_includes_ready_for_match(monkeypatch, capsys) -> None:

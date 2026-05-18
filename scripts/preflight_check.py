@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -45,7 +47,21 @@ EXPECTED_RELEASE_CONFIG = {
 }
 
 DEFAULT_COMMANDS = (
-    ("pytest -q", (sys.executable, "-m", "pytest", "-q")),
+    (
+        "pytest -q",
+        (
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "--tb=short",
+            "--maxfail=1",
+            "--basetemp",
+            "{PYTEST_BASETEMP}",
+        ),
+    ),
     ("scripts/smoke_test.py", (sys.executable, "scripts/smoke_test.py")),
     ("scripts/s2_rehearsal.py", (sys.executable, "scripts/s2_rehearsal.py")),
     (
@@ -81,6 +97,7 @@ REQUIRED_FILES = (
 )
 
 Runner = Callable[[Sequence[str], Path], int]
+PYTEST_BASETEMP_TOKEN = "{PYTEST_BASETEMP}"
 
 
 class PreflightError(RuntimeError):
@@ -128,8 +145,78 @@ def validate_gui_defaults() -> None:
         raise PreflightError("GUI default recommender kwargs drifted from locked P3 rollout defaults")
 
 
+def validate_runtime_environment(project_root: Path = PROJECT_ROOT) -> None:
+    if not sys.executable.lower().startswith(str(project_root / ".venv" / "Scripts").lower()):
+        raise PreflightError(f"preflight must use project venv python, got: {sys.executable}")
+    _configure_tk_library_paths()
+    try:
+        import tkinter as tk
+    except ImportError as exc:
+        raise PreflightError(
+            "Tk 初始化失败。常见原因是把 .venv 从另一台电脑直接拷过来，"
+            "或新电脑 Python 安装缺少 Tcl/Tk；请在当前电脑重建 .venv。"
+        ) from exc
+
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        root.destroy()
+    except tk.TclError as exc:
+        raise PreflightError(
+            "Tk 初始化失败。常见原因是把 .venv 从另一台电脑直接拷过来，"
+            "或新电脑 Python 安装缺少 Tcl/Tk；请在当前电脑重建 .venv。"
+        ) from exc
+
+
+def _configure_tk_library_paths() -> None:
+    _set_library_path_if_present("TCL_LIBRARY", "tcl8.6", "init.tcl")
+    _set_library_path_if_present("TK_LIBRARY", "tk8.6", "tk.tcl")
+
+
+def _set_library_path_if_present(env_var: str, directory_name: str, marker_file: str) -> None:
+    if os.environ.get(env_var):
+        return
+    candidate = Path(sys.base_prefix) / "tcl" / directory_name
+    if (candidate / marker_file).is_file():
+        os.environ[env_var] = str(candidate)
+
+
+def print_runtime_summary(project_root: Path = PROJECT_ROOT) -> None:
+    print(f"[INFO] python: {sys.executable}", flush=True)
+    print(f"[INFO] version: {sys.version.split()[0]}", flush=True)
+    print(f"[INFO] project: {project_root}", flush=True)
+    print(f"[INFO] temp: {os.environ.get('TEMP', '')}", flush=True)
+
+
+def _project_temp_dir(project_root: Path) -> Path:
+    temp_dir = project_root / ".local-temp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir
+
+
+def _pytest_basetemp(project_root: Path) -> Path:
+    return _project_temp_dir(project_root) / f"pytest-{os.getpid()}-{time.monotonic_ns()}"
+
+
+def _expand_runtime_args(args: Sequence[str], project_root: Path) -> tuple[str, ...]:
+    basetemp = None
+    expanded: list[str] = []
+    for arg in args:
+        if arg == PYTEST_BASETEMP_TOKEN:
+            if basetemp is None:
+                basetemp = _pytest_basetemp(project_root)
+            expanded.append(str(basetemp))
+        else:
+            expanded.append(str(arg))
+    return tuple(expanded)
+
+
 def _subprocess_runner(args: Sequence[str], cwd: Path) -> int:
-    return subprocess.run(args, cwd=cwd, check=False).returncode
+    temp_dir = _project_temp_dir(cwd)
+    env = os.environ.copy()
+    env["TEMP"] = str(temp_dir)
+    env["TMP"] = str(temp_dir)
+    return subprocess.run(args, cwd=cwd, check=False, env=env).returncode
 
 
 def run_external_checks(
@@ -139,7 +226,7 @@ def run_external_checks(
     commands: Sequence[tuple[str, Sequence[str]]] = DEFAULT_COMMANDS,
 ) -> int:
     for label, args in commands:
-        code = runner(args, project_root)
+        code = runner(_expand_runtime_args(args, project_root), project_root)
         if code != 0:
             print(f"[FAIL] {label}: exit code {code}", flush=True)
             return code
@@ -152,11 +239,13 @@ def main() -> int:
         validate_project_root(PROJECT_ROOT)
         validate_release_files(PROJECT_ROOT)
         validate_gui_defaults()
+        validate_runtime_environment(PROJECT_ROOT)
     except PreflightError as exc:
         print(f"[FAIL] release defaults locked: {exc}", flush=True)
         return 1
 
     print("[OK] release defaults locked", flush=True)
+    print_runtime_summary(PROJECT_ROOT)
     code = run_external_checks(PROJECT_ROOT)
     if code != 0:
         return code

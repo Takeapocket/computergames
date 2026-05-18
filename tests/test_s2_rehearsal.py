@@ -1,9 +1,11 @@
 from pathlib import Path
 
 from scripts import s2_rehearsal
+from tests.tk_support import make_hidden_tk_root
 
 
 def test_s2_rehearsal_scenario_cleans_temp_dirs(monkeypatch) -> None:
+    make_hidden_tk_root()
     created: list[Path] = []
     original_mkdtemp = s2_rehearsal.tempfile.mkdtemp
 

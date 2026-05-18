@@ -6,6 +6,7 @@ import tkinter as tk
 import pytest
 
 from gui.match_mode import MatchModePanel
+from gui.match_mode import RECOMMENDATION_TEXT_HEIGHT
 from tests.tk_support import make_hidden_tk_root
 
 
@@ -50,6 +51,16 @@ def test_recommendation_label_uses_neutral_style_for_waiting_states(tk_root):
     assert str(panel._recommendation_label.cget("relief")) == "flat"
     assert int(panel._recommendation_label.cget("borderwidth")) == 0
     assert "bold" not in str(panel._recommendation_label.cget("font"))
+
+
+def test_recommendation_text_height_is_bounded_for_long_diagnostics(tk_root):
+    panel = MatchModePanel(tk_root)
+    long_text = "\n".join(f"rollout candidate {i}: visits=32, score=0.{i}" for i in range(20))
+
+    panel.set_recommendation(long_text)
+
+    assert int(panel._recommendation_label.cget("height")) == RECOMMENDATION_TEXT_HEIGHT
+    assert "rollout candidate 19" in panel._recommendation_label.get("1.0", "end-1c")
 
 
 def test_set_match_status_shows_match_fields(tk_root):

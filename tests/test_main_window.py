@@ -863,6 +863,18 @@ def test_match_mode_panel_displays_rollout_recommendation_after_dice_input(tk_ro
     assert "未启用" not in recommendation
 
 
+def test_playing_controls_keep_operator_buttons_reachable(tk_root):
+    window = MainWindow(tk_root)
+    window.pack()
+    window._phase = "playing"
+    window._handle_dice_change("6")
+
+    assert int(window.match_mode_panel._recommendation_label.cget("height")) <= 8
+    assert int(window.controls.move_listbox.cget("height")) <= 7
+    assert window.controls.apply_button.winfo_manager()
+    assert window.controls.undo_button.winfo_manager()
+
+
 def test_recommendation_is_cached_until_state_or_dice_changes(tk_root):
     class CountingAI:
         name = "counting"
