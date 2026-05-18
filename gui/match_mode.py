@@ -20,17 +20,35 @@ class MatchModePanel(tk.Frame):
         self.score_var = tk.StringVar(value="")
         self.first_mover_var = tk.StringVar(value="")
         self.role_var = tk.StringVar(value="")
+        self._recommendation_normal_style = {
+            "relief": "flat",
+            "borderwidth": 0,
+            "padx": 0,
+            "pady": 0,
+            "bg": self.cget("bg"),
+            "font": ("TkDefaultFont", 10, "normal"),
+        }
+        self._recommendation_emphasis_style = {
+            "relief": "solid",
+            "borderwidth": 1,
+            "padx": 8,
+            "pady": 5,
+            "bg": "#fff7cc",
+            "font": ("TkDefaultFont", 10, "bold"),
+        }
 
         tk.Label(self, textvariable=self.current_player_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.phase_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.selected_pieces_var, anchor="w").pack(fill=tk.X)
-        tk.Label(
+        self._recommendation_label = tk.Label(
             self,
             textvariable=self.recommendation_var,
             anchor="w",
             justify=tk.LEFT,
             wraplength=320,
-        ).pack(fill=tk.X)
+            **self._recommendation_normal_style,
+        )
+        self._recommendation_label.pack(fill=tk.X, pady=(4, 4))
         tk.Label(self, textvariable=self.record_status_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.can_undo_var, anchor="w").pack(fill=tk.X)
 
@@ -60,6 +78,17 @@ class MatchModePanel(tk.Frame):
 
     def set_recommendation(self, text: str) -> None:
         self.recommendation_var.set(f"推荐走法：{text}")
+        self._set_recommendation_emphasis(self._should_emphasize_recommendation(text))
+
+    def _set_recommendation_emphasis(self, enabled: bool) -> None:
+        style = self._recommendation_emphasis_style if enabled else self._recommendation_normal_style
+        self._recommendation_label.configure(**style)
+
+    @staticmethod
+    def _should_emphasize_recommendation(text: str) -> bool:
+        neutral_texts = {"未启用 AI", "本轮已结束", "对局已结束", "当前骰子无合法走法"}
+        stripped = text.strip()
+        return bool(stripped) and not stripped.startswith("等待") and stripped not in neutral_texts
 
     def set_record_dirty(self, dirty: bool) -> None:
         self.record_status_var.set("棋谱状态：● 未保存" if dirty else "棋谱状态：✓ 已保存")

@@ -139,25 +139,37 @@ def write_reports(payload: dict, output: Path, json_output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     json_output.parent.mkdir(parents=True, exist_ok=True)
     json_output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    is_preflight = output.name.startswith("preflight_")
     markdown = [
-        "# P6 Timing Budget Probe",
+        "# Preflight Timing Budget Probe" if is_preflight else "# P6 Timing Budget Probe",
         "",
         "默认 AI、默认布局、release 配置未变。",
         "",
-        f"- ai_kind: `{payload['ai_kind']}`",
-        f"- default_layout: `{payload['default_layout']}`",
-        f"- sample_count: `{payload['sample_count']}`",
-        f"- avg_ms: `{payload['avg_ms']:.2f}`",
-        f"- p50_ms: `{payload['p50_ms']:.2f}`",
-        f"- p95_ms: `{payload['p95_ms']:.2f}`",
-        f"- p99_ms: `{payload['p99_ms']:.2f}`",
-        f"- max_ms: `{payload['max_ms']:.2f}`",
-        f"- rollout_timed_out_count: `{payload['rollout_timed_out_count']}`",
-        f"- rollout_used_fallback_count: `{payload['rollout_used_fallback_count']}`",
-        f"- illegal_recommendations: `{payload['illegal_recommendations']}`",
-        f"- exceptions: `{payload['exceptions']}`",
-        "",
     ]
+    if is_preflight:
+        markdown.extend(
+            [
+                "本报告是 16 样本赛前快速核对，不替代历史 P6 120 样本 timing probe 证据。",
+                "",
+            ]
+        )
+    markdown.extend(
+        [
+            f"- ai_kind: `{payload['ai_kind']}`",
+            f"- default_layout: `{payload['default_layout']}`",
+            f"- sample_count: `{payload['sample_count']}`",
+            f"- avg_ms: `{payload['avg_ms']:.2f}`",
+            f"- p50_ms: `{payload['p50_ms']:.2f}`",
+            f"- p95_ms: `{payload['p95_ms']:.2f}`",
+            f"- p99_ms: `{payload['p99_ms']:.2f}`",
+            f"- max_ms: `{payload['max_ms']:.2f}`",
+            f"- rollout_timed_out_count: `{payload['rollout_timed_out_count']}`",
+            f"- rollout_used_fallback_count: `{payload['rollout_used_fallback_count']}`",
+            f"- illegal_recommendations: `{payload['illegal_recommendations']}`",
+            f"- exceptions: `{payload['exceptions']}`",
+            "",
+        ]
+    )
     flagged = [
         sample
         for sample in payload.get("samples", [])

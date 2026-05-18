@@ -1261,14 +1261,71 @@ def test_operator_move_list_distinguishes_self_capture(tk_root):
     assert not any("吃子" in label and "自吃" not in label for label in labels)
 
 
-def test_match_opponent_turn_recommendation_waits_for_opponent_move(tk_root):
+def test_move_list_marks_ai_recommendation(tk_root):
+    from core.game_state import GameState
+    from core.types import Position
+    from gui.main_window import format_move_label
+    from record.game_record import GameRecord
+
+    state = GameState.from_layout(
+        red={1: Position(0, 0), 2: Position(0, 1)},
+        blue={1: Position(4, 4)},
+        current_player=Player.RED,
+    )
+    moves = state.legal_moves(Player.RED, 1)
+    recommended = moves[1]
+
+    class FakeRecommender:
+        last_diagnostics = []
+        last_low_confidence = False
+        last_timed_out = False
+        last_used_fallback = False
+
+        def choose_move(self, state, dice):
+            return recommended
+
     window = MainWindow(tk_root)
     window.pack()
+    window.state = state
+    window.record = GameRecord.from_state(state)
+    window._recommender = FakeRecommender()
+    window._phase = "playing"
+    window._awaiting_dice = False
+    window.current_dice = 1
+
+    window._refresh()
+
+    labels = window.controls.move_listbox.get(0, tk.END)
+    marked = [label for label in labels if label.startswith("[AI推荐] ")]
+    assert marked == [f"[AI推荐] {format_move_label(recommended, distinguish_self_capture=True)}"]
+
+
+def test_match_opponent_turn_recommendation_waits_for_opponent_move(tk_root):
+    class CountingRecommender:
+        last_diagnostics = []
+        last_low_confidence = False
+        last_timed_out = False
+        last_used_fallback = False
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def choose_move(self, state, dice):
+            self.calls += 1
+            return state.legal_moves(state.current_player, dice)[0]
+
+    window = MainWindow(tk_root)
+    window.pack()
+    recommender = CountingRecommender()
+    window._recommender = recommender
     window._phase = "playing"
     window._set_mode("match", our_side=Player.BLUE)
 
     window._handle_dice_change("6")
 
     recommendation = window.match_mode_panel.recommendation_var.get()
+    labels = window.controls.move_listbox.get(0, tk.END)
     assert "等待对方走法" in recommendation
     assert "rollout" not in recommendation
+    assert recommender.calls == 0
+    assert not any(label.startswith("[AI推荐] ") for label in labels)

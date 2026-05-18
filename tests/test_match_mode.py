@@ -33,6 +33,25 @@ def test_panel_constructs_without_match_status_visible(tk_root):
     assert panel.role_var.get() == ""
 
 
+def test_recommendation_label_is_visually_emphasized(tk_root):
+    panel = MatchModePanel(tk_root)
+    panel.set_recommendation("rollout：红方 1: (0,0) -> (1,1)")
+
+    assert str(panel._recommendation_label.cget("relief")) == "solid"
+    assert int(panel._recommendation_label.cget("borderwidth")) >= 1
+    assert "bold" in str(panel._recommendation_label.cget("font"))
+
+
+def test_recommendation_label_uses_neutral_style_for_waiting_states(tk_root):
+    panel = MatchModePanel(tk_root)
+
+    panel.set_recommendation("等待对方走法")
+
+    assert str(panel._recommendation_label.cget("relief")) == "flat"
+    assert int(panel._recommendation_label.cget("borderwidth")) == 0
+    assert "bold" not in str(panel._recommendation_label.cget("font"))
+
+
 def test_set_match_status_shows_match_fields(tk_root):
     panel = MatchModePanel(tk_root)
     panel.set_match_status(

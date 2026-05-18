@@ -768,11 +768,24 @@ class MainWindow(tk.Frame):
     def _refresh(self) -> None:
         moves = self._current_moves()
         selected_ids = self._selected_piece_ids()
-        move_labels = [format_move_label(move, distinguish_self_capture=True) for move in moves]
         legal_destinations = self._legal_destinations_for_selection(moves)
         winner = self.state.get_winner()
         can_enter_dice = self._can_enter_dice(winner)
         can_select_moves = self._can_select_moves(winner)
+        recommended_move: Move | None = None
+        is_opponent_turn = (
+            self._mode == "match"
+            and self._our_side is not None
+            and self.state.current_player is not self._our_side
+        )
+        if can_select_moves and not is_opponent_turn:
+            recommended_move = self._recommended_move()
+        move_labels = []
+        for move in moves:
+            label = format_move_label(move, distinguish_self_capture=True)
+            if recommended_move is not None and move == recommended_move:
+                label = f"[AI推荐] {label}"
+            move_labels.append(label)
         selected_move_valid = (
             self.selected_move_index is not None
             and 0 <= self.selected_move_index < len(moves)
@@ -926,9 +939,9 @@ class MainWindow(tk.Frame):
             if getattr(self._recommender, "last_low_confidence", False):
                 margin = getattr(self._recommender, "last_score_margin", None)
                 if margin is None:
-                    lines.append("置信：低，候选差距过小")
+                    lines.append("低置信：建议人工核对候选列表（候选差距过小）")
                 else:
-                    lines.append(f"置信：低，候选差距={float(margin):.2f}")
+                    lines.append(f"低置信：建议人工核对候选列表，候选差距={float(margin):.2f}")
             if getattr(self._recommender, "last_timed_out", False):
                 if getattr(self._recommender, "last_used_fallback", False):
                     lines.append("采样：超时，已使用 greedy_risk 回退")

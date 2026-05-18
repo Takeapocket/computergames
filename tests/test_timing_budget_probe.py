@@ -65,6 +65,35 @@ def test_write_reports_writes_json_and_markdown(tmp_path) -> None:
     assert "默认 AI、默认布局、release 配置未变" in markdown
 
 
+def test_write_reports_marks_preflight_probe_as_quick_check(tmp_path) -> None:
+    payload = {
+        "ai_kind": "rollout",
+        "ai_kwargs_source": "release/v1.0/default_params.json",
+        "default_layout": "balanced_v1",
+        "sample_count": 16,
+        "avg_ms": 10.0,
+        "p50_ms": 10.0,
+        "p95_ms": 10.0,
+        "p99_ms": 10.0,
+        "max_ms": 10.0,
+        "rollout_timed_out_count": 0,
+        "rollout_used_fallback_count": 0,
+        "illegal_recommendations": 0,
+        "exceptions": 0,
+        "samples": [],
+        "command": "python scripts/timing_budget_probe.py --samples 16",
+    }
+
+    md_path = tmp_path / "preflight_timing_budget_probe.md"
+    json_path = tmp_path / "preflight_timing_budget_probe.json"
+    timing_budget_probe.write_reports(payload, md_path, json_path)
+
+    markdown = md_path.read_text(encoding="utf-8")
+    assert "Preflight Timing Budget Probe" in markdown
+    assert "16 样本赛前快速核对" in markdown
+    assert "不替代历史 P6 120 样本 timing probe 证据" in markdown
+
+
 def test_write_reports_lists_fallback_samples(tmp_path) -> None:
     payload = {
         "ai_kind": "rollout",

@@ -98,7 +98,7 @@ def test_recommendation_text_marks_low_confidence():
     text = MainWindow._recommendation_text(FakeWindow(), None)
 
     assert "rollout：红方 5: (2,1) -> (2,2) 自吃" in text
-    assert "置信：低" in text
+    assert "低置信：建议人工核对候选列表" in text
     assert "0.03" in text
 
 
