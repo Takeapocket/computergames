@@ -4,6 +4,9 @@ import tkinter as tk
 from collections.abc import Sequence
 
 
+RECOMMENDATION_TEXT_HEIGHT = 8
+
+
 class MatchModePanel(tk.Frame):
     def __init__(self, master: tk.Misc) -> None:
         super().__init__(master, padx=16, pady=8, borderwidth=1, relief="solid")
@@ -40,15 +43,28 @@ class MatchModePanel(tk.Frame):
         tk.Label(self, textvariable=self.current_player_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.phase_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.selected_pieces_var, anchor="w").pack(fill=tk.X)
-        self._recommendation_label = tk.Label(
-            self,
-            textvariable=self.recommendation_var,
-            anchor="w",
-            justify=tk.LEFT,
-            wraplength=320,
+        self._recommendation_frame = tk.Frame(self)
+        self._recommendation_label = tk.Text(
+            self._recommendation_frame,
+            height=RECOMMENDATION_TEXT_HEIGHT,
+            width=1,
+            wrap=tk.WORD,
+            state=tk.DISABLED,
+            cursor="arrow",
+            takefocus=False,
+            exportselection=False,
             **self._recommendation_normal_style,
         )
-        self._recommendation_label.pack(fill=tk.X, pady=(4, 4))
+        self._recommendation_scrollbar = tk.Scrollbar(
+            self._recommendation_frame,
+            orient=tk.VERTICAL,
+            command=self._recommendation_label.yview,
+        )
+        self._recommendation_label.configure(yscrollcommand=self._recommendation_scrollbar.set)
+        self._recommendation_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._recommendation_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self._recommendation_frame.pack(fill=tk.X, pady=(4, 4))
+        self._sync_recommendation_text()
         tk.Label(self, textvariable=self.record_status_var, anchor="w").pack(fill=tk.X)
         tk.Label(self, textvariable=self.can_undo_var, anchor="w").pack(fill=tk.X)
 
@@ -78,11 +94,18 @@ class MatchModePanel(tk.Frame):
 
     def set_recommendation(self, text: str) -> None:
         self.recommendation_var.set(f"推荐走法：{text}")
+        self._sync_recommendation_text()
         self._set_recommendation_emphasis(self._should_emphasize_recommendation(text))
 
     def _set_recommendation_emphasis(self, enabled: bool) -> None:
         style = self._recommendation_emphasis_style if enabled else self._recommendation_normal_style
         self._recommendation_label.configure(**style)
+
+    def _sync_recommendation_text(self) -> None:
+        self._recommendation_label.configure(state=tk.NORMAL)
+        self._recommendation_label.delete("1.0", tk.END)
+        self._recommendation_label.insert("1.0", self.recommendation_var.get())
+        self._recommendation_label.configure(state=tk.DISABLED)
 
     @staticmethod
     def _should_emphasize_recommendation(text: str) -> bool:

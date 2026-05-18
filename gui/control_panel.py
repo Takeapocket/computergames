@@ -49,7 +49,7 @@ class ControlPanel(tk.Frame):
 
         tk.Label(self, text="合法走法：", anchor="w").pack(fill=tk.X)
 
-        self.move_listbox = tk.Listbox(self, height=12, exportselection=False)
+        self.move_listbox = tk.Listbox(self, height=7, exportselection=False)
         self.move_listbox.pack(fill=tk.BOTH, expand=True, pady=(4, 8))
         self.move_listbox.bind("<<ListboxSelect>>", self._emit_move_select)
 

@@ -97,12 +97,12 @@ def _make_window(
     *,
     setup_dialog_return: tuple[Player, str] | None = (Player.RED, "甲"),
     askyesno_return: bool = True,
-) -> tuple[tk.Tk, MainWindow]:
+) -> tuple[tk.Tk | tk.Toplevel, MainWindow]:
     """工厂：返回 (root, MainWindow)，路径隔离到 tmp。所有 dialog 静音。"""
     restore_messagebox = _silence_messagebox(askyesno_return=askyesno_return)
     try:
         _configure_tk_library_paths()
-        root = tk.Tk()
+        root = _create_hidden_tk_container()
         root.withdraw()
         window = MainWindow(
             root,
@@ -122,7 +122,18 @@ def _make_window(
     return root, window
 
 
-def _destroy(root: tk.Tk, window: MainWindow) -> None:
+def _create_hidden_tk_container() -> tk.Tk | tk.Toplevel:
+    default_root = getattr(tk, "_default_root", None)
+    if default_root is not None:
+        try:
+            if default_root.winfo_exists():
+                return tk.Toplevel(default_root)
+        except tk.TclError:
+            pass
+    return tk.Tk()
+
+
+def _destroy(root: tk.Tk | tk.Toplevel, window: MainWindow) -> None:
     if window._timer_after_id is not None:
         try:
             window.after_cancel(window._timer_after_id)

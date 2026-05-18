@@ -12,6 +12,8 @@ tmp/
 # Common local artifacts
 __pycache__/
 .pytest_cache/
+.pytest-tmp/
+.local-temp/
 .mypy_cache/
 .ruff_cache/
 .venv/

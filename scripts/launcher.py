@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal, Sequence
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PYTEST_BASETEMP_TOKEN = "{PYTEST_BASETEMP}"
 
 CommandKind = Literal["subprocess", "status"]
 Runner = Callable[[Sequence[str], Path], int]
@@ -69,7 +72,15 @@ def build_commands(project_root: Path = PROJECT_ROOT) -> tuple[LauncherCommand, 
             label="完整 pytest",
             description="运行全部自动测试。",
             kind="subprocess",
-            args=(python_path, "-m", "pytest"),
+            args=(
+                python_path,
+                "-m",
+                "pytest",
+                "-p",
+                "no:cacheprovider",
+                "--basetemp",
+                PYTEST_BASETEMP_TOKEN,
+            ),
         ),
         LauncherCommand(
             key="4",
@@ -134,8 +145,35 @@ def resolve_command(commands: Sequence[LauncherCommand], choice: str) -> Launche
     raise LauncherError(f"未知选项：{choice}")
 
 
+def _project_temp_dir(project_root: Path) -> Path:
+    temp_dir = project_root / ".local-temp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    return temp_dir
+
+
+def _pytest_basetemp(project_root: Path) -> Path:
+    return _project_temp_dir(project_root) / f"pytest-{os.getpid()}-{time.monotonic_ns()}"
+
+
+def _expand_runtime_args(args: Sequence[str], project_root: Path) -> tuple[str, ...]:
+    basetemp = None
+    expanded: list[str] = []
+    for arg in args:
+        if arg == PYTEST_BASETEMP_TOKEN:
+            if basetemp is None:
+                basetemp = _pytest_basetemp(project_root)
+            expanded.append(str(basetemp))
+        else:
+            expanded.append(str(arg))
+    return tuple(expanded)
+
+
 def _subprocess_runner(args: Sequence[str], cwd: Path) -> int:
-    return subprocess.run(args, cwd=cwd, check=False).returncode
+    temp_dir = _project_temp_dir(cwd)
+    env = os.environ.copy()
+    env["TEMP"] = str(temp_dir)
+    env["TMP"] = str(temp_dir)
+    return subprocess.run(args, cwd=cwd, check=False, env=env).returncode
 
 
 def _format_args(args: Sequence[str]) -> str:
@@ -174,7 +212,7 @@ def run_command(
     if command.kind == "status":
         print_release_status(project_root)
         return 0
-    return runner(command.args, project_root)
+    return runner(_expand_runtime_args(command.args, project_root), project_root)
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -204,7 +242,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.dry_run:
             command = resolve_command(commands, args.dry_run)
             print(f"{command.label}:")
-            print(_format_args(command.args) if command.kind == "subprocess" else "内置状态显示")
+            if command.kind == "subprocess":
+                print(_format_args(_expand_runtime_args(command.args, project_root)))
+            else:
+                print("内置状态显示")
             return 0
         if args.run:
             command = resolve_command(commands, args.run)
@@ -237,8 +278,11 @@ def _interactive_loop(project_root: Path, commands: Sequence[LauncherCommand]) -
 
         print(f"\n[RUN] {command.label}")
         if command.kind == "subprocess":
-            print(_format_args(command.args))
-        code = run_command(command, project_root)
+            runtime_args = _expand_runtime_args(command.args, project_root)
+            print(_format_args(runtime_args))
+            code = _subprocess_runner(runtime_args, project_root)
+        else:
+            code = run_command(command, project_root)
         if code == 0:
             print(f"[OK] {command.label}")
         else:
