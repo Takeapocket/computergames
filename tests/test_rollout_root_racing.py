@@ -12,9 +12,9 @@ def test_build_ai_rollout_root_racing_uses_release_budget_and_policy():
     assert isinstance(ai, RolloutRootRacingAI)
     assert ai.name == "rollout_root_racing"
     assert ai.max_rollout_turns == 80
-    assert ai.max_step_time_ms == 750.0
-    assert ai.deadline_safety_ms == 30.0
-    assert ai.epsilon == 0.1
+    assert ai.max_step_time_ms == 2000.0
+    assert ai.deadline_safety_ms == 80.0
+    assert ai.epsilon == 0.05
     assert ai.playout_policy == "greedy_risk"
     assert ai.cutoff_eval == "zweistein"
     assert ai.racing_initial_rollouts_per_move == 6

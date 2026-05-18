@@ -1,12 +1,12 @@
 # Test Report
 
-Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive/P3 候选复验）/ 2026-05-16（P3 受控默认替换复验）/ 2026-05-17（P6-P9 robustness / audit / candidate follow-up / R-4 GUI dice / launcher）
+Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真实 Tk GUI 手动表填写完成）/ 2026-05-15（sign-off 复验 + adaptive/P3 候选复验）/ 2026-05-16（P3 受控默认替换复验）/ 2026-05-17（P6-P9 robustness / audit / candidate follow-up / R-4 GUI dice / launcher）/ 2026-05-18（P14 默认 rollout 参数受控替换）
 
 ## Current sign-off snapshot
 
 | command | exit code | result |
 |---|---:|---|
-| `.venv/Scripts/python.exe -m pytest -q` | 0 | 699 passed |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 862 passed |
 | `.venv/Scripts/python.exe scripts/preflight_check.py` | 0 | READY FOR MATCH |
 | `.venv/Scripts/python.exe scripts/launcher.py --list` | 0 | 菜单正常 |
 | `.venv/Scripts/python.exe scripts/launcher.py --dry-run 4` | 0 | smoke 命令映射正常 |
@@ -18,6 +18,7 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 - **P8 threat defense audit**：threat rerank gate 不支持实现候选，默认 AI、布局和 release 配置未变。
 - **P9 Zweistein-DP chance-aware evaluation**：P9.1 / P9.2 候选未过 candidate 门槛，P9.3 不启动。
 - **R-4 GUI dice + launcher**：GUI 程序掷骰已完成；现场一键启动器 `启动项目.cmd` / `scripts/launcher.py` 已完成，`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，preflight 已纳入启动器文件存在性检查。
+- **P14 default rollout replacement**：用户确认将 `rollout_strong_64_loweps` 显式 kwargs 作为 GUI/release 工作默认；`rollout_timed_out_count` 仅表示 RolloutAI 内部 deadline 停止采样信号，不等同于 bench timeout 或现场超时判负。
 
 ## Commands
 
@@ -26,9 +27,10 @@ Date: 2026-05-12（自动化基线）/ 2026-05-13（自动化复验 + S2 §4 真
 | `.venv/Scripts/python.exe -m pytest -q` | 0 | 495 passed in 11.68s |
 | `.venv/Scripts/python.exe -m pytest -q` | 0 | 520 passed in 10.51s（2026-05-16 P3 默认替换后） |
 | `.venv/Scripts/python.exe -m pytest -q` | 0 | 699 passed（2026-05-17 一键启动器与 R-4 follow-up 后） |
+| `.venv/Scripts/python.exe -m pytest -q` | 0 | 862 passed in 73.55s（2026-05-18 P14 默认替换与 code-review follow-up 后） |
 | `.venv/Scripts/python.exe -m pytest tests/test_default_ai_config.py tests/test_ai_basic.py tests/test_quick_bench_ci.py tests/test_bench_ai.py tests/test_ai_match.py tests/test_rollout_ai.py tests/test_rollout_stability.py tests/test_gui_logic.py -q` | 0 | 91 passed |
 | `.venv/Scripts/python.exe scripts/smoke_test.py` | 0 | 合法走法 / undo / winner 全过；undo restored: True |
-| hidden Tk `MainWindow` smoke with temporary auto-save paths | 0 | default recommender kind=`rollout`, cutoff_eval=`zweistein`, deadline_safety_ms=`30.0` |
+| hidden Tk `MainWindow` smoke with temporary auto-save paths | 0 | default recommender kind=`rollout`, cutoff_eval=`zweistein`（P3 当时参数；当前 P14 默认见下方 `deadline_safety_ms=80.0`） |
 | `.venv/Scripts/python.exe scripts/rollout_stability.py --runs 10 --seed 0` | 0 | 输出含 score / winrate / cutoffs / avg；固定 10-run 分布随机且受 deadline 影响，只说明候选接近、低置信可见 |
 | `.venv/Scripts/python.exe scripts/s2_rehearsal.py` | 0 | Total: 8/8 scenarios passed |
 | `python scripts/quick_bench.py --red greedy_risk --blue greedy --games 200 --seed 2026` | 0 | red_win_rate=0.58 |
@@ -230,7 +232,7 @@ report_path:                            reports/p3_promotion_rollout_zweistein_c
 参见 `reports/ai_promotion_decision.md`：
 
 - **AI 默认**：`rollout` 晋升为 GUI/release 默认；`greedy_risk` 保留为应急回退。
-- **rollout 参数**：2026-05-16 受控默认替换后，GUI/release 默认参数改为 P3 promotion 通过的 `rollout_zweistein_cutoff` 参数集，但实现上仍使用 `kind="rollout"` + 显式 kwargs；`greedy_risk` 保留为应急回退。
+- **rollout 参数**：2026-05-18 P14 受控默认替换后，GUI/release 默认参数改为 `rollout_strong_64_loweps` 参数集，但实现上仍使用 `kind="rollout"` + 显式 kwargs；`greedy_risk` 保留为应急回退。
 - **开局默认**：保持 `balanced_v1`，未做候选晋升。
 
 参数搜索 / 开局搜索 / pairwise tournament 流水线均已落地为 `scripts/param_sweep.py`、`scripts/search_openings.py`、`scripts/tournament.py`；本 release 未替换默认布局。
@@ -238,3 +240,49 @@ report_path:                            reports/p3_promotion_rollout_zweistein_c
 ## Known limitations
 
 参见 `release/v1.0/known_limitations.md`。本次验证未发现新已知项。
+
+## P14 rollout_strong_64_loweps working default replacement
+
+- P14 `rollout_strong_64_loweps` promoted as GUI/release working default kwargs.
+- Implementation keeps `ai` / `DEFAULT_RECOMMENDER_KIND` as `rollout`; only rollout kwargs changed.
+- Combined verification evidence: 118/200 = 59.0%.
+- Wilson CI: [52.1%, 65.6%].
+- illegal/crash/timeout: 0/0/0.
+- Timing remains safe under the 4-minute per-side budget; max step ms ≈ 1920.8, max per-side thinking ≈ 11.4s / 10.9s. `rollout_timed_out_count` in preflight timing reports is an internal RolloutAI deadline signal; it is not the bench `timeouts` metric and is allowed when there is no illegal recommendation, exception, command failure, or hard timing-gate failure.
+- `greedy_risk` remains the emergency fallback.
+
+Current working default kwargs:
+
+```json
+{
+  "rollouts_per_move": 64,
+  "max_rollout_turns": 80,
+  "max_step_time_ms": 2000.0,
+  "epsilon": 0.05,
+  "close_sample_margin": 0.08,
+  "close_sample_rollouts_per_move": 96,
+  "low_confidence_margin": 0.08,
+  "playout_policy": "greedy_risk",
+  "cutoff_eval": "zweistein",
+  "deadline_safety_ms": 80.0
+}
+```
+
+Latest validation commands/results:
+
+```text
+& ".venv/Scripts/python.exe" -m pytest tests/test_release_consistency.py -v
+12 passed in 0.87s
+
+& ".venv/Scripts/python.exe" -m pytest -q
+862 passed in 73.55s
+
+& ".venv/Scripts/python.exe" scripts/smoke_test.py
+exit 0; undo restored: True
+
+& ".venv/Scripts/python.exe" scripts/preflight_check.py
+exit 0; pytest -q 862 passed; S2 rehearsal 8/8 PASS; READY FOR MATCH
+
+& ".venv/Scripts/python.exe" scripts/launcher.py --run status
+exit 0; 默认 AI rollout / params.ai=rollout; fallback AI greedy_risk; rollout 数 64; step deadline 2000.0 ms; playout_policy greedy_risk; cutoff_eval zweistein
+```

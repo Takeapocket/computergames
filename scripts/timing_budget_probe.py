@@ -168,6 +168,8 @@ def write_reports(payload: dict, output: Path, json_output: Path) -> None:
             f"- illegal_recommendations: `{payload['illegal_recommendations']}`",
             f"- exceptions: `{payload['exceptions']}`",
             "",
+            "rollout_timed_out_count 是 RolloutAI 内部 deadline 信号；它记录推荐器在本步接近自身搜索预算时停止采样，不等同于 bench 对局 `timeouts` 或现场超时判负。preflight 硬失败条件仍是脚本异常、非法推荐、命令失败，或显式硬时间门超过阈值。",
+            "",
         ]
     )
     flagged = [

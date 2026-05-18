@@ -130,6 +130,8 @@ def test_write_reports_lists_fallback_samples(tmp_path) -> None:
     timing_budget_probe.write_reports(payload, md_path, json_path)
 
     markdown = md_path.read_text(encoding="utf-8")
+    assert "rollout_timed_out_count 是 RolloutAI 内部 deadline 信号" in markdown
+    assert "preflight 硬失败条件" in markdown
     assert "## Flagged Samples" in markdown
     assert "index=7" in markdown
     assert "fallback=True" in markdown

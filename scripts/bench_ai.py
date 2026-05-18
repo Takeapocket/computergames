@@ -770,9 +770,11 @@ def _resolve_starting_layout(profile: dict, explicit_layout: str | None) -> str:
 
 
 def _resolve_gates(candidate_kind: str, stage: str) -> dict:
-    if candidate_kind in STRONG_ROLLOUT_CANDIDATES and stage == "candidate":
-        return dict(STAGE_GATES["candidate"])
     gates = dict(STAGE_GATES[stage])
+    if candidate_kind in STRONG_ROLLOUT_CANDIDATES and stage == "candidate":
+        gates.pop("average_step_time_ms", None)
+        gates["max_step_time_ms"] = ("le", 5000.0)
+        return gates
     extra = _resolve_profile(candidate_kind, stage).get("extra_gates")
     if extra:
         gates.update(extra)

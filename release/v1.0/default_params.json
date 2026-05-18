@@ -1,15 +1,15 @@
 {
   "ai": "rollout",
-  "rollouts_per_move": 32,
+  "rollouts_per_move": 64,
   "max_rollout_turns": 80,
-  "max_step_time_ms": 750.0,
-  "epsilon": 0.1,
+  "max_step_time_ms": 2000.0,
+  "epsilon": 0.05,
   "close_sample_margin": 0.08,
-  "close_sample_rollouts_per_move": 32,
+  "close_sample_rollouts_per_move": 96,
   "low_confidence_margin": 0.08,
   "playout_policy": "greedy_risk",
   "cutoff_eval": "zweistein",
-  "deadline_safety_ms": 30.0,
+  "deadline_safety_ms": 80.0,
   "fallback_ai": "greedy_risk",
   "promotion_report": "reports/ai_promotion_decision.md"
 }

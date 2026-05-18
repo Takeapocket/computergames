@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目记忆
 
-更新时间：2026-05-17（R-4 GUI 程序掷骰与一键启动器后同步）
+更新时间：2026-05-18（P14 默认 rollout 参数受控替换后同步）
 
 ## 当前结论
 
@@ -36,6 +36,7 @@
 - **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，使用 `secrets.randbelow(6) + 1` 作为程序掷骰来源；GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已修复 Spinbox `FocusOut` 与程序掷骰按钮点击的事件顺序边界，且禁用按钮不会吞掉手动改错提交。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 - **2026-05-17 现场一键启动器已完成**：新增根目录 `启动项目.cmd` 和 `scripts/launcher.py`。双击可打开菜单，支持启动 GUI、一键赛前总检查、完整 pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示；`scripts/launcher.py` 支持 `--list`、`--dry-run`、`--run` 非交互入口并有 `tests/test_launcher.py` 覆盖；`scripts/preflight_check.py` 已把启动器文件纳入必备文件检查；`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，避免 Windows `cmd.exe` 解析异常。默认 AI、默认布局、core 规则语义和 release 配置均未变。最新验证：699 pytest passed；启动器 `--list` / `--dry-run 4` / `--run status` 均正常。
 - **2026-05-17 计时判负安全开关已完成并补审查 follow-up**：比赛模式弹窗新增"单方时限（秒）"和"程序自动超时判负"；默认不再由程序自动超时判负，只显示超时提示并以裁判判定为准。默认模式下裁判确认某方超时负后，可点击计时面板对应的"裁判判红方超时负" / "裁判判蓝方超时负"按钮，程序会二次确认、写入 `reason="timeout"`、推进七盘制比分并进入下一盘 setup。若裁判要求双方程序自行计时判负，可在比赛模式弹窗勾选自动判负，或命令行使用 `scripts/run_gui.py --auto-timeout`。`--total-seconds`、弹窗时限、auto-save / 棋谱内计时数据现在拒绝 `nan/inf/负数`；比赛中取消/加载损坏棋谱不会提前清掉当前 match；`step_seconds` 也拒绝非负有限数以外的损坏值。S2 演练脚本会主动设置 Tcl/Tk 库路径，避免全量 pytest 中 Tk 初始化抖动。默认 AI、默认布局、core 规则语义和 release 配置均未变。最新验证：744 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
+- **2026-05-18 P14 受控默认替换已完成**：用户确认将 `rollout_strong_64_loweps` 参数集作为 GUI/release 工作默认 kwargs；实现仍保持 `DEFAULT_RECOMMENDER_KIND = "rollout"`，只替换显式参数为 64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、playout_policy=`greedy_risk`、cutoff_eval=`zweistein`、80ms deadline safety（`deadline_safety_ms=80.0`）。P14 两轮 50+50 合并为 118/200 = 59.0%，Wilson CI [52.1%, 65.6%]，`illegal_moves=0`、`crashes=0`、bench `timeouts=0`；单步 max 约 1920.8ms，单方累计思考 max 约 11.4s / 10.9s。`greedy_risk` 仍是应急回退，默认布局仍是 `balanced_v1`，core 规则语义未变。`rollout_timed_out_count` 在 preflight timing probe 中仅表示 RolloutAI 内部 deadline 停止采样信号，不等同于 bench timeout 或现场超时判负。
 
 ## 已确认的比赛事实
 
@@ -104,7 +105,7 @@
 ## 下一次对话建议第一步
 
 1. 先读取本文件 + `PROJECT_PHASES.md` "赛事规则对齐补丁"章节。
-2. R-0 / R-1 / R-2 / R-3 / R-4 / S2 / S3 / S4 / P6 / P7 / P8 / P9 全部闭环；当前 GUI/release 默认仍是 `rollout` kind + P3 promotion 参数，不是旧 flat rollout。
+2. R-0 / R-1 / R-2 / R-3 / R-4 / S2 / S3 / S4 / P6 / P7 / P8 / P9 / P14 全部闭环；当前 GUI/release 默认是 `rollout` kind + P14 promotion 参数（64 rollout / move、2000ms step deadline、epsilon 0.05、80ms deadline safety），不是旧 flat rollout，也不是 P3 参数。
 3. P7.2 adaptive close-sample candidate 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动；没有用户明确批准前不得进入 GUI/release 默认。
 4. P5.5 opening 候选晋升路线已停止；任何默认布局变更仍必须直接对当前 release 默认 rollout kwargs 做正式门禁验证。
 5. 下一步优先赛前冻结、现场启动包核对和 QQ 群/老师附件对齐；现场启动优先双击根目录 `启动项目.cmd`；只修现场风险 bug，不继续默认 AI/布局调参。

@@ -188,6 +188,7 @@ def test_main_success_output_includes_ready_for_match(monkeypatch, capsys) -> No
     monkeypatch.setattr(preflight_check, "validate_project_root", lambda project_root: None)
     monkeypatch.setattr(preflight_check, "validate_release_files", lambda project_root: None)
     monkeypatch.setattr(preflight_check, "validate_gui_defaults", lambda: None)
+    monkeypatch.setattr(preflight_check, "validate_runtime_environment", lambda project_root: None)
     monkeypatch.setattr(preflight_check, "run_external_checks", lambda project_root: 0)
 
     assert preflight_check.main() == 0

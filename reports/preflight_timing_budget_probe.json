@@ -2,14 +2,14 @@
   "ai_kind": "rollout",
   "ai_kwargs_source": "release/v1.0/default_params.json",
   "default_layout": "balanced_v1",
-  "avg_ms": 393.7724000002163,
-  "p50_ms": 440.4015000018262,
-  "p95_ms": 646.9134749995646,
-  "p99_ms": 647.9204549990754,
-  "max_ms": 648.1721999989531,
+  "avg_ms": 1308.0950250005117,
+  "p50_ms": 1282.7419499990356,
+  "p95_ms": 1920.1765000016167,
+  "p99_ms": 1920.3152200057957,
+  "max_ms": 1920.3499000068405,
   "sample_count": 16,
-  "rollout_timed_out_count": 0,
-  "rollout_used_fallback_count": 0,
+  "rollout_timed_out_count": 3,
+  "rollout_used_fallback_count": 1,
   "illegal_recommendations": 0,
   "exceptions": 0,
   "samples": [
@@ -18,7 +18,7 @@
       "player": "red",
       "dice": 4,
       "legal_moves": 3,
-      "elapsed_ms": 612.8588000028685,
+      "elapsed_ms": 1899.7470000031171,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
@@ -29,165 +29,165 @@
       "player": "blue",
       "dice": 4,
       "legal_moves": 3,
-      "elapsed_ms": 572.6637999978266,
+      "elapsed_ms": 1709.9766999963322,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
     },
     {
       "index": 2,
       "player": "red",
       "dice": 6,
       "legal_moves": 3,
-      "elapsed_ms": 515.6913999999233,
+      "elapsed_ms": 1284.4894000008935,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
     },
     {
       "index": 3,
       "player": "blue",
       "dice": 3,
       "legal_moves": 3,
-      "elapsed_ms": 487.5090000023192,
+      "elapsed_ms": 1280.9944999971776,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 3, 'col': 1}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
     },
     {
       "index": 4,
       "player": "red",
       "dice": 5,
-      "legal_moves": 3,
-      "elapsed_ms": 393.2940000013332,
-      "timed_out": false,
+      "legal_moves": 6,
+      "elapsed_ms": 1920.0969000012265,
+      "timed_out": true,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 3, 'col': 1}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
     },
     {
       "index": 5,
       "player": "blue",
       "dice": 2,
       "legal_moves": 3,
-      "elapsed_ms": 389.3351000006078,
+      "elapsed_ms": 1063.0493000062415,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 2, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 4, 'col': 2}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
     },
     {
       "index": 6,
       "player": "red",
       "dice": 5,
-      "legal_moves": 3,
-      "elapsed_ms": 338.72840000185533,
+      "legal_moves": 4,
+      "elapsed_ms": 731.5899999957765,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 2, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 4, 'col': 2}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
     },
     {
       "index": 7,
       "player": "blue",
       "dice": 3,
-      "legal_moves": 6,
-      "elapsed_ms": 614.1036000008171,
+      "legal_moves": 3,
+      "elapsed_ms": 476.4906999989762,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 3, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': False}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 4, 'col': 3}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
     },
     {
       "index": 8,
       "player": "red",
       "dice": 5,
-      "legal_moves": 3,
-      "elapsed_ms": 209.71950000239303,
+      "legal_moves": 4,
+      "elapsed_ms": 420.51250000076834,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 3, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': False}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 1, 'col': 3}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 4, 'col': 3}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 2, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
     },
     {
       "index": 9,
-      "player": "blue",
+      "player": "red",
       "dice": 4,
       "legal_moves": 3,
-      "elapsed_ms": 166.1623999971198,
-      "timed_out": false,
-      "used_fallback": false,
-      "illegal": false,
-      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 4, 'col': 2}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': False}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 1, 'col': 3}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
-    },
-    {
-      "index": 10,
-      "player": "red",
-      "dice": 6,
-      "legal_moves": 1,
-      "elapsed_ms": 37.14839999884134,
-      "timed_out": false,
-      "used_fallback": false,
-      "illegal": false,
-      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 4, 'col': 2}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': False}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 0, 'col': 3}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
-    },
-    {
-      "index": 11,
-      "player": "blue",
-      "dice": 5,
-      "legal_moves": 1,
-      "elapsed_ms": 25.36799999870709,
-      "timed_out": false,
-      "used_fallback": false,
-      "illegal": false,
-      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 4, 'col': 3}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': False}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 0, 'col': 3}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
-    },
-    {
-      "index": 12,
-      "player": "red",
-      "dice": 6,
-      "legal_moves": 1,
-      "elapsed_ms": 2.467199999955483,
-      "timed_out": false,
-      "used_fallback": false,
-      "illegal": false,
-      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': False}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': False}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 4, 'col': 3}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 3, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 3, 'col': 1}, 'alive': False}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 0, 'col': 2}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': False}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': False}}}}"
-    },
-    {
-      "index": 13,
-      "player": "red",
-      "dice": 5,
-      "legal_moves": 3,
-      "elapsed_ms": 648.1721999989531,
+      "elapsed_ms": 1674.0300000019488,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
       "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 0}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
     },
     {
+      "index": 10,
+      "player": "blue",
+      "dice": 6,
+      "legal_moves": 3,
+      "elapsed_ms": 1223.9751999950386,
+      "timed_out": false,
+      "used_fallback": false,
+      "illegal": false,
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
+    },
+    {
+      "index": 11,
+      "player": "red",
+      "dice": 5,
+      "legal_moves": 6,
+      "elapsed_ms": 1920.1186999998754,
+      "timed_out": true,
+      "used_fallback": true,
+      "illegal": false,
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 1, 'col': 3}, 'alive': True}}}}"
+    },
+    {
+      "index": 12,
+      "player": "blue",
+      "dice": 6,
+      "legal_moves": 3,
+      "elapsed_ms": 1358.170200001041,
+      "timed_out": false,
+      "used_fallback": false,
+      "illegal": false,
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 1, 'col': 3}, 'alive': True}}}}"
+    },
+    {
+      "index": 13,
+      "player": "red",
+      "dice": 5,
+      "legal_moves": 6,
+      "elapsed_ms": 1920.3499000068405,
+      "timed_out": true,
+      "used_fallback": false,
+      "illegal": false,
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 1, 'col': 2}, 'alive': True}}}}"
+    },
+    {
       "index": 14,
       "player": "blue",
       "dice": 5,
       "legal_moves": 3,
-      "elapsed_ms": 646.4938999997685,
+      "elapsed_ms": 1094.4234999988112,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 0}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 2, 'col': 2}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
+      "board": "{'current_player': 'blue', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 3}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 1, 'col': 2}, 'alive': True}}}}"
     },
     {
       "index": 15,
       "player": "red",
       "dice": 5,
       "legal_moves": 3,
-      "elapsed_ms": 640.6427000001713,
+      "elapsed_ms": 951.5059000041219,
       "timed_out": false,
       "used_fallback": false,
       "illegal": false,
-      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 1, 'col': 0}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 2, 'col': 2}, 'alive': True}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 0}, 'alive': True}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 3, 'col': 2}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 2, 'col': 4}, 'alive': True}}}}"
+      "board": "{'current_player': 'red', 'pieces': {'red': {'1': {'player': 'red', 'piece_id': 1, 'position': {'row': 0, 'col': 0}, 'alive': True}, '2': {'player': 'red', 'piece_id': 2, 'position': {'row': 0, 'col': 1}, 'alive': True}, '3': {'player': 'red', 'piece_id': 3, 'position': {'row': 0, 'col': 2}, 'alive': True}, '4': {'player': 'red', 'piece_id': 4, 'position': {'row': 2, 'col': 1}, 'alive': True}, '5': {'player': 'red', 'piece_id': 5, 'position': {'row': 1, 'col': 1}, 'alive': False}, '6': {'player': 'red', 'piece_id': 6, 'position': {'row': 2, 'col': 1}, 'alive': False}}, 'blue': {'1': {'player': 'blue', 'piece_id': 1, 'position': {'row': 4, 'col': 4}, 'alive': True}, '2': {'player': 'blue', 'piece_id': 2, 'position': {'row': 4, 'col': 3}, 'alive': True}, '3': {'player': 'blue', 'piece_id': 3, 'position': {'row': 4, 'col': 2}, 'alive': True}, '4': {'player': 'blue', 'piece_id': 4, 'position': {'row': 3, 'col': 4}, 'alive': True}, '5': {'player': 'blue', 'piece_id': 5, 'position': {'row': 2, 'col': 2}, 'alive': True}, '6': {'player': 'blue', 'piece_id': 6, 'position': {'row': 1, 'col': 2}, 'alive': True}}}}"
     }
   ],
   "command": "& \".venv/Scripts/python.exe\" \"scripts/timing_budget_probe.py\" --samples 16 --seed 26016 --layout balanced_v1 --output \"reports\\preflight_timing_budget_probe.md\" --json-output \"reports\\preflight_timing_budget_probe.json\""

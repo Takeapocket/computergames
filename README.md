@@ -16,7 +16,7 @@
 | 比赛流程 | 支持每轮最多 7 盘、先胜 4 盘、甲乙身份和固定先手序列 |
 | 计时判负 | 默认只提示超时，以裁判判定为准；裁判要求时可开启程序自动超时判负 |
 | 规则实现 | 已对齐国赛规则，包含"目标格有棋子即吃掉"，本方棋子也可被吃 |
-| 默认 AI | `rollout` kind + P3 promotion 显式参数 |
+| 默认 AI | `rollout` kind + P14 promotion 显式参数 |
 | 应急回退 | `greedy_risk`，再退到第一条合法步 |
 | 默认布局 | `balanced_v1`，P5 系列候选未晋升 |
 | 当前主线 | 赛前冻结、现场启动包核对、只修现场风险 bug |
@@ -125,8 +125,8 @@ python -m venv ".venv"
 
 ### AI 与评测
 
-- 默认推荐：`rollout` kind + P3 promotion 参数。
-- 当前默认参数：32 rollout / move、80 half-turn cutoff、750ms step deadline、epsilon 0.10、risk-aware playout、Zweistein cutoff、30ms deadline safety。
+- 默认推荐：`rollout` kind + P14 promotion 参数。
+- 当前默认参数：64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety。
 - 应急 AI：`greedy_risk`。
 - 实验 AI：`expectimax`、`expectimax_v2`、`mcts`、Zweistein / DP / adaptive rollout 系列候选。
 - 评测脚本覆盖 quick bench、candidate/promotion bench、tournament、参数搜索、开局搜索、布局对比和失败归因。

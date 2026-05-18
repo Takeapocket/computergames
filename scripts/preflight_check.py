@@ -16,16 +16,16 @@ if str(PROJECT_ROOT) not in sys.path:
 from gui import main_window
 
 EXPECTED_RECOMMENDER_KWARGS = {
-    "rollouts_per_move": 32,
+    "rollouts_per_move": 64,
     "max_rollout_turns": 80,
-    "max_step_time_ms": 750.0,
-    "epsilon": 0.1,
+    "max_step_time_ms": 2000.0,
+    "epsilon": 0.05,
     "close_sample_margin": 0.08,
-    "close_sample_rollouts_per_move": 32,
+    "close_sample_rollouts_per_move": 96,
     "low_confidence_margin": 0.08,
     "playout_policy": "greedy_risk",
     "cutoff_eval": "zweistein",
-    "deadline_safety_ms": 30.0,
+    "deadline_safety_ms": 80.0,
 }
 
 EXPECTED_DEFAULT_PARAMS = {
@@ -130,7 +130,7 @@ def validate_project_root(
 def validate_release_files(project_root: Path = PROJECT_ROOT) -> None:
     default_params = _read_json(project_root / "release" / "v1.0" / "default_params.json")
     if default_params != EXPECTED_DEFAULT_PARAMS:
-        raise PreflightError("default_params.json drifted from locked P3 rollout defaults")
+        raise PreflightError("default_params.json drifted from locked P14 rollout defaults")
 
     config = _read_json(project_root / "release" / "v1.0" / "config.json")
     for key, expected in EXPECTED_RELEASE_CONFIG.items():
@@ -142,7 +142,7 @@ def validate_gui_defaults() -> None:
     if main_window.DEFAULT_RECOMMENDER_KIND != "rollout":
         raise PreflightError("GUI default recommender kind must be rollout")
     if main_window.DEFAULT_RECOMMENDER_KWARGS != EXPECTED_RECOMMENDER_KWARGS:
-        raise PreflightError("GUI default recommender kwargs drifted from locked P3 rollout defaults")
+        raise PreflightError("GUI default recommender kwargs drifted from locked P14 rollout defaults")
 
 
 def validate_runtime_environment(project_root: Path = PROJECT_ROOT) -> None:

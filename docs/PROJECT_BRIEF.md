@@ -1,6 +1,6 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-17（R-4 GUI 程序掷骰与一键启动器后同步）
+更新时间：2026-05-18（P14 默认 rollout 参数受控替换后同步）
 
 ## 项目定位
 
@@ -8,7 +8,7 @@
 
 程序目标不是命令行工具，而是比赛现场可操作的软件：操作员按双方/裁判确认的来源录入或生成骰子，录入对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
 
-## 当前阶段判断（2026-05-17，R-4 与 P6/P7/P8/P9 已闭环）
+## 当前阶段判断（2026-05-18，R-4 与 P6/P7/P8/P9/P14 已闭环）
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
 - 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
@@ -32,15 +32,16 @@
 - **2026-05-16 P5.5 opening duel 60-game expansion 已完成**：复用 P5.4 同一 balanced 候选，扩到 60 局双边复验。结果：合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；candidate as red 13/30，candidate as blue 10/30，0 illegal/crash/timeout。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`；P5.4 小样本正信号未复现，停止该候选晋升路线，未改 GUI/release 默认布局。
 - **2026-05-17 P6 robustness lock 已完成**：`tests/test_release_consistency.py` 锁定 release/GUI 默认 AI、fallback 与 `balanced_v1`；`scripts/preflight_check.py` 可一条命令跑 pytest、smoke、S2 rehearsal，并以 `READY FOR MATCH` 作为成功结论。GUI 推荐兜底链已实现为 default rollout -> `greedy_risk` -> 第一条合法步 -> 无合法步；损坏 auto-save 启动清理已覆盖。P6.4 timing probe 120 样本：0 illegal、0 exception、p99≈641ms、max≈720ms，1 个 timeout/fallback 样本已列入报告。
 - **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：P7.0 默认 rollout vs `greedy_risk` 120 局为 87 胜 / 33 负，0 illegal/crash/timeout；`missed_direct_win=0`，所以 P7.1 direct-win guard 不成立。P7.2 `rollout_adaptive_close_sample` 已注册为显式实验候选，双边 100+100 在 `balanced_v1` 布局对当前 release 默认 rollout 合并胜率 50.0%，未过 55% candidate 门槛，不能默认启用。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。
-- **2026-05-17 P8 threat defense audit 已完成，候选未实现**：新增 `scripts/analyze_threat_defense.py`，对当前 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。120 局审计得到 `audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。gate 不支持 `rollout_threat_rerank`，因此未实现候选；默认 AI、默认布局、core 规则和 release 配置未变。
+- **2026-05-17 P8 threat defense audit 已完成，候选未实现**：新增 `scripts/analyze_threat_defense.py`，对当时 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。120 局审计得到 `audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。gate 不支持 `rollout_threat_rerank`，因此未实现候选；默认布局、core 规则和 release 规则语义未变。
 - **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：新增 `ai/zweistein_dp.py` 概率估值表和 `rollout_zweistein_dp_cutoff` / `rollout_exact_opp1_zdp` 显式候选。P9.0 smoke 显示 DP 表尺寸为 `15625 x 20`，测试通过；P9.1 双边 candidate 合并胜率 45.0%，未过 55% candidate 门槛；P9.2 双边 candidate 合并胜率 51.5%，未过 55% candidate 门槛，且低于 P9.3 启动线 52%，因此不启动 TT / move ordering。默认 AI、默认布局、core 规则和 release 配置均未变。
 - **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已覆盖 Spinbox `FocusOut` 与程序掷骰按钮点击/禁用状态的边界。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
 - **2026-05-17 现场一键启动器已完成**：新增根目录 `启动项目.cmd` 和 `scripts/launcher.py`。双击可打开现场菜单；菜单支持启动 GUI、一键赛前总检查、完整 pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示。`scripts/launcher.py` 提供 `--list`、`--dry-run`、`--run` 入口并有测试覆盖；`scripts/preflight_check.py` 已把启动器文件纳入必备文件检查；`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，避免 Windows `cmd.exe` 解析异常。验证：699 pytest passed，启动器 `--list` / `--dry-run 4` / `--run status` 正常。
 - **2026-05-17 计时判负安全开关已完成并补审查 follow-up**：比赛模式弹窗新增"单方时限（秒）"和"程序自动超时判负"；默认只提示超时，不自动 finalize 本盘，现场判罚以裁判为准。裁判确认超时判负后可用计时面板按钮手动记分，写入 `reason="timeout"` 并推进下一盘；只有裁判要求双方程序自行计时判负时才勾选自动判负。`scripts/run_gui.py --auto-timeout` 可作为命令行等价入口；`--total-seconds` 仍可设置启动默认时限，且拒绝 `nan/inf/非正数`；auto-save / 棋谱内计时数据也会拒绝 `nan/inf/负数`；比赛中取消/加载损坏棋谱不会提前清掉当前 match。最新验证：744 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
+- **2026-05-18 P14 默认 rollout 参数受控替换已完成**：用户确认将 `rollout_strong_64_loweps` 作为 GUI/release 工作默认 kwargs；实现仍为 `kind="rollout"`，显式参数为 64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety（`deadline_safety_ms=80.0`）。两轮 50+50 合并为 118/200 = 59.0%，Wilson CI [52.1%, 65.6%]，bench `illegal/crash/timeout=0/0/0`。默认布局仍是 `balanced_v1`，`greedy_risk` 仍是应急回退，core 规则语义未变。
 
 下一会话优先级：
 1. **赛前冻结与现场启动包核对**：现场优先双击根目录 `启动项目.cmd`；使用其中的"一键赛前总检查"或直接运行 `scripts/preflight_check.py`，成功必须输出 `READY FOR MATCH`。
-2. 默认 AI 仍是 `rollout` kind + P3 promotion 显式参数；P7.2 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动。赛前不得默认启用这些实验候选。
+2. 默认 AI 仍是 `rollout` kind + P14 promotion 显式参数；P7.2 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动。赛前不得默认启用这些实验候选。
 3. 默认布局仍是 `balanced_v1`；P5.5 失败候选和 P5.0-P5.4 报告都不是晋升证据。
 
 ## 当前技术栈
@@ -60,7 +61,7 @@
 - 合法走法生成（含吃本方棋子，R-0 已合规）。
 - 吃对方/本方子、胜负判断、走子和撤销。
 - 状态序列化和反序列化。
-- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P3 promotion 显式 kwargs）、P2/P3 rollout/Zweistein 显式实验候选、MCTSAI（实验性，P4.1 已停止，不进入 promotion）、ExpectimaxAI（实验性）。
+- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P14 promotion 显式 kwargs）、P2/P3/P14 rollout/Zweistein 显式实验候选、MCTSAI（实验性，P4.1 已停止，不进入 promotion）、ExpectimaxAI（实验性）。
 - Tkinter GUI（含开局录入、手动骰子录入、程序掷骰、推荐走法 by rollout；rollout 异常时回退到 `greedy_risk` / 第一条合法步）。
 - 现场启动器：根目录 `启动项目.cmd` 双击菜单，覆盖 GUI、preflight、pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示。
 - 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）+ P6/P7/P8 报告脚本（`scripts/preflight_check.py`、`scripts/timing_budget_probe.py`、`scripts/analyze_rollout_failures.py`、`scripts/analyze_threat_defense.py`）。
@@ -111,5 +112,5 @@
 详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
 
 1. **release/v1.0 归档**：把 release/v1.0 当作正式提交物备份；准备现场启动包。
-2. **可选 AI 研究**：当前默认已替换为 P3 promotion 参数，P4.1 已停止 MCTS，P5.5 已证明当前 balanced 候选小样本正信号不可复现，P8 threat defense audit 也不支持实现 `rollout_threat_rerank`。任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
+2. **可选 AI 研究**：当前默认已替换为 P14 promotion 参数，P4.1 已停止 MCTS，P5.5 已证明当前 balanced 候选小样本正信号不可复现，P8 threat defense audit 也不支持实现 `rollout_threat_rerank`。任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
 3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。

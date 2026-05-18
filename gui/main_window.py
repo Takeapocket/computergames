@@ -38,16 +38,16 @@ from record.match_record import MatchRecord, MatchRole
 DEFAULT_RECORD_DIR = Path(__file__).resolve().parents[1] / "records"
 DEFAULT_RECOMMENDER_KIND = "rollout"
 DEFAULT_RECOMMENDER_KWARGS = {
-    "rollouts_per_move": 32,
+    "rollouts_per_move": 64,
     "max_rollout_turns": 80,
-    "max_step_time_ms": 750.0,
-    "epsilon": 0.1,
+    "max_step_time_ms": 2000.0,
+    "epsilon": 0.05,
     "close_sample_margin": 0.08,
-    "close_sample_rollouts_per_move": 32,
+    "close_sample_rollouts_per_move": 96,
     "low_confidence_margin": 0.08,
     "playout_policy": "greedy_risk",
     "cutoff_eval": "zweistein",
-    "deadline_safety_ms": 30.0,
+    "deadline_safety_ms": 80.0,
 }
 
 
