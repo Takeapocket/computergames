@@ -1,0 +1,141 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-18T23:03:19",
+  "git_revision": "dd5f22bd0aeb6f2ecdded0bf6fe94b1fffa5c079",
+  "git_dirty": true,
+  "command": "python scripts/bench_ai.py --candidate rollout_paired --stage candidate --report-name p12_candidate_rollout_paired_20260518",
+  "python_version": "3.11.9",
+  "starting_layout_id": "balanced_v1",
+  "experiment": "rollout_paired_candidate",
+  "candidate": "rollout_paired",
+  "candidate_kwargs": {},
+  "stage": "candidate",
+  "opponent": "rollout",
+  "opponent_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "games_per_side": 25,
+  "red_direction": {
+    "label": "candidate_red_vs_rollout_blue",
+    "summary": {
+      "games": 25,
+      "candidate_wins": 15,
+      "opponent_wins": 10,
+      "draws": 0,
+      "candidate_win_rate": 0.6,
+      "candidate_win_ci95": [
+        0.40739127785127344,
+        0.7659694233580909
+      ],
+      "average_turns": 17.8,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 315.57176337072826,
+      "p95_step_time_ms": 629.688900000474,
+      "p99_step_time_ms": 720.2801000021282,
+      "max_step_time_ms": 720.6437999993796
+    }
+  },
+  "blue_direction": {
+    "label": "rollout_red_vs_candidate_blue",
+    "summary": {
+      "games": 25,
+      "candidate_wins": 10,
+      "opponent_wins": 15,
+      "draws": 0,
+      "candidate_win_rate": 0.4,
+      "candidate_win_ci95": [
+        0.23403057664190918,
+        0.5926087221487266
+      ],
+      "average_turns": 18.44,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "average_step_time_ms": 312.8559167026906,
+      "p95_step_time_ms": 629.9539999963599,
+      "p99_step_time_ms": 720.3261000031489,
+      "max_step_time_ms": 720.7991000032052
+    }
+  },
+  "combined": {
+    "games": 50,
+    "candidate_wins": 25,
+    "candidate_win_rate": 0.5,
+    "candidate_win_ci95": [
+      0.36644286412332855,
+      0.6335571358766714
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_step_time_ms": 314.2138400367094,
+    "p95_step_time_ms": 629.9539999963599,
+    "p99_step_time_ms": 720.3261000031489,
+    "max_step_time_ms": 720.7991000032052
+  },
+  "gates_pass": false,
+  "gate_failures": [
+    "candidate_win_rate = 50.0%（要求 ≥ 55.0%）"
+  ],
+  "ai_versions": {
+    "candidate": {
+      "name": "rollout_paired",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0,
+      "paired_trial_seed_stride": 1000003,
+      "paired_shuffle_moves": false
+    },
+    "opponent": {
+      "name": "rollout",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 284.702,
+  "paired_rollout_decision": {
+    "candidate_gate_pass": false,
+    "status": "stop",
+    "candidate_win_rate": 0.5,
+    "wilson_ci95": [
+      0.36644286412332855,
+      0.6335571358766714
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_step_time_ms": 314.2138400367094,
+    "max_step_time_ms": 720.7991000032052,
+    "default_config_changed": false,
+    "core_rules_changed": false,
+    "suggest_expansion": false,
+    "recommendation": "不默认启用，不扩样。"
+  }
+}

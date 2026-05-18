@@ -342,6 +342,136 @@ class RolloutAI:
         return state.get_winner()
 
 
+class RolloutPairedAI(RolloutAI):
+    """Common-random-numbers paired rollout AI.
+
+    For each trial, all root moves are evaluated with the same trial seed,
+    reducing variance when comparing high-variance root moves.
+
+    This first paired variant deliberately does not run the extra close-sample
+    pass. ``close_sample_enabled`` makes that explicit in bench signatures;
+    the inherited close_sample_* values remain visible only for comparison
+    with the release default rollout configuration.
+    """
+
+    def __init__(
+        self,
+        *,
+        paired_trial_seed_stride: int = 1000003,
+        paired_shuffle_moves: bool = False,
+        rng: random.Random | None = None,
+        name: str = "rollout_paired",
+        **kwargs,
+    ) -> None:
+        super().__init__(rng=rng, name=name, **kwargs)
+        self.paired_trial_seed_stride = int(paired_trial_seed_stride)
+        self.paired_shuffle_moves = bool(paired_shuffle_moves)
+        self.close_sample_enabled = False
+
+    def choose_move(self, state: GameState, dice: int) -> Move | None:
+        self.last_root_stats = []
+        self.last_diagnostics = []
+        self.last_score_margin = None
+        self.last_low_confidence = False
+        self.last_timed_out = False
+        self.last_used_fallback = False
+        legal = state.legal_moves(state.current_player, dice)
+        if not legal:
+            return None
+
+        step_budget_ms = max(0.0, self.max_step_time_ms - self.deadline_safety_ms)
+        deadline = time.perf_counter() + step_budget_ms / 1000.0
+        perspective = state.current_player
+        fallback = GreedyAI(
+            rng=random.Random(self._rng.randrange(2**31)),
+            name="rollout_fallback",
+            expected_risk_weight=EXPECTED_RISK_WEIGHT,
+            expected_win_risk_weight=EXPECTED_WIN_RISK_WEIGHT,
+        )
+        fallback_move = fallback.choose_move(state, dice) or self._rng.choice(legal)
+        scores = [_RolloutMoveScore(move=move) for move in legal]
+        base_seed = self._rng.randrange(2**31)
+
+        def finish_timeout() -> Move:
+            self.fallback_count += 1
+            self.last_timed_out = True
+            self._record_diagnostics(scores)
+            if any(score.visits > 0 for score in scores):
+                self._record_confidence(scores)
+                return self._best_score(scores).move
+            self.last_used_fallback = True
+            return fallback_move
+
+        for trial_index in range(self.rollouts_per_move):
+            trial_seed = base_seed + trial_index * self.paired_trial_seed_stride
+            trial_scores = list(scores)
+            if self.paired_shuffle_moves:
+                random.Random(trial_seed).shuffle(trial_scores)
+            for score in trial_scores:
+                if time.perf_counter() >= deadline:
+                    return finish_timeout()
+                sim = GameState.deserialize(state.serialize())
+                sim.apply_move(score.move, dice=dice)
+                self._playout_hit_deadline = False
+                winner = self._playout_with_rng(
+                    sim,
+                    deadline=deadline,
+                    rng=random.Random(trial_seed),
+                )
+                if self._playout_hit_deadline:
+                    return finish_timeout()
+                if winner is perspective:
+                    score.record_win()
+                elif winner is perspective.opponent:
+                    score.record_loss()
+                elif winner is None:
+                    score.record_cutoff(self._cutoff_score(sim, perspective))
+
+        self._record_diagnostics(scores)
+        self._record_confidence(scores)
+        return self._best_score(scores).move
+
+    def _playout_with_rng(
+        self,
+        state: GameState,
+        *,
+        deadline: float,
+        rng: random.Random,
+    ) -> Player | None:
+        policy: GreedyAI | None = None
+
+        def choose_policy_move(dice: int) -> Move | None:
+            nonlocal policy
+            if policy is None:
+                policy_kwargs = {
+                    "rng": random.Random(rng.randrange(2**31)),
+                    "name": "rollout_policy",
+                }
+                if self.playout_policy == "greedy_risk":
+                    policy_kwargs["expected_risk_weight"] = EXPECTED_RISK_WEIGHT
+                    policy_kwargs["expected_win_risk_weight"] = EXPECTED_WIN_RISK_WEIGHT
+                policy = GreedyAI(**policy_kwargs)
+            return policy.choose_move(state, dice)
+
+        for _ in range(self.max_rollout_turns):
+            winner = state.get_winner()
+            if winner is not None:
+                return winner
+            if time.perf_counter() >= deadline:
+                self._playout_hit_deadline = True
+                return None
+            dice = rng.randint(1, 6)
+            legal = state.legal_moves(state.current_player, dice)
+            if not legal:
+                return state.current_player.opponent
+            if rng.random() < self.epsilon:
+                move = rng.choice(legal)
+            else:
+                move = choose_policy_move(dice) or rng.choice(legal)
+            state.apply_move(move, dice=dice)
+        return state.get_winner()
+
+
 class RolloutRootRacingAI(RolloutAI):
     """在根节点用 racing 分配 rollout 预算的显式实验候选。"""
 

@@ -1,0 +1,163 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-05-19T00:09:19",
+  "git_revision": "dd5f22bd0aeb6f2ecdded0bf6fe94b1fffa5c079",
+  "git_dirty": true,
+  "command": "python scripts/bench_ai.py --candidate rollout_strong_64 --stage candidate --report-name p14_candidate_rollout_strong_64_20260518",
+  "python_version": "3.11.9",
+  "starting_layout_id": "balanced_v1",
+  "experiment": "rollout_strong_64_candidate",
+  "candidate": "rollout_strong_64",
+  "candidate_kwargs": {},
+  "stage": "candidate",
+  "opponent": "rollout",
+  "opponent_kwargs": {
+    "rollouts_per_move": 32,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 750.0,
+    "epsilon": 0.1,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 32,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 30.0
+  },
+  "games_per_side": 25,
+  "red_direction": {
+    "label": "candidate_red_vs_rollout_blue",
+    "summary": {
+      "games": 25,
+      "candidate_wins": 13,
+      "opponent_wins": 12,
+      "draws": 0,
+      "candidate_win_rate": 0.52,
+      "candidate_win_ci95": [
+        0.334982179531473,
+        0.6996899607103998
+      ],
+      "average_turns": 18.92,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "total_step_time_ms": 263857.89329995896,
+      "average_step_time_ms": 557.8390978857483,
+      "p95_step_time_ms": 1691.2179999999353,
+      "p99_step_time_ms": 1920.188900003268,
+      "max_step_time_ms": 1920.3895000027842,
+      "max_red_thinking_seconds": 10.53065140000399,
+      "max_blue_thinking_seconds": 3.4261706999968737,
+      "avg_red_thinking_seconds": 7.778543923996913,
+      "avg_blue_thinking_seconds": 2.7757718080014455
+    }
+  },
+  "blue_direction": {
+    "label": "rollout_red_vs_candidate_blue",
+    "summary": {
+      "games": 25,
+      "candidate_wins": 16,
+      "opponent_wins": 9,
+      "draws": 0,
+      "candidate_win_rate": 0.64,
+      "candidate_win_ci95": [
+        0.44518154601046633,
+        0.7975234356826436
+      ],
+      "average_turns": 16.92,
+      "illegal_moves": 0,
+      "crashes": 0,
+      "timeouts": 0,
+      "total_step_time_ms": 229149.37799997278,
+      "average_step_time_ms": 541.7242978722761,
+      "p95_step_time_ms": 1621.0687999991933,
+      "p99_step_time_ms": 1871.1838999952306,
+      "max_step_time_ms": 1920.6946999984211,
+      "max_red_thinking_seconds": 3.9008592999889515,
+      "max_blue_thinking_seconds": 8.406130099989241,
+      "avg_red_thinking_seconds": 2.836406004000164,
+      "avg_blue_thinking_seconds": 6.329569115998748
+    }
+  },
+  "combined": {
+    "games": 50,
+    "candidate_wins": 29,
+    "candidate_win_rate": 0.58,
+    "candidate_win_ci95": [
+      0.4423319668777783,
+      0.7062520276543307
+    ],
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_turns": 17.92,
+    "total_step_time_ms": 493007.27129993174,
+    "average_step_time_ms": 549.7816978790122,
+    "p95_step_time_ms": 1691.2179999999353,
+    "p99_step_time_ms": 1920.188900003268,
+    "max_step_time_ms": 1920.6946999984211,
+    "max_red_thinking_seconds": 10.53065140000399,
+    "max_blue_thinking_seconds": 8.406130099989241,
+    "avg_red_thinking_seconds": 5.307474963998539,
+    "avg_blue_thinking_seconds": 4.552670462000097
+  },
+  "gates_pass": true,
+  "gate_failures": [],
+  "ai_versions": {
+    "candidate": {
+      "name": "rollout_strong_64",
+      "rollouts_per_move": 64,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 2000.0,
+      "epsilon": 0.08,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 96,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 80.0
+    },
+    "opponent": {
+      "name": "rollout",
+      "rollouts_per_move": 32,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 750.0,
+      "epsilon": 0.1,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 32,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 30.0
+    }
+  },
+  "max_turns": 200,
+  "wall_seconds": 493.054,
+  "strong_rollout_decision": {
+    "candidate_gate_pass": true,
+    "status": "expand_50x2",
+    "candidate_win_rate": 0.58,
+    "wilson_ci95": [
+      0.4423319668777783,
+      0.7062520276543307
+    ],
+    "passed_52_gate": true,
+    "passed_55_gate": true,
+    "passed_50x2_gate": false,
+    "illegal_moves": 0,
+    "crashes": 0,
+    "timeouts": 0,
+    "average_step_time_ms": 549.7816978790122,
+    "p95_step_time_ms": 1691.2179999999353,
+    "p99_step_time_ms": 1920.188900003268,
+    "max_step_time_ms": 1920.6946999984211,
+    "max_red_thinking_seconds": 10.53065140000399,
+    "max_blue_thinking_seconds": 8.406130099989241,
+    "avg_red_thinking_seconds": 5.307474963998539,
+    "avg_blue_thinking_seconds": 4.552670462000097,
+    "timing_risk": false,
+    "default_config_changed": false,
+    "core_rules_changed": false,
+    "suggest_expansion": true,
+    "recommendation": "通过 55% 初筛；建议扩到 50+50，不默认启用。"
+  }
+}

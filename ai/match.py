@@ -42,6 +42,58 @@ production 默认用 ``default_no_stuck_corner_v1``。
 """
 
 
+STRONG_ROLLOUT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "rollout_strong_48": {
+        "rollouts_per_move": 48,
+        "max_rollout_turns": 80,
+        "max_step_time_ms": 1500.0,
+        "epsilon": 0.08,
+        "close_sample_margin": 0.08,
+        "close_sample_rollouts_per_move": 64,
+        "low_confidence_margin": 0.08,
+        "playout_policy": "greedy_risk",
+        "cutoff_eval": "zweistein",
+        "deadline_safety_ms": 50.0,
+    },
+    "rollout_strong_64": {
+        "rollouts_per_move": 64,
+        "max_rollout_turns": 80,
+        "max_step_time_ms": 2000.0,
+        "epsilon": 0.08,
+        "close_sample_margin": 0.08,
+        "close_sample_rollouts_per_move": 96,
+        "low_confidence_margin": 0.08,
+        "playout_policy": "greedy_risk",
+        "cutoff_eval": "zweistein",
+        "deadline_safety_ms": 80.0,
+    },
+    "rollout_strong_64_loweps": {
+        "rollouts_per_move": 64,
+        "max_rollout_turns": 80,
+        "max_step_time_ms": 2000.0,
+        "epsilon": 0.05,
+        "close_sample_margin": 0.08,
+        "close_sample_rollouts_per_move": 96,
+        "low_confidence_margin": 0.08,
+        "playout_policy": "greedy_risk",
+        "cutoff_eval": "zweistein",
+        "deadline_safety_ms": 80.0,
+    },
+    "rollout_strong_96": {
+        "rollouts_per_move": 96,
+        "max_rollout_turns": 80,
+        "max_step_time_ms": 3000.0,
+        "epsilon": 0.08,
+        "close_sample_margin": 0.08,
+        "close_sample_rollouts_per_move": 128,
+        "low_confidence_margin": 0.08,
+        "playout_policy": "greedy_risk",
+        "cutoff_eval": "zweistein",
+        "deadline_safety_ms": 120.0,
+    },
+}
+
+
 def default_starting_state() -> GameState:
     """返回 5x5 默认开局：近三角形布局，确保每枚棋子初始都有至少一个合法走法。
 
@@ -303,6 +355,68 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
     def _merged(defaults: dict[str, Any]) -> dict[str, Any]:
         return {**defaults, **ai_kwargs}
 
+    if kind in {
+        "rollout_self_capture_guard",
+        "rollout_material_guard",
+        "rollout_self_capture_guard_strict",
+    }:
+        from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
+        from ai.rollout_ai import RolloutAI
+        from ai.self_capture_guard import SelfCaptureGuardAI
+
+        guard_defaults_by_kind = {
+            "rollout_self_capture_guard": {
+                "enemy_capture_margin": 0.08,
+                "non_self_low_material_margin": 0.12,
+                "prefer_enemy_capture_margin": 0.00,
+                "low_material_threshold": 3,
+                "max_score_gap_for_override": 0.12,
+            },
+            "rollout_material_guard": {
+                "enemy_capture_margin": 0.10,
+                "non_self_low_material_margin": 0.12,
+                "prefer_enemy_capture_margin": 0.04,
+                "low_material_threshold": 3,
+                "max_score_gap_for_override": 0.12,
+            },
+            "rollout_self_capture_guard_strict": {
+                "enemy_capture_margin": 0.14,
+                "non_self_low_material_margin": 0.18,
+                "prefer_enemy_capture_margin": 0.06,
+                "low_material_threshold": 4,
+                "max_score_gap_for_override": 0.18,
+            },
+        }
+        guard_keys = {
+            "enemy_capture_margin",
+            "non_self_low_material_margin",
+            "prefer_enemy_capture_margin",
+            "low_material_threshold",
+            "max_score_gap_for_override",
+            "require_safe_alternative",
+        }
+        remaining = dict(ai_kwargs)
+        guard_kwargs = dict(guard_defaults_by_kind[kind])
+        for key in list(remaining):
+            if key in guard_keys:
+                guard_kwargs[key] = remaining.pop(key)
+        base_kwargs = dict(RELEASE_DEFAULT_ROLLOUT_KWARGS)
+        for key in list(remaining):
+            if key in base_kwargs:
+                base_kwargs[key] = remaining.pop(key)
+        if remaining:
+            raise TypeError(f"{kind} does not accept kwargs: {sorted(remaining)}")
+        base_rng = random.Random(seed)
+        wrapper_seed = None if seed is None else (int(seed) ^ 0xA5A5A5A5)
+        wrapper_rng = random.Random(wrapper_seed)
+        base = RolloutAI(rng=base_rng, **base_kwargs)
+        return SelfCaptureGuardAI(
+            base=base,
+            rng=wrapper_rng,
+            name=kind,
+            **guard_kwargs,
+        )
+
     if kind == "random":
         if ai_kwargs:
             raise TypeError(f"random AI does not accept kwargs: {sorted(ai_kwargs)}")
@@ -328,6 +442,23 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
         from ai.zweistein_ai import ZweisteinGreedyAI
 
         return ZweisteinGreedyAI(rng=rng, name="greedy_zweistein", **ai_kwargs)
+    if kind in STRONG_ROLLOUT_DEFAULTS:
+        from ai.rollout_ai import RolloutAI
+
+        return RolloutAI(
+            rng=rng,
+            name=kind,
+            **_merged(STRONG_ROLLOUT_DEFAULTS[kind]),
+        )
+    if kind in {"rollout_paired", "rollout_common_random"}:
+        from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
+        from ai.rollout_ai import RolloutPairedAI
+
+        return RolloutPairedAI(
+            rng=rng,
+            name=kind,
+            **_merged(RELEASE_DEFAULT_ROLLOUT_KWARGS),
+        )
     if kind == "rollout":
         from ai.rollout_ai import RolloutAI
 
@@ -521,6 +652,7 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     列表，让 bench metadata 能区分「裸 base」与「base + 战术补丁」。
     """
     from ai.chance_rerank import ExactOpponentDiceRerankAI
+    from ai.self_capture_guard import SelfCaptureGuardAI
     from ai.tactical import TacticalAI
 
     if isinstance(ai, TacticalAI):
@@ -540,6 +672,18 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
             "max_step_time_ms": ai.max_step_time_ms,
         }
 
+    if isinstance(ai, SelfCaptureGuardAI):
+        return {
+            "name": ai.name,
+            "base": ai_version_signature(ai.base),
+            "enemy_capture_margin": ai.enemy_capture_margin,
+            "non_self_low_material_margin": ai.non_self_low_material_margin,
+            "prefer_enemy_capture_margin": ai.prefer_enemy_capture_margin,
+            "low_material_threshold": ai.low_material_threshold,
+            "max_score_gap_for_override": ai.max_score_gap_for_override,
+            "require_safe_alternative": ai.require_safe_alternative,
+        }
+
     sig: dict[str, Any] = {"name": ai.name}
     for attr in (
         "depth",
@@ -556,10 +700,13 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "epsilon",
         "close_sample_margin",
         "close_sample_rollouts_per_move",
+        "close_sample_enabled",
         "low_confidence_margin",
         "playout_policy",
         "cutoff_eval",
         "deadline_safety_ms",
+        "paired_trial_seed_stride",
+        "paired_shuffle_moves",
         "racing_initial_rollouts_per_move",
         "racing_survivor_count",
         "racing_final_survivor_count",
