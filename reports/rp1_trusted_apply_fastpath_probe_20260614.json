@@ -1,0 +1,30 @@
+{
+  "match_probe": {
+    "average_step_time_ms": 89.84065882438753,
+    "crashes": 0,
+    "games": 1,
+    "illegal_moves": 0,
+    "instrumentation_note": "match_probe reports match timing; rollout_decision_probe.instrumentation reports clone/legal-generation/object-construction counters.",
+    "max_step_time_ms": 286.1609000028693,
+    "steps": 17,
+    "steps_per_second": 11.075156664608729,
+    "timeouts": 0,
+    "turns": 17,
+    "wall_seconds": 1.5349669999995967
+  },
+  "rollout_decision_probe": {
+    "average_root_visits": 237.5,
+    "decisions": 8,
+    "instrumentation": {
+      "game_state_deserialize_calls": 1902,
+      "game_state_serialize_calls": 1902,
+      "greedy_ai_constructs": 1910,
+      "legal_moves_calls": 1411197,
+      "rng_constructs": 1919
+    },
+    "root_visits": 1900,
+    "root_visits_per_second": 143.76362656913804,
+    "samples": 8,
+    "wall_seconds": 13.216138499999943
+  }
+}

@@ -1,12 +1,12 @@
 # AI / Opening Experiment Stop List
 
-更新时间：2026-05-18
+更新时间：2026-06-14
 
 ## 结论
 
 赛前默认配置保持不变：
 
-- 默认 AI：`rollout` kind + P3 promotion 显式参数。
+- 默认 AI：`rollout` kind + P14 显式参数（64 rollout / 2000ms / epsilon 0.05 / close sample 96 / deadline_safety 80ms）。
 - fallback AI：`greedy_risk`，再 fallback 到第一条合法步。
 - 默认布局：`balanced_v1`。
 

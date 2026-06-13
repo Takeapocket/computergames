@@ -1,14 +1,18 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-05-18（P14 默认 rollout 参数受控替换后同步）
+更新时间：2026-06-14（长期研究模式与审查 follow-up 后同步）
 
 ## 项目定位
 
-本项目用于 2026 年辽宁省大学生计算机博弈大赛校内选拔赛，方向为爱恩斯坦棋离线 GUI 参赛程序。
+本项目已从 2026 年辽宁省大学生计算机博弈大赛爱恩斯坦棋离线 GUI 参赛程序，转型为以该程序为基础的长期 AI 棋力研究平台。
 
-程序目标不是命令行工具，而是比赛现场可操作的软件：操作员按双方/裁判确认的来源录入或生成骰子，录入对方走法，程序校验合法性、维护局面，并逐步加入 AI 推荐、棋谱、计时和评测能力。
+比赛形态的 GUI、release/v1.0 和 P14 默认参数保留为历史基线与天梯锚点；后续默认目标是研究搜索、rollout/MCTS、天梯评测、真实棋谱复盘与骰子取证。R-P0 迁移到 `E:\computergame` 尚未执行，当前 C 盘工作区只用于修复和提交前验证。
 
-## 当前阶段判断（2026-05-18，R-4 与 P6/P7/P8/P9/P14 已闭环）
+## 当前阶段判断（2026-06-14，长期研究模式）
+
+- 当前主线：先修复研究转型审查发现的问题，再经用户确认后 commit/push，随后从 E 盘重新 clone 并重建研究环境。
+- 研究红线：天梯数据、训练数据、模型权重和缓存不默认写入 C 盘；`scripts/ladder.py` 现在需要显式 `--output-dir` 或 `CG_RESEARCH_DATA_DIR`。
+- 赛前/比赛内容以下作为历史基线保留，不再代表当前下一步优先级。
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
 - 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
@@ -40,9 +44,9 @@
 - **2026-05-18 P14 默认 rollout 参数受控替换已完成**：用户确认将 `rollout_strong_64_loweps` 作为 GUI/release 工作默认 kwargs；实现仍为 `kind="rollout"`，显式参数为 64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety（`deadline_safety_ms=80.0`）。两轮 50+50 合并为 118/200 = 59.0%，Wilson CI [52.1%, 65.6%]，bench `illegal/crash/timeout=0/0/0`。默认布局仍是 `balanced_v1`，`greedy_risk` 仍是应急回退，core 规则语义未变。
 
 下一会话优先级：
-1. **赛前冻结与现场启动包核对**：现场优先双击根目录 `启动项目.cmd`；使用其中的"一键赛前总检查"或直接运行 `scripts/preflight_check.py`，成功必须输出 `READY FOR MATCH`。
-2. 默认 AI 仍是 `rollout` kind + P14 promotion 显式参数；P7.2 未过门禁，P8 gate 不支持 `rollout_threat_rerank`，P9.1 / P9.2 也未过 candidate，P9.3 不启动。赛前不得默认启用这些实验候选。
-3. 默认布局仍是 `balanced_v1`；P5.5 失败候选和 P5.0-P5.4 报告都不是晋升证据。
+1. 修复 code review 中的 Critical / Important / Minor 问题，并跑目标测试与全量 pytest。
+2. 用户确认后再执行 `git commit` / `git push`。
+3. 从 `E:\computergame` 重新 clone，重建 `.venv`，设置 `CG_RESEARCH_DATA_DIR` 与 pip/torch cache 到 E 盘，跑全量验证；C 盘旧目录先保留。
 
 ## 当前技术栈
 
@@ -109,8 +113,8 @@
 
 ## 下一步建议（下一会话）
 
-详见 `PROJECT_PHASES.md` §S4 与 `docs/superpowers/plans/2026-05-12-final-sprint-plan.md`。简版顺序：
+详见 `PROJECT_PHASES.md` §2.5 与 `docs/superpowers/specs/2026-06-13-research-transition-design.md`。简版顺序：
 
-1. **release/v1.0 归档**：把 release/v1.0 当作正式提交物备份；准备现场启动包。
-2. **可选 AI 研究**：当前默认已替换为 P14 promotion 参数，P4.1 已停止 MCTS，P5.5 已证明当前 balanced 候选小样本正信号不可复现，P8 threat defense audit 也不支持实现 `rollout_threat_rerank`。任何再次默认变更都必须直接对当前默认配置复验，并保持可回退到 `greedy_risk` 或旧 flat `rollout` 参数。
-3. 比赛后再回到 Expectimax 强化 / 开局库 / rollout 参数实验主线。
+1. **当前仓库修复**：先堵住 C 盘默认输出、骰子取证语义、天梯元数据、文档口径和测试覆盖问题。
+2. **提交与迁移**：用户确认后 commit/push，再从 E 盘 clone；不要直接搬运 `.venv` 或大数据目录。
+3. **研究主线**：R-P1 地基稳定后继续 ExpectimaxV2 / MCTS / 天梯评测，棋力结论只认持久天梯和批量对战数据。

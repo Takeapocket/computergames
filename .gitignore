@@ -32,3 +32,15 @@ records/**/*.json
 # Auto-save runtime artifacts
 replays/auto_save.json
 replays/auto_save_match.json
+
+# Research artifacts: self-play data, ladder results, model weights (kept on disk, not in git)
+data/
+models/
+cache/
+.cache/
+pip-cache/
+torch-cache/
+*.pt
+*.pth
+*.ckpt
+*.safetensors

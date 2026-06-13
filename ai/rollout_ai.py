@@ -223,7 +223,7 @@ class RolloutAI:
             if time.perf_counter() >= deadline:
                 return True
             sim = GameState.deserialize(state.serialize())
-            sim.apply_move(score.move, dice=dice)
+            sim._apply_known_legal_move(score.move)
             self._playout_hit_deadline = False
             winner = self._playout(sim, deadline=deadline)
             if self._playout_hit_deadline:
@@ -338,7 +338,7 @@ class RolloutAI:
                 move = self._rng.choice(legal)
             else:
                 move = policy.choose_move(state, dice) or self._rng.choice(legal)
-            state.apply_move(move, dice=dice)
+            state._apply_known_legal_move(move)
         return state.get_winner()
 
 
@@ -411,7 +411,7 @@ class RolloutPairedAI(RolloutAI):
                 if time.perf_counter() >= deadline:
                     return finish_timeout()
                 sim = GameState.deserialize(state.serialize())
-                sim.apply_move(score.move, dice=dice)
+                sim._apply_known_legal_move(score.move)
                 self._playout_hit_deadline = False
                 winner = self._playout_with_rng(
                     sim,
@@ -468,7 +468,7 @@ class RolloutPairedAI(RolloutAI):
                 move = rng.choice(legal)
             else:
                 move = choose_policy_move(dice) or rng.choice(legal)
-            state.apply_move(move, dice=dice)
+            state._apply_known_legal_move(move)
         return state.get_winner()
 
 

@@ -1,0 +1,27 @@
+{
+  "players": [
+    "p14_default",
+    {
+      "player_id": "mcts_static_z_l0",
+      "kind": "mcts_eval_v1",
+      "kwargs": {
+        "time_limit_ms": 120.0,
+        "max_iterations": 80,
+        "leaf_evaluator": "zweistein",
+        "leaf_policy": "static",
+        "leaf_playout_turns": 8
+      }
+    },
+    {
+      "player_id": "mcts_playout_z_l8",
+      "kind": "mcts_eval_v1",
+      "kwargs": {
+        "time_limit_ms": 120.0,
+        "max_iterations": 80,
+        "leaf_evaluator": "zweistein",
+        "leaf_policy": "playout",
+        "leaf_playout_turns": 8
+      }
+    }
+  ]
+}

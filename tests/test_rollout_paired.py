@@ -155,6 +155,31 @@ def test_rollout_paired_reuses_trial_seed_for_all_root_moves(monkeypatch):
     assert chunks[0][0] != chunks[1][0]
 
 
+def test_rollout_paired_fixed_seed_characterization_after_fastpath():
+    state = _multi_move_state()
+    before = state.serialize()
+    ai = RolloutPairedAI(
+        rollouts_per_move=2,
+        max_rollout_turns=6,
+        max_step_time_ms=1000,
+        rng=random.Random(7),
+    )
+
+    move = ai.choose_move(state, 5)
+
+    assert state.serialize() == before
+    assert move is not None
+    assert (move.piece_id, move.from_pos.row, move.from_pos.col, move.to_pos.row, move.to_pos.col) == (5, 2, 1, 3, 1)
+    assert move.captured_piece is not None
+    assert (move.captured_piece.player, move.captured_piece.piece_id) == (Player.BLUE, 6)
+    assert [(stats.visits, stats.wins, stats.losses, stats.draws, stats.score) for stats in ai.last_root_stats] == [
+        (2, 1.0, 1.0, 0.0, 0.5),
+        (2, 0.0, 2.0, 0.0, 0.0),
+        (2, 0.0, 2.0, 0.0, 0.0),
+    ]
+    assert abs(ai._rng.random() - 0.3948234964231735) < 1e-15
+
+
 def test_rollout_paired_cutoff_eval_zweistein_can_run():
     state = _multi_move_state()
     ai = RolloutPairedAI(

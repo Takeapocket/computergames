@@ -2,7 +2,7 @@ import pytest
 
 from core.game_state import GameState
 from core.move import Move
-from core.types import Player, Position
+from core.types import Piece, Player, Position
 
 
 def make_state(red=None, blue=None, current_player=Player.RED):
@@ -165,6 +165,102 @@ def test_mutating_returned_capture_move_does_not_corrupt_history():
 
     assert state.pieces[Player.BLUE][2].alive is True
     assert state.pieces[Player.BLUE][2].position == Position(3, 3)
+
+
+def test_apply_move_canonicalizes_captured_piece_from_legal_move():
+    state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
+    legal_move = next(
+        move
+        for move in state.legal_moves(Player.RED, 1)
+        if move.to_pos == Position(3, 3)
+    )
+    forged_move = Move(
+        player=legal_move.player,
+        piece_id=legal_move.piece_id,
+        from_pos=legal_move.from_pos,
+        to_pos=legal_move.to_pos,
+        is_capture=True,
+        captured_piece=Piece(Player.BLUE, 2, Position(0, 0), alive=False),
+    )
+
+    applied = state.apply_move(forged_move, dice=1)
+
+    assert applied.captured_piece is not None
+    assert applied.captured_piece.position == Position(3, 3)
+    assert applied.captured_piece.alive is True
+    state.undo_move()
+    assert state.pieces[Player.BLUE][2].position == Position(3, 3)
+    assert state.pieces[Player.BLUE][2].alive is True
+
+
+def test_apply_known_legal_move_matches_public_apply_for_legal_capture():
+    public_state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
+    trusted_state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
+    public_move = next(
+        move
+        for move in public_state.legal_moves(Player.RED, 1)
+        if move.to_pos == Position(3, 3)
+    )
+    trusted_move = next(
+        move
+        for move in trusted_state.legal_moves(Player.RED, 1)
+        if move.to_pos == Position(3, 3)
+    )
+
+    public_applied = public_state.apply_move(public_move, dice=1)
+    trusted_applied = trusted_state._apply_known_legal_move(trusted_move)
+
+    assert trusted_state.serialize() == public_state.serialize()
+    assert trusted_applied.to_dict() == public_applied.to_dict()
+    public_state.undo_move()
+    trusted_state.undo_move()
+    assert trusted_state.serialize() == public_state.serialize()
+
+
+def test_apply_known_legal_move_rejects_wrong_current_player():
+    state = make_state(
+        red={1: Position(2, 2)},
+        blue={1: Position(0, 4)},
+        current_player=Player.BLUE,
+    )
+    move = GameState.from_layout(
+        red={1: Position(2, 2)},
+        blue={1: Position(0, 4)},
+        current_player=Player.RED,
+    ).legal_moves(Player.RED, 1)[0]
+
+    with pytest.raises(ValueError, match="current player"):
+        state._apply_known_legal_move(move)
+
+
+def test_apply_known_legal_move_rejects_stale_piece_position():
+    state = make_state(current_player=Player.RED)
+    move = Move(
+        player=Player.RED,
+        piece_id=1,
+        from_pos=Position(1, 1),
+        to_pos=Position(1, 2),
+    )
+
+    with pytest.raises(ValueError, match="known legal move is stale"):
+        state._apply_known_legal_move(move)
+
+
+def test_apply_known_legal_move_rejects_moves_after_win():
+    state = make_state(
+        red={1: Position(4, 4), 2: Position(0, 0)},
+        blue={1: Position(1, 1)},
+        current_player=Player.RED,
+    )
+    move = Move(
+        player=Player.RED,
+        piece_id=2,
+        from_pos=Position(0, 0),
+        to_pos=Position(1, 0),
+    )
+
+    with pytest.raises(ValueError, match="game is already finished"):
+        state._apply_known_legal_move(move)
 
 
 def test_from_layout_rejects_overlapping_living_pieces():

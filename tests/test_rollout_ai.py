@@ -15,6 +15,139 @@ def test_rollout_ai_returns_legal_move():
     assert move in state.legal_moves(state.current_player, 6)
 
 
+def test_rollout_ai_fixed_seed_behavior_characterization():
+    state = GameState.from_layout(
+        red={
+            1: Position(0, 0),
+            2: Position(0, 1),
+            3: Position(0, 2),
+            4: Position(1, 0),
+            5: Position(2, 0),
+            6: Position(3, 1),
+        },
+        blue={
+            1: Position(4, 4),
+            2: Position(4, 3),
+            3: Position(4, 2),
+            4: Position(3, 4),
+            5: Position(2, 4),
+            6: Position(1, 3),
+        },
+        current_player=Player.RED,
+    )
+    before = state.serialize()
+    ai = RolloutAI(
+        rollouts_per_move=4,
+        max_rollout_turns=8,
+        max_step_time_ms=10_000.0,
+        epsilon=0.15,
+        playout_policy="greedy_risk",
+        cutoff_eval="zweistein",
+        rng=random.Random(2026),
+    )
+
+    move = ai.choose_move(state, 3)
+
+    assert state.serialize() == before
+    assert move is not None
+    assert move.to_dict() == {
+        "player": "red",
+        "piece_id": 3,
+        "from_pos": {"row": 0, "col": 2},
+        "to_pos": {"row": 1, "col": 3},
+        "is_capture": True,
+        "captured_piece": {
+            "player": "blue",
+            "piece_id": 6,
+            "position": {"row": 1, "col": 3},
+            "alive": True,
+        },
+    }
+    assert [
+        (
+            stats.move.to_dict(),
+            stats.visits,
+            stats.wins,
+            stats.losses,
+            stats.draws,
+            stats.cutoffs,
+            stats.score,
+            stats.winrate,
+            stats.avg,
+            stats.low_confidence,
+        )
+        for stats in ai.last_root_stats
+    ] == [
+        (
+            {
+                "player": "red",
+                "piece_id": 3,
+                "from_pos": {"row": 0, "col": 2},
+                "to_pos": {"row": 1, "col": 2},
+                "is_capture": False,
+                "captured_piece": None,
+            },
+            4,
+            2.0,
+            2.0,
+            0.0,
+            4.0,
+            0.5,
+            0.5,
+            0.0,
+            False,
+        ),
+        (
+            {
+                "player": "red",
+                "piece_id": 3,
+                "from_pos": {"row": 0, "col": 2},
+                "to_pos": {"row": 0, "col": 3},
+                "is_capture": False,
+                "captured_piece": None,
+            },
+            4,
+            1.0,
+            3.0,
+            0.0,
+            4.0,
+            0.25,
+            0.25,
+            -0.5,
+            False,
+        ),
+        (
+            {
+                "player": "red",
+                "piece_id": 3,
+                "from_pos": {"row": 0, "col": 2},
+                "to_pos": {"row": 1, "col": 3},
+                "is_capture": True,
+                "captured_piece": {
+                    "player": "blue",
+                    "piece_id": 6,
+                    "position": {"row": 1, "col": 3},
+                    "alive": True,
+                },
+            },
+            4,
+            4.0,
+            0.0,
+            0.0,
+            4.0,
+            1.0,
+            1.0,
+            1.0,
+            False,
+        ),
+    ]
+    assert ai.last_score_margin == 0.5
+    assert ai.last_low_confidence is False
+    assert ai.last_timed_out is False
+    assert ai.last_used_fallback is False
+    assert abs(ai._rng.random() - 0.21872353393889177) < 1e-15
+
+
 def test_rollout_ai_deadline_safety_ms_reduces_internal_deadline(monkeypatch):
     state = default_starting_state()
     seen_deadlines = []

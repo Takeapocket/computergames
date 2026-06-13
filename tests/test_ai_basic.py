@@ -350,12 +350,26 @@ def test_zweistein_experimental_kinds_return_legal_move_without_mutating_state()
 
 
 def test_build_ai_expectimax_v2_registers_signature_fields():
-    ai = build_ai("expectimax_v2", seed=1, depth=2, time_limit_ms=300, randomize_ties=False)
+    ai = build_ai(
+        "expectimax_v2",
+        seed=1,
+        depth=2,
+        time_limit_ms=300,
+        randomize_ties=False,
+        use_transposition_table=True,
+        move_ordering=True,
+        iterative_deepening=True,
+        chance_pruning="star1",
+    )
     signature = ai_version_signature(ai)
 
     assert signature["name"] == "expectimax_v2"
     assert signature["depth"] == 2
     assert signature["time_limit_ms"] == 300.0
     assert signature["randomize_ties"] is False
+    assert signature["use_transposition_table"] is True
+    assert signature["move_ordering"] is True
+    assert signature["iterative_deepening"] is True
+    assert signature["chance_pruning"] == "star1"
     assert signature["expected_risk_weight"] == 0.0
     assert signature["expected_win_risk_weight"] == 0.0

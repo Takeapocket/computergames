@@ -1,0 +1,7 @@
+# Research-only dependencies.
+# Install with an E-drive cache after R-P0 migration, for example:
+#   python -m pip install --cache-dir E:/pip-cache -r requirements-research.txt
+#
+# Do not import these from core/, GUI startup paths, or release/v1.0.
+
+numpy

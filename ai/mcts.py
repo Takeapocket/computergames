@@ -117,10 +117,18 @@ class MCTSAI:
         rng: random.Random | None = None,
         name: str = "mcts_eval_v1",
         leaf_evaluator: str = "current",
+        leaf_policy: str = "static",
+        leaf_playout_turns: int = 20,
     ) -> None:
         if leaf_evaluator not in {"current", "zweistein"}:
             raise ValueError(f"unknown leaf_evaluator: {leaf_evaluator!r}")
+        if leaf_policy not in {"static", "playout"}:
+            raise ValueError(f"unknown leaf_policy: {leaf_policy!r}")
+        normalized_leaf_playout_turns = int(leaf_playout_turns)
+        if normalized_leaf_playout_turns < 0:
+            raise ValueError("leaf_playout_turns must be non-negative")
         self.time_limit_ms = float(time_limit_ms)
+        self.max_step_time_ms = self.time_limit_ms
         self.c_uct = float(c_uct)
         self.scale = float(scale)
         self.max_iterations = (
@@ -129,6 +137,8 @@ class MCTSAI:
         self._rng = rng or random.Random()
         self.name = name
         self.leaf_evaluator = leaf_evaluator
+        self.leaf_policy = leaf_policy
+        self.leaf_playout_turns = normalized_leaf_playout_turns
         # 报告字段：最近一次 choose_move 的统计，bench 可读取作为 avg_iterations/max_depth 输入。
         self.last_iterations: int = 0
         self.last_max_depth: int = 0
@@ -312,6 +322,11 @@ class MCTSAI:
         return best_chance.parent_move, best_chance
 
     def _leaf_score(self, state: GameState, perspective: Player) -> float:
+        if self.leaf_policy == "playout":
+            return self._leaf_playout_score(state, perspective)
+        return self._static_leaf_score(state, perspective)
+
+    def _static_leaf_score(self, state: GameState, perspective: Player) -> float:
         if self.leaf_evaluator == "zweistein":
             return zweistein_lite_score(state, perspective)
         return evaluate(
@@ -320,6 +335,29 @@ class MCTSAI:
             expected_risk_weight=0.0,
             expected_win_risk_weight=0.0,
         )
+
+    def _leaf_playout_score(self, state: GameState, perspective: Player) -> float:
+        history_size_before = len(state.history)
+        try:
+            for _ in range(self.leaf_playout_turns):
+                winner = state.get_winner()
+                if winner is not None:
+                    return WIN_VALUE if winner is perspective else -WIN_VALUE
+
+                active = state.current_player
+                dice = self._rng.randint(1, 6)
+                legal = state.legal_moves(active, dice)
+                if not legal:
+                    return WIN_VALUE if active.opponent is perspective else -WIN_VALUE
+                state.apply_move(self._rng.choice(legal), dice=dice)
+
+            winner = state.get_winner()
+            if winner is not None:
+                return WIN_VALUE if winner is perspective else -WIN_VALUE
+            return self._static_leaf_score(state, perspective)
+        finally:
+            while len(state.history) > history_size_before:
+                state.undo_move()
 
 
 def mcts_choose_move(
@@ -332,6 +370,8 @@ def mcts_choose_move(
     max_iterations: int | None = None,
     rng: random.Random | None = None,
     leaf_evaluator: str = "current",
+    leaf_policy: str = "static",
+    leaf_playout_turns: int = 20,
 ) -> Move | None:
     """便捷函数：在 ``state`` 给定 ``dice`` 时返回 MCTS 选出的 Move。"""
     ai = MCTSAI(
@@ -341,5 +381,7 @@ def mcts_choose_move(
         max_iterations=max_iterations,
         rng=rng,
         leaf_evaluator=leaf_evaluator,
+        leaf_policy=leaf_policy,
+        leaf_playout_turns=leaf_playout_turns,
     )
     return ai.choose_move(state, dice)

@@ -9,7 +9,7 @@ import random
 import pytest
 
 from ai.match import ai_version_signature, build_ai, default_starting_state
-from ai.mcts import ChanceNode, DecisionNode, MCTSAI, mcts_choose_move
+from ai.mcts import WIN_VALUE, ChanceNode, DecisionNode, MCTSAI, mcts_choose_move
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
@@ -263,6 +263,67 @@ def test_mcts_leaf_evaluator_rejects_unknown_name():
         MCTSAI(leaf_evaluator="not-real")
 
 
+def test_mcts_leaf_policy_is_static_by_default():
+    ai = MCTSAI()
+
+    assert ai.leaf_policy == "static"
+    assert ai.leaf_playout_turns == 20
+
+
+def test_mcts_leaf_policy_rejects_unknown_name():
+    with pytest.raises(ValueError, match="unknown leaf_policy"):
+        MCTSAI(leaf_policy="not-real")
+
+
+def test_mcts_leaf_policy_rejects_negative_playout_turns():
+    with pytest.raises(ValueError, match="leaf_playout_turns"):
+        MCTSAI(leaf_policy="playout", leaf_playout_turns=-1)
+
+
+def test_mcts_leaf_policy_playout_resolves_direct_leaf_win_without_mutating_state():
+    state = GameState.from_layout(
+        red={1: Position(4, 3)},
+        blue={1: Position(0, 4)},
+        current_player=Player.RED,
+    )
+    before = state.serialize()
+    ai = MCTSAI(
+        leaf_policy="playout",
+        leaf_playout_turns=1,
+        rng=random.Random(0),
+    )
+
+    score = ai._leaf_score(state, Player.RED)
+
+    assert score == WIN_VALUE
+    assert state.serialize() == before
+
+
+def test_mcts_leaf_policy_playout_is_used_during_iteration():
+    class PlayoutSpyMCTS(MCTSAI):
+        def __init__(self):
+            super().__init__(
+                max_iterations=1,
+                time_limit_ms=10_000.0,
+                leaf_policy="playout",
+                leaf_playout_turns=1,
+                rng=random.Random(2),
+            )
+            self.calls = []
+
+        def _leaf_playout_score(self, state, perspective):
+            self.calls.append((state.current_player, perspective))
+            return 42.0
+
+    state = default_starting_state()
+    ai = PlayoutSpyMCTS()
+
+    move = ai.choose_move(state, 1)
+
+    assert move in state.legal_moves(Player.RED, 1)
+    assert ai.calls == [(Player.BLUE, Player.RED)]
+
+
 def test_mcts_choose_move_function_equivalent_to_class():
     state = default_starting_state()
     a = MCTSAI(time_limit_ms=10_000.0, max_iterations=32, rng=random.Random(8))
@@ -277,14 +338,47 @@ def test_mcts_choose_move_function_equivalent_to_class():
     assert move_class == move_fn
 
 
+def test_mcts_choose_move_function_accepts_leaf_playout_options(monkeypatch):
+    captured = {}
+
+    class FakeMCTS:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        def choose_move(self, state, dice):
+            del state, dice
+            return None
+
+    monkeypatch.setattr("ai.mcts.MCTSAI", FakeMCTS)
+
+    move = mcts_choose_move(
+        default_starting_state(),
+        5,
+        leaf_policy="playout",
+        leaf_playout_turns=8,
+    )
+
+    assert move is None
+    assert captured["leaf_policy"] == "playout"
+    assert captured["leaf_playout_turns"] == 8
+
+
 def test_build_ai_mcts_eval_v1():
     ai = build_ai("mcts_eval_v1", seed=42)
     assert isinstance(ai, MCTSAI)
     assert ai.name == "mcts_eval_v1"
     # 必备字段能被 ai_version_signature 拿到
     assert hasattr(ai, "time_limit_ms")
+    assert hasattr(ai, "max_step_time_ms")
     assert hasattr(ai, "c_uct")
     assert hasattr(ai, "scale")
+
+
+def test_mcts_exposes_step_timeout_budget_for_match_harness():
+    ai = MCTSAI(time_limit_ms=123.0)
+
+    assert ai.max_step_time_ms == 123.0
+    assert ai_version_signature(ai)["max_step_time_ms"] == 123.0
 
 
 def test_build_ai_mcts_eval_v1_accepts_kwargs():
@@ -296,14 +390,22 @@ def test_build_ai_mcts_eval_v1_accepts_kwargs():
         scale=50.0,
         max_iterations=10,
         leaf_evaluator="zweistein",
+        leaf_policy="playout",
+        leaf_playout_turns=7,
     )
     assert isinstance(ai, MCTSAI)
     assert ai.time_limit_ms == 123.0
+    assert ai.max_step_time_ms == 123.0
     assert ai.c_uct == 1.0
     assert ai.scale == 50.0
     assert ai.max_iterations == 10
     assert ai.leaf_evaluator == "zweistein"
-    assert ai_version_signature(ai)["leaf_evaluator"] == "zweistein"
+    assert ai.leaf_policy == "playout"
+    assert ai.leaf_playout_turns == 7
+    signature = ai_version_signature(ai)
+    assert signature["leaf_evaluator"] == "zweistein"
+    assert signature["leaf_policy"] == "playout"
+    assert signature["leaf_playout_turns"] == 7
 
 
 def test_mcts_returns_legal_move_for_every_dice_from_default_state():
