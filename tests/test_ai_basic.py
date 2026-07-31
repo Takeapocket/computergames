@@ -373,3 +373,56 @@ def test_build_ai_expectimax_v2_registers_signature_fields():
     assert signature["chance_pruning"] == "star1"
     assert signature["expected_risk_weight"] == 0.0
     assert signature["expected_win_risk_weight"] == 0.0
+
+
+def test_build_ai_expectimax_v2_registers_star2_signature():
+    ai = build_ai("expectimax_v2", seed=1, chance_pruning="star2")
+
+    assert ai_version_signature(ai)["chance_pruning"] == "star2"
+
+
+def test_build_ai_expectimax_v2_registers_recursive_star2_signature():
+    ai = build_ai("expectimax_v2", seed=1, chance_pruning="star2_recursive")
+
+    assert ai_version_signature(ai)["chance_pruning"] == "star2_recursive"
+
+
+def test_build_ai_registers_exact_endgame_signature():
+    ai = build_ai(
+        "endgame_exact",
+        seed=7,
+        max_total_pieces=2,
+        max_total_distance=4,
+        use_transposition_table=False,
+        randomize_ties=True,
+    )
+
+    assert ai_version_signature(ai) == {
+        "name": "endgame_exact",
+        "randomize_ties": True,
+        "use_transposition_table": False,
+        "max_total_pieces": 2,
+        "max_total_distance": 4,
+    }
+
+
+def test_build_ai_registers_custom_greedy_zweistein_weights():
+    ai = build_ai(
+        "greedy_zweistein",
+        seed=7,
+        randomize_ties=False,
+        progress_weight=1.0,
+        material_weight=2.0,
+        mobility_weight=3.0,
+        capture_risk_weight=4.0,
+        target_win_risk_weight=5.0,
+    )
+    signature = ai_version_signature(ai)
+
+    assert signature["name"] == "greedy_zweistein"
+    assert signature["randomize_ties"] is False
+    assert signature["progress_weight"] == 1.0
+    assert signature["material_weight"] == 2.0
+    assert signature["mobility_weight"] == 3.0
+    assert signature["capture_risk_weight"] == 4.0
+    assert signature["target_win_risk_weight"] == 5.0

@@ -24,6 +24,7 @@ def _new_instrumentation_counts() -> dict[str, int]:
     return {
         "game_state_serialize_calls": 0,
         "game_state_deserialize_calls": 0,
+        "game_state_clone_calls": 0,
         "legal_moves_calls": 0,
         "greedy_ai_constructs": 0,
         "rng_constructs": 0,
@@ -36,6 +37,7 @@ def _instrument_rollout_hotspots():
     original_serialize = GameState.__dict__["serialize"]
     original_deserialize_descriptor = GameState.__dict__["deserialize"]
     original_deserialize = original_deserialize_descriptor.__func__
+    original_clone = GameState.__dict__["clone"]
     original_legal_moves = GameState.__dict__["legal_moves"]
     original_greedy_ai = rollout_module.GreedyAI
     original_random = rollout_module.random.Random
@@ -47,6 +49,10 @@ def _instrument_rollout_hotspots():
     def counted_deserialize(cls, data):
         counters["game_state_deserialize_calls"] += 1
         return original_deserialize(cls, data)
+
+    def counted_clone(self, *args, **kwargs):
+        counters["game_state_clone_calls"] += 1
+        return original_clone(self, *args, **kwargs)
 
     def counted_legal_moves(self, *args, **kwargs):
         counters["legal_moves_calls"] += 1
@@ -62,6 +68,7 @@ def _instrument_rollout_hotspots():
 
     GameState.serialize = counted_serialize
     GameState.deserialize = classmethod(counted_deserialize)
+    GameState.clone = counted_clone
     GameState.legal_moves = counted_legal_moves
     rollout_module.GreedyAI = counted_greedy_ai
     rollout_module.random.Random = counted_random
@@ -70,6 +77,7 @@ def _instrument_rollout_hotspots():
     finally:
         GameState.serialize = original_serialize
         GameState.deserialize = original_deserialize_descriptor
+        GameState.clone = original_clone
         GameState.legal_moves = original_legal_moves
         rollout_module.GreedyAI = original_greedy_ai
         rollout_module.random.Random = original_random
@@ -111,6 +119,11 @@ def run_probe(
     wall_seconds = max(time.perf_counter() - start, 1e-9)
     steps = len(step_times)
     return {
+        "red": {"kind": red_kind, "kwargs": red_kwargs},
+        "blue": {"kind": blue_kind, "kwargs": blue_kwargs},
+        "seed": seed,
+        "layout_id": layout_id,
+        "max_turns": max_turns,
         "games": games,
         "turns": turns,
         "steps": steps,
@@ -162,6 +175,16 @@ def run_rollout_decision_probe(
     }
 
 
+def _json_kwargs_arg(value: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise argparse.ArgumentTypeError(f"invalid JSON object: {exc.msg}") from exc
+    if not isinstance(payload, dict):
+        raise argparse.ArgumentTypeError("expected a JSON object")
+    return payload
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Collect research performance baseline metrics.")
     parser.add_argument("--games", type=int, default=2)
@@ -169,7 +192,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--red", default="rollout")
     parser.add_argument("--blue", default="random")
+    parser.add_argument("--red-kwargs", type=_json_kwargs_arg, default=None)
+    parser.add_argument("--blue-kwargs", type=_json_kwargs_arg, default=None)
     parser.add_argument("--layout-id", default="balanced_v1")
+    parser.add_argument("--max-turns", type=int, default=200)
     parser.add_argument("--output", default="")
     args = parser.parse_args(argv)
 
@@ -180,6 +206,9 @@ def main(argv: list[str] | None = None) -> int:
             games=args.games,
             seed=args.seed,
             layout_id=args.layout_id,
+            max_turns=args.max_turns,
+            red_kwargs=args.red_kwargs or {},
+            blue_kwargs=args.blue_kwargs or {},
         ),
         "rollout_decision_probe": run_rollout_decision_probe(
             samples=args.samples,

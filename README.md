@@ -2,12 +2,16 @@
 
 面向 2026 年辽宁省大学生计算机博弈大赛（暨中国大学生计算机博弈大赛辽宁选拔赛）的爱恩斯坦棋程序：Python + Tkinter 离线 GUI，按"操作员辅助参赛"设计。比赛现场默认离线运行，不依赖网络、数据库或统一平台 API；若后续确认统一平台协议，只在 `adapters/` 增加适配层，`core/` 规则语义不变。
 
-仓库已完成 v1.0 封版：规则引擎、GUI、七盘制比赛流程、计时提示、棋谱与崩溃恢复、默认 AI、赛前检查脚本和 Windows 双击启动器全部落地。项目当前已转入**长期研究模式**（2026-06 起）：以这套可运行程序为基础研究爱恩斯坦棋 AI 棋力，v1.0 锁定配置保留为历史基线与评测锚点；研究路线图见 `PROJECT_PHASES.md` §2.5。
+仓库已完成 v1.0 封版：规则引擎、GUI、七盘制比赛流程、计时提示、棋谱与崩溃恢复、默认 AI、赛前检查脚本和 Windows 双击启动器全部落地。项目当前已转入**长期研究模式**（2026-06 起）：以这套可运行程序为基础研究爱恩斯坦棋 AI 棋力，v1.0 锁定配置保留为历史基线与评测锚点；研究路线图见 `PROJECT_PHASES.md` §2.5。当前主开发目录为 `E:\computergame`，C 盘旧目录已弃用。
 
 ## 当前状态
 
 | 项目 | 当前结论 |
 |---|---|
+| 主开发目录 | `E:\computergame` |
+| C 盘旧目录 | 已弃用，仅作为迁移前快照保留，不再开发/测试/提交 |
+| 研究数据/cache | `E:\computergame-data`、`E:\pip-cache`、`E:\torch-cache` |
+| 当前提交 | `4b8b10910502fc9473c28e35c9128c65fafbe45e` |
 | 参赛版本 | `release/v1.0/`，P14 默认参数已锁定（2026-05-18） |
 | 现场入口 | 根目录 `启动项目.cmd` 双击打开菜单 |
 | 默认 AI | `rollout` kind + P14 promotion 显式参数（明细见下） |
@@ -57,6 +61,7 @@ READY FOR MATCH
 - Windows + Python 3.11，Tkinter 标准库 GUI
 - 测试框架 pytest
 - 不依赖网络服务、数据库或生产 API
+- 长期研究数据、模型权重、自对弈棋谱和 pip/torch 缓存放 E 盘，不写入 C 盘旧仓库
 
 优先使用仓库内 `.venv/`。如需重建虚拟环境：
 
@@ -64,6 +69,18 @@ READY FOR MATCH
 python -m venv ".venv"
 & ".venv/Scripts/python.exe" -m pip install pytest
 ```
+
+E 盘研究环境建议：
+
+```powershell
+cd E:\computergame
+$env:CG_RESEARCH_DATA_DIR = "E:/computergame-data"
+$env:PIP_CACHE_DIR = "E:/pip-cache"
+$env:TORCH_HOME = "E:/torch-cache"
+& ".venv/Scripts/python.exe" -m pytest -q
+```
+
+当前 E 盘交接验证结果：`933 passed in 79.08s`。详细交接记录见 `docs/E_DRIVE_HANDOFF_20260614.md`。
 
 ## 锁定的默认配置
 
@@ -174,6 +191,7 @@ adapters/         平台/API 适配层预留，未实现具体协议
 
 - `PROJECT_MEMORY.md`：当前事实快照和历史决策。
 - `PROJECT_PHASES.md`：阶段规划、验收门槛和 AI 研究路线。
+- `docs/E_DRIVE_HANDOFF_20260614.md`：E 盘迁移、虚拟环境、数据/cache 目录和新对话接手说明。
 - `docs/RULE_ASSUMPTIONS.md`：规则假设与国赛规则对齐记录。
 - `docs/PROJECT_BRIEF.md`：项目定位、当前阶段和边界。
 - `reports/ai_promotion_decision.md`：默认 AI 决策记录。

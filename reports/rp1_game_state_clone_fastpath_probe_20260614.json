@@ -1,0 +1,42 @@
+{
+  "match_probe": {
+    "average_step_time_ms": 96.75301176471027,
+    "blue": {
+      "kind": "random",
+      "kwargs": {}
+    },
+    "crashes": 0,
+    "games": 1,
+    "illegal_moves": 0,
+    "instrumentation_note": "match_probe reports match timing; rollout_decision_probe.instrumentation reports clone/legal-generation/object-construction counters.",
+    "layout_id": "balanced_v1",
+    "max_step_time_ms": 294.23989999850164,
+    "max_turns": 200,
+    "red": {
+      "kind": "rollout",
+      "kwargs": {}
+    },
+    "seed": 62014,
+    "steps": 17,
+    "steps_per_second": 10.275864032415017,
+    "timeouts": 0,
+    "turns": 17,
+    "wall_seconds": 1.6543621000018902
+  },
+  "rollout_decision_probe": {
+    "average_root_visits": 229.125,
+    "decisions": 8,
+    "instrumentation": {
+      "game_state_clone_calls": 1836,
+      "game_state_deserialize_calls": 0,
+      "game_state_serialize_calls": 0,
+      "greedy_ai_constructs": 1844,
+      "legal_moves_calls": 1365298,
+      "rng_constructs": 1853
+    },
+    "root_visits": 1833,
+    "root_visits_per_second": 133.42274865435257,
+    "samples": 8,
+    "wall_seconds": 13.738286899999366
+  }
+}

@@ -1,17 +1,19 @@
 # 爱恩斯坦棋参赛程序项目简介
 
-更新时间：2026-06-14（长期研究模式与审查 follow-up 后同步）
+更新时间：2026-06-14（E 盘迁移交接完成）
 
 ## 项目定位
 
 本项目已从 2026 年辽宁省大学生计算机博弈大赛爱恩斯坦棋离线 GUI 参赛程序，转型为以该程序为基础的长期 AI 棋力研究平台。
 
-比赛形态的 GUI、release/v1.0 和 P14 默认参数保留为历史基线与天梯锚点；后续默认目标是研究搜索、rollout/MCTS、天梯评测、真实棋谱复盘与骰子取证。R-P0 迁移到 `E:\computergame` 尚未执行，当前 C 盘工作区只用于修复和提交前验证。
+比赛形态的 GUI、release/v1.0 和 P14 默认参数保留为历史基线与天梯锚点；后续默认目标是研究搜索、rollout/MCTS、天梯评测、真实棋谱复盘与骰子取证。R-P0 迁移已完成：当前主开发目录是 `E:\computergame`，C 盘旧目录 `C:\Users\Takeapocket\Desktop\documents\computergames` 已弃用，仅作为迁移前快照保留。
 
 ## 当前阶段判断（2026-06-14，长期研究模式）
 
-- 当前主线：先修复研究转型审查发现的问题，再经用户确认后 commit/push，随后从 E 盘重新 clone 并重建研究环境。
-- 研究红线：天梯数据、训练数据、模型权重和缓存不默认写入 C 盘；`scripts/ladder.py` 现在需要显式 `--output-dir` 或 `CG_RESEARCH_DATA_DIR`。
+- 当前主线：在 `E:\computergame` 继续长期 AI 研究；不要回到 C 盘旧目录开发、测试、提交或推送。
+- 迁移状态：审查修复已提交并推送到 GitHub main（`4b8b10910502fc9473c28e35c9128c65fafbe45e`），E 盘已从 GitHub 干净 clone，`.venv` 已重建并通过全量验证。
+- 研究红线：天梯数据、训练数据、模型权重和缓存不默认写入仓库或 C 盘；`scripts/ladder.py` 需要显式 `--output-dir` 或 `CG_RESEARCH_DATA_DIR`。当前推荐环境变量为 `CG_RESEARCH_DATA_DIR=E:/computergame-data`、`PIP_CACHE_DIR=E:/pip-cache`、`TORCH_HOME=E:/torch-cache`。
+- 交接详情：见 `docs/E_DRIVE_HANDOFF_20260614.md`。
 - 赛前/比赛内容以下作为历史基线保留，不再代表当前下一步优先级。
 
 - 阶段 0：项目初始化与规则固化已基本补齐。
@@ -44,9 +46,9 @@
 - **2026-05-18 P14 默认 rollout 参数受控替换已完成**：用户确认将 `rollout_strong_64_loweps` 作为 GUI/release 工作默认 kwargs；实现仍为 `kind="rollout"`，显式参数为 64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety（`deadline_safety_ms=80.0`）。两轮 50+50 合并为 118/200 = 59.0%，Wilson CI [52.1%, 65.6%]，bench `illegal/crash/timeout=0/0/0`。默认布局仍是 `balanced_v1`，`greedy_risk` 仍是应急回退，core 规则语义未变。
 
 下一会话优先级：
-1. 修复 code review 中的 Critical / Important / Minor 问题，并跑目标测试与全量 pytest。
-2. 用户确认后再执行 `git commit` / `git push`。
-3. 从 `E:\computergame` 重新 clone，重建 `.venv`，设置 `CG_RESEARCH_DATA_DIR` 与 pip/torch cache 到 E 盘，跑全量验证；C 盘旧目录先保留。
+1. 从 `E:\computergame` 开始，先读 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`README.md`、`docs/E_DRIVE_HANDOFF_20260614.md`，并确认 `git status --short`。
+2. 设置研究环境变量：`CG_RESEARCH_DATA_DIR=E:/computergame-data`、`PIP_CACHE_DIR=E:/pip-cache`、`TORCH_HOME=E:/torch-cache`。
+3. 继续 R-P1/R-P2A/R-P2B 研究主线：性能基线、持久 Elo 天梯、真实棋谱复盘、dice forensics、ExpectimaxV2 与 MCTS/learning 线。每项先写技术假设和门禁，再跑 harness。
 
 ## 当前技术栈
 
@@ -113,8 +115,8 @@
 
 ## 下一步建议（下一会话）
 
-详见 `PROJECT_PHASES.md` §2.5 与 `docs/superpowers/specs/2026-06-13-research-transition-design.md`。简版顺序：
+详见 `PROJECT_PHASES.md` §2.5、`docs/E_DRIVE_HANDOFF_20260614.md` 与 `docs/superpowers/specs/2026-06-13-research-transition-design.md`。简版顺序：
 
-1. **当前仓库修复**：先堵住 C 盘默认输出、骰子取证语义、天梯元数据、文档口径和测试覆盖问题。
-2. **提交与迁移**：用户确认后 commit/push，再从 E 盘 clone；不要直接搬运 `.venv` 或大数据目录。
+1. **E 盘接手**：只在 `E:\computergame` 工作；C 盘旧目录已弃用。
+2. **环境固定**：研究数据和缓存使用 `E:\computergame-data`、`E:\pip-cache`、`E:\torch-cache`。
 3. **研究主线**：R-P1 地基稳定后继续 ExpectimaxV2 / MCTS / 天梯评测，棋力结论只认持久天梯和批量对战数据。

@@ -621,6 +621,9 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
     if kind == "expectimax_v2":
         from ai.expectimax_v2 import ExpectimaxV2
         return ExpectimaxV2(rng=rng, **ai_kwargs)
+    if kind == "endgame_exact":
+        from ai.endgame_solver import ExactEndgameAI
+        return ExactEndgameAI(rng=rng, **ai_kwargs)
     if kind == "mcts_eval_v1":
         from ai.mcts import MCTSAI
 
@@ -693,8 +696,14 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
         "move_ordering",
         "iterative_deepening",
         "chance_pruning",
+        "max_total_pieces",
+        "max_total_distance",
+        "progress_weight",
         "distance_weight",
         "material_weight",
+        "mobility_weight",
+        "capture_risk_weight",
+        "target_win_risk_weight",
         "expected_risk_weight",
         "expected_win_risk_weight",
         "self_capture_weight",

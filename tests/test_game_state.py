@@ -193,6 +193,47 @@ def test_apply_move_canonicalizes_captured_piece_from_legal_move():
     assert state.pieces[Player.BLUE][2].alive is True
 
 
+
+def test_clone_matches_serialize_round_trip_and_is_independent():
+    state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
+    move = next(
+        move
+        for move in state.legal_moves(Player.RED, 1)
+        if move.to_pos == Position(3, 3)
+    )
+    state.apply_move(move, dice=1)
+
+    clone = state.clone()
+
+    assert clone.serialize() == state.serialize()
+    assert clone.pieces is not state.pieces
+    assert clone.pieces[Player.RED] is not state.pieces[Player.RED]
+    assert clone.pieces[Player.RED][1] is not state.pieces[Player.RED][1]
+    assert clone.pieces[Player.BLUE][2] is not state.pieces[Player.BLUE][2]
+    assert clone.history is not state.history
+    assert clone.history[0] is not state.history[0]
+    assert clone.history[0].captured_piece is not state.history[0].captured_piece
+    clone.undo_move()
+    assert clone.serialize() != state.serialize()
+    assert state.pieces[Player.RED][1].position == Position(3, 3)
+    assert not state.pieces[Player.BLUE][2].alive
+
+
+def test_clone_can_omit_history_for_rollout_simulations():
+    state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
+    move = next(
+        move
+        for move in state.legal_moves(Player.RED, 1)
+        if move.to_pos == Position(3, 3)
+    )
+    state.apply_move(move, dice=1)
+
+    clone = state.clone(include_history=False)
+
+    assert clone.history == []
+    assert clone.serialize(include_history=False) == state.serialize(include_history=False)
+    assert "history" not in clone.serialize(include_history=False)
+
 def test_apply_known_legal_move_matches_public_apply_for_legal_capture():
     public_state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})
     trusted_state = make_state(red={1: Position(2, 2)}, blue={2: Position(3, 3)})

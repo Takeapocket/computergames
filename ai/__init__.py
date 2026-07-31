@@ -5,6 +5,7 @@ from typing import Protocol
 from core.game_state import GameState
 from core.move import Move
 
+from ai.endgame_solver import ExactEndgameAI, ExactEndgameSolver
 from ai.expectimax_ai import ExpectimaxAI
 from ai.expectimax_v2 import ExpectimaxV2
 from ai.greedy_ai import GreedyAI
@@ -28,6 +29,8 @@ class AIPlayer(Protocol):
 
 __all__ = [
     "AIPlayer",
+    "ExactEndgameAI",
+    "ExactEndgameSolver",
     "ExpectimaxAI",
     "ExpectimaxV2",
     "ExactOpponentDiceRerankAI",

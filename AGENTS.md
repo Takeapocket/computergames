@@ -6,14 +6,22 @@
 - 面向有经验的开发者，保持专业、直接、技术导向。
 - 汇报结论时优先说明事实、验证结果和下一步，不做无依据承诺。
 
+## 当前工作区
+
+- 主开发目录：`E:\computergame`
+- 研究数据目录：`E:\computergame-data`
+- pip 缓存目录：`E:\pip-cache`
+- torch 缓存目录：`E:\torch-cache`
+- C 盘旧目录 `C:\Users\Takeapocket\Desktop\documents\computergames` 已弃用，仅作为迁移前快照保留；不要在旧目录继续开发、测试、提交或推送。
+
 ## 项目目标
 
-本项目是面向 2026 年辽宁省大学生计算机博弈大赛校内选拔赛的爱恩斯坦棋离线 GUI 参赛程序。
+本项目已从 2026 年辽宁省大学生计算机博弈大赛校内选拔赛的爱恩斯坦棋离线 GUI 参赛程序，转型为以该程序为基础的长期 AI 棋力研究项目。比赛形态的 GUI、`release/v1.0` 和 P14 默认参数保留为历史基线与天梯锚点。
 
 核心目标优先级：
 
 ```text
-规则正确 > 现场稳定 > GUI 可操作 > 基础 AI 强度 > Expectimax 强化 > 开局库与参数优化 > 界面美观
+规则正确 > 可复现实验 > 本地稳定 > GUI 可操作 > 基础 AI 强度 > Expectimax/MCTS 强化 > 开局库与参数优化 > 界面美观
 ```
 
 当前默认假设：
@@ -22,6 +30,8 @@
 - 不默认存在统一平台或 API。
 - 若后续确认平台协议，只在 `adapters/` 增加适配层，不改 core 规则语义。
 - GUI 只调用 core，不复制或改写规则逻辑。
+- 长期研究阶段不再受封版纪律约束，但保留 core-first、harness-first、pytest 全绿和数据可复现纪律。
+- 训练数据、模型权重、自对弈棋谱、pip/torch 缓存一律放 E 盘；仓库内不得默认写入大体积研究产物。
 
 ## 每次接手项目先读
 
@@ -32,6 +42,7 @@
 3. `README.md`
 4. `docs/RULE_ASSUMPTIONS.md`
 5. `docs/PROJECT_BRIEF.md`
+6. `docs/E_DRIVE_HANDOFF_20260614.md`
 
 不要只凭历史印象判断项目状态；以当前仓库文件和测试结果为准。
 
@@ -64,6 +75,14 @@
 & ".venv/Scripts/python.exe" -m pytest
 & ".venv/Scripts/python.exe" "scripts/smoke_test.py"
 & ".venv/Scripts/python.exe" "scripts/run_gui.py"
+```
+
+研究脚本默认使用 E 盘环境变量：
+
+```powershell
+$env:CG_RESEARCH_DATA_DIR = "E:/computergame-data"
+$env:PIP_CACHE_DIR = "E:/pip-cache"
+$env:TORCH_HOME = "E:/torch-cache"
 ```
 
 搜索文件和内容优先使用 `rg`。

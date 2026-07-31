@@ -180,6 +180,34 @@ def test_rollout_paired_fixed_seed_characterization_after_fastpath():
     assert abs(ai._rng.random() - 0.3948234964231735) < 1e-15
 
 
+def test_rollout_paired_uses_clone_without_serialize_round_trip(monkeypatch):
+    state = _multi_move_state()
+    calls = {"serialize": 0, "deserialize": 0}
+    original_serialize = GameState.serialize
+    original_deserialize = GameState.deserialize
+
+    def counting_serialize(self, *args, **kwargs):
+        calls["serialize"] += 1
+        return original_serialize(self, *args, **kwargs)
+
+    def counting_deserialize(cls, data):
+        calls["deserialize"] += 1
+        return original_deserialize(data)
+
+    monkeypatch.setattr(GameState, "serialize", counting_serialize)
+    monkeypatch.setattr(GameState, "deserialize", classmethod(counting_deserialize))
+
+    ai = RolloutPairedAI(
+        rollouts_per_move=1,
+        max_rollout_turns=1,
+        max_step_time_ms=1000,
+        rng=random.Random(7),
+    )
+
+    assert ai.choose_move(state, 5) is not None
+    assert calls == {"serialize": 0, "deserialize": 0}
+
+
 def test_rollout_paired_cutoff_eval_zweistein_can_run():
     state = _multi_move_state()
     ai = RolloutPairedAI(

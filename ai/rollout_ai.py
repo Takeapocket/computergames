@@ -222,7 +222,7 @@ class RolloutAI:
         while score.visits < target_visits:
             if time.perf_counter() >= deadline:
                 return True
-            sim = GameState.deserialize(state.serialize())
+            sim = state.clone(include_history=False)
             sim._apply_known_legal_move(score.move)
             self._playout_hit_deadline = False
             winner = self._playout(sim, deadline=deadline)
@@ -410,7 +410,7 @@ class RolloutPairedAI(RolloutAI):
             for score in trial_scores:
                 if time.perf_counter() >= deadline:
                     return finish_timeout()
-                sim = GameState.deserialize(state.serialize())
+                sim = state.clone(include_history=False)
                 sim._apply_known_legal_move(score.move)
                 self._playout_hit_deadline = False
                 winner = self._playout_with_rng(

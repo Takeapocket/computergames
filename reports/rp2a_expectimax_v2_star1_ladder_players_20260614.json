@@ -1,0 +1,19 @@
+{
+  "players": [
+    "p14_default",
+    {
+      "player_id": "expectimax_v2_d2_tt_order_star1",
+      "kind": "expectimax_v2",
+      "kwargs": {
+        "depth": 2,
+        "time_limit_ms": 250.0,
+        "randomize_ties": false,
+        "use_transposition_table": true,
+        "move_ordering": true,
+        "iterative_deepening": true,
+        "chance_pruning": "star1"
+      },
+      "rating": 1500.0
+    }
+  ]
+}

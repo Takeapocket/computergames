@@ -18,7 +18,7 @@ EXPECTIMAX_V2_MAX_SCORE: float = WIN_SCORE
 EXPECTIMAX_V2_EVALUATOR_VERSION: str = "current-risk0-v1"
 
 ExpectimaxV2NodeType = Literal["chance", "turn"]
-ExpectimaxV2ChancePruning = Literal["none", "star1"]
+ExpectimaxV2ChancePruning = Literal["none", "star1", "star2", "star2_recursive"]
 ExpectimaxV2PieceKey = tuple[str, int, bool, int, int]
 ExpectimaxV2StateKey = tuple[str, tuple[ExpectimaxV2PieceKey, ...]]
 ExpectimaxV2TranspositionKey = tuple[
@@ -38,6 +38,8 @@ class ExpectimaxV2SearchStats:
     tt_hits: int = 0
     tt_stores: int = 0
     chance_prunes: int = 0
+    chance_probes: int = 0
+    chance_probe_cutoffs: int = 0
     timed_out: bool = False
     completed_depth: int = 0
 
@@ -130,8 +132,11 @@ class ExpectimaxV2:
         iterative_deepening: bool = False,
         chance_pruning: ExpectimaxV2ChancePruning = "none",
     ) -> None:
-        if chance_pruning not in ("none", "star1"):
-            raise ValueError("chance_pruning must be one of: 'none', 'star1'")
+        if chance_pruning not in ("none", "star1", "star2", "star2_recursive"):
+            raise ValueError(
+                "chance_pruning must be one of: "
+                "'none', 'star1', 'star2', 'star2_recursive'"
+            )
         self.depth = int(depth)
         self.time_limit_ms = float(time_limit_ms)
         self._rng = rng or random.Random()
@@ -236,7 +241,9 @@ class ExpectimaxV2:
             try:
                 cutoff_upper_bound = (
                     best_score
-                    if self.chance_pruning == "star1" and best_moves
+                    if self.chance_pruning
+                    in ("star1", "star2", "star2_recursive")
+                    and best_moves
                     else None
                 )
                 chance_kwargs = {
@@ -280,6 +287,7 @@ class ExpectimaxV2:
         deadline: float,
         table: ExpectimaxV2TranspositionTable | None,
         cutoff_upper_bound: float | None = None,
+        cutoff_lower_bound: float | None = None,
     ) -> tuple[float, bool]:
         self.last_search_stats.nodes += 1
         if time.perf_counter() >= deadline:
@@ -299,7 +307,19 @@ class ExpectimaxV2:
             self.last_search_stats.tt_hits += 1
             return expectimax_v2_require_score_in_bounds(table[key], context="cached chance"), True
 
-        if self.chance_pruning == "star1":
+        if self.chance_pruning == "star2_recursive" or (
+            self.chance_pruning == "star2" and depth == 1
+        ):
+            value, complete = self._chance_value_star2(
+                state,
+                perspective=perspective,
+                depth=depth,
+                deadline=deadline,
+                table=table,
+                cutoff_upper_bound=cutoff_upper_bound,
+                cutoff_lower_bound=cutoff_lower_bound,
+            )
+        elif self.chance_pruning in ("star1", "star2"):
             value, complete = self._chance_value_star1(
                 state,
                 perspective=perspective,
@@ -307,6 +327,7 @@ class ExpectimaxV2:
                 deadline=deadline,
                 table=table,
                 cutoff_upper_bound=cutoff_upper_bound,
+                cutoff_lower_bound=cutoff_lower_bound,
             )
         else:
             value, complete = self._chance_value_exact(
@@ -356,6 +377,7 @@ class ExpectimaxV2:
         deadline: float,
         table: ExpectimaxV2TranspositionTable | None,
         cutoff_upper_bound: float | None,
+        cutoff_lower_bound: float | None,
     ) -> tuple[float, bool]:
         total = 0.0
         complete = True
@@ -386,9 +408,265 @@ class ExpectimaxV2:
                         ),
                         False,
                     )
+            if (
+                cutoff_lower_bound is not None
+                and remaining > 0
+                and not self.last_search_stats.timed_out
+            ):
+                min_possible = (total + remaining * EXPECTIMAX_V2_MIN_SCORE) / 6.0
+                if min_possible > cutoff_lower_bound:
+                    self.last_search_stats.chance_prunes += remaining
+                    return (
+                        expectimax_v2_require_score_in_bounds(
+                            min_possible,
+                            context="chance-pruned-lower-bound",
+                        ),
+                        False,
+                    )
         value = total / 6.0
         value = expectimax_v2_require_score_in_bounds(value, context="chance")
         return value, complete
+
+
+    def _chance_value_probe_exact(
+        self,
+        state: GameState,
+        *,
+        perspective: Player,
+        depth: int,
+        deadline: float,
+        table: ExpectimaxV2TranspositionTable | None,
+    ) -> tuple[float, bool]:
+        self.last_search_stats.nodes += 1
+        if time.perf_counter() >= deadline:
+            self.last_search_stats.timed_out = True
+            return self._evaluate_leaf(state, perspective=perspective), False
+        if depth <= 0 or state.get_winner() is not None:
+            return self._evaluate_leaf(state, perspective=perspective), True
+
+        key = expectimax_v2_transposition_key(
+            state,
+            node_type="chance",
+            perspective=perspective,
+            depth=depth,
+            dice=None,
+        )
+        if table is not None and key in table:
+            self.last_search_stats.tt_hits += 1
+            return (
+                expectimax_v2_require_score_in_bounds(
+                    table[key],
+                    context="cached exact probe chance",
+                ),
+                True,
+            )
+
+        total = 0.0
+        for dice in range(1, 7):
+            value, complete = self._turn_value_probe_exact(
+                state,
+                dice=dice,
+                perspective=perspective,
+                depth=depth,
+                deadline=deadline,
+                table=table,
+            )
+            if not complete:
+                return value, False
+            total += value
+        value = expectimax_v2_require_score_in_bounds(
+            total / 6.0,
+            context="exact probe chance",
+        )
+        if table is not None:
+            table[key] = value
+            self.last_search_stats.tt_stores += 1
+        return value, True
+
+    def _turn_value_probe_exact(
+        self,
+        state: GameState,
+        *,
+        dice: int,
+        perspective: Player,
+        depth: int,
+        deadline: float,
+        table: ExpectimaxV2TranspositionTable | None,
+    ) -> tuple[float, bool]:
+        self.last_search_stats.nodes += 1
+        winner = state.get_winner()
+        if winner is not None:
+            value = WIN_SCORE if winner is perspective else -WIN_SCORE
+            return expectimax_v2_require_score_in_bounds(value, context="terminal"), True
+
+        whose_turn = state.current_player
+        legal = state.legal_moves(whose_turn, dice)
+        key = expectimax_v2_transposition_key(
+            state,
+            node_type="turn",
+            perspective=perspective,
+            depth=depth,
+            dice=dice,
+        )
+        if not legal:
+            value = -WIN_SCORE if whose_turn is perspective else WIN_SCORE
+            value = expectimax_v2_require_score_in_bounds(
+                value,
+                context="exact probe no-move",
+            )
+            if table is not None:
+                table[key] = value
+                self.last_search_stats.tt_stores += 1
+            return value, True
+        if time.perf_counter() >= deadline:
+            self.last_search_stats.timed_out = True
+            return self._evaluate_leaf(state, perspective=perspective), False
+        if table is not None and key in table:
+            self.last_search_stats.tt_hits += 1
+            return (
+                expectimax_v2_require_score_in_bounds(
+                    table[key],
+                    context="cached exact probe turn",
+                ),
+                True,
+            )
+
+        scores = []
+        for move in self._ordered_moves(state, legal):
+            if time.perf_counter() >= deadline:
+                self.last_search_stats.timed_out = True
+                return self._evaluate_leaf(state, perspective=perspective), False
+            state.apply_move(move, dice=dice)
+            try:
+                value, complete = self._chance_value_probe_exact(
+                    state,
+                    perspective=perspective,
+                    depth=depth - 1,
+                    deadline=deadline,
+                    table=table,
+                )
+            finally:
+                state.undo_move()
+            if not complete:
+                return value, False
+            scores.append(value)
+
+        value = max(scores) if whose_turn is perspective else min(scores)
+        value = expectimax_v2_require_score_in_bounds(value, context="exact probe turn")
+        if table is not None:
+            table[key] = value
+            self.last_search_stats.tt_stores += 1
+        return value, True
+
+    def _probe_turn_bound(
+        self,
+        state: GameState,
+        *,
+        dice: int,
+        perspective: Player,
+        depth: int,
+        deadline: float,
+        table: ExpectimaxV2TranspositionTable | None,
+    ) -> tuple[float, bool]:
+        whose_turn = state.current_player
+        legal = state.legal_moves(whose_turn, dice)
+        if not legal:
+            value = -WIN_SCORE if whose_turn is perspective else WIN_SCORE
+            return (
+                expectimax_v2_require_score_in_bounds(
+                    value,
+                    context="star2-probe-no-move",
+                ),
+                True,
+            )
+        if time.perf_counter() >= deadline:
+            self.last_search_stats.timed_out = True
+            return self._evaluate_leaf(state, perspective=perspective), False
+
+        move = self._ordered_moves(state, legal)[0]
+        state.apply_move(move, dice=dice)
+        self.last_search_stats.chance_probes += 1
+        try:
+            return self._chance_value_probe_exact(
+                state,
+                perspective=perspective,
+                depth=depth - 1,
+                deadline=deadline,
+                table=table,
+            )
+        finally:
+            state.undo_move()
+
+    def _chance_value_star2(
+        self,
+        state: GameState,
+        *,
+        perspective: Player,
+        depth: int,
+        deadline: float,
+        table: ExpectimaxV2TranspositionTable | None,
+        cutoff_upper_bound: float | None,
+        cutoff_lower_bound: float | None,
+    ) -> tuple[float, bool]:
+        whose_turn = state.current_player
+        upper_probe = (
+            cutoff_upper_bound is not None
+            and cutoff_lower_bound is None
+            and whose_turn is not perspective
+        )
+        lower_probe = (
+            cutoff_lower_bound is not None
+            and cutoff_upper_bound is None
+            and whose_turn is perspective
+        )
+        if not (upper_probe or lower_probe):
+            return self._chance_value_star1(
+                state,
+                perspective=perspective,
+                depth=depth,
+                deadline=deadline,
+                table=table,
+                cutoff_upper_bound=cutoff_upper_bound,
+                cutoff_lower_bound=cutoff_lower_bound,
+            )
+
+        probe_total = 0.0
+        for dice in range(1, 7):
+            value, complete = self._probe_turn_bound(
+                state,
+                dice=dice,
+                perspective=perspective,
+                depth=depth,
+                deadline=deadline,
+                table=table,
+            )
+            if not complete:
+                return value, False
+            probe_total += value
+
+        probe_bound = expectimax_v2_require_score_in_bounds(
+            probe_total / 6.0,
+            context="star2-probe-bound",
+        )
+        if upper_probe:
+            assert cutoff_upper_bound is not None
+            should_cut = probe_bound < cutoff_upper_bound
+        else:
+            assert lower_probe and cutoff_lower_bound is not None
+            should_cut = probe_bound > cutoff_lower_bound
+        if should_cut:
+            self.last_search_stats.chance_probe_cutoffs += 1
+            return probe_bound, False
+
+        return self._chance_value_star1(
+            state,
+            perspective=perspective,
+            depth=depth,
+            deadline=deadline,
+            table=table,
+            cutoff_upper_bound=cutoff_upper_bound,
+            cutoff_lower_bound=cutoff_lower_bound,
+        )
 
     def _turn_value(self, state: GameState, *, dice: int, perspective, depth: int, deadline: float) -> float:
         value, _complete = self._turn_value_with_status(
@@ -450,12 +728,24 @@ class ExpectimaxV2:
                 break
             state.apply_move(move, dice=dice)
             try:
+                chance_kwargs = {
+                    "perspective": perspective,
+                    "depth": depth - 1,
+                    "deadline": deadline,
+                    "table": table,
+                }
+                if self.chance_pruning in (
+                    "star1",
+                    "star2",
+                    "star2_recursive",
+                ) and scores:
+                    if whose_turn is perspective:
+                        chance_kwargs["cutoff_upper_bound"] = max(scores)
+                    else:
+                        chance_kwargs["cutoff_lower_bound"] = min(scores)
                 value, child_complete = self._chance_value_with_status(
                     state,
-                    perspective=perspective,
-                    depth=depth - 1,
-                    deadline=deadline,
-                    table=table,
+                    **chance_kwargs,
                 )
                 scores.append(value)
                 complete = complete and child_complete

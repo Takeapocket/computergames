@@ -241,9 +241,55 @@ tests/test_expectimax_v2.py + expectimax_v2 signature test: 32 passed in 2.00s
 full pytest: 913 passed in 73.30s
 ```
 
-- [ ] **Step 4: Bench-only, no promotion**
+- [x] **Step 4: Bench-only, no promotion**
 
 Use `scripts/perf_probe.py` and `scripts/ladder.py` for evidence. Any strength claim must compare against P14 release default rollout kwargs, not bare `build_ai("rollout")`.
+
+Observed 2026-06-14:
+
+```text
+ladder smoke: E:/computergame-data/ladder/rp2a_expectimax_v2_star1_smoke_20260614/report.json
+perf probe: reports/rp2a_expectimax_v2_star1_perf_probe_20260614.json
+report: reports/rp2a_expectimax_v2_star1_bench_smoke_20260614.md
+scope: 1 ladder game + 1 perf game, no strength claim, no promotion
+```
+
+- [x] **Step 5: Complete recursive Star1/Star2 chance pruning**
+
+Recursive Star1 now carries symmetric upper/lower incumbent bounds. The
+frontier-only `star2` mode and all-depth `star2_recursive` mode have independent
+AI signatures so both reports remain reproducible. Recursive Star2 uses exact
+one-child probe subtrees, exact-only TT reuse, strict tie comparisons, and
+timeout-safe incomplete propagation. Reports:
+`reports/rp2a_minimizing_star1_20260731.md`,
+`reports/rp2a_star2_frontier_20260731.md`, and
+`reports/rp2a_recursive_star2_20260731.md`.
+
+Observed 2026-07-31:
+
+```text
+ExpectimaxV2 target group: 61 passed in 2.68s
+full pytest: 970 passed in 75.41s
+scope: correctness + wiring probes only, no promotion
+```
+
+- [x] **Step 6: Exact endgame solver**
+
+Added standalone `ExactEndgameSolver` / `ExactEndgameAI` under the explicit
+`endgame_exact` kind. The solver uses a strictly decreasing Manhattan progress
+measure, untruncated chance/turn recursion, canonical RED win-probability TT,
+and a small-piece/near-terminal gate with explicit failure outside the gate.
+Retrograde databases remain out of scope. Report:
+`reports/rp2a_exact_endgame_20260731.md`.
+
+Observed 2026-07-31:
+
+```text
+E3 target group: 21 passed in 0.81s
+full pytest: 991 passed in 72.85s
+hand oracle: P(RED)=1/3, P(BLUE)=2/3, 25 nodes, 3 TT hits, 14 TT stores
+scope: exact primitive + endgame-only AI, no promotion
+```
 
 ### Task 6: Status And Evidence Sync
 
@@ -252,10 +298,10 @@ Use `scripts/perf_probe.py` and `scripts/ladder.py` for evidence. Any strength c
 - Modify: `PROJECT_PHASES.md`
 - Create/Modify: `reports/rp2a_*.md`
 
-- [ ] **Step 1: Record each completed slice**
+- [x] **Step 1: Record each completed slice**
 
 Only record verified facts: changed files, exact tests, perf/ladder outputs, and explicit non-goals.
 
-- [ ] **Step 2: Keep R-P0 boundary visible**
+- [x] **Step 2: Keep R-P0 boundary visible**
 
-R-P0 PR/commit/push, migration to `E:\computergame`, `.venv` rebuild, pip cache config, dependency install, and old-directory cleanup remain separate dangerous operations requiring explicit user confirmation.
+Historical boundary updated 2026-06-14: R-P0 migration to `E:\computergame`, `.venv` rebuild, E-drive cache directories, and dependency install are already complete per `docs/E_DRIVE_HANDOFF_20260614.md`. This R-P2A plan does not repeat migration, dependency install, commit, push, or old-directory cleanup; any future commit/push or destructive cleanup still requires explicit user confirmation.

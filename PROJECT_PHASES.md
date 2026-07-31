@@ -1,10 +1,10 @@
 # 爱恩斯坦棋参赛程序阶段规划
 
-更新时间：2026-06-14（研究脚手架审查 follow-up）
+更新时间：2026-07-31
 项目目标：长期 AI 棋力研究（2026-06-13 起）；原 2026 年辽宁省赛参赛目标对应的赛季已结束
 项目方向：以离线 GUI 参赛程序为基础的爱恩斯坦棋 AI 研究平台
 
-本文件是项目后续规划的唯一主入口：记录阶段顺序、当前优先级、验收门槛和 AI 研究路线。规则细节写入 `docs/RULE_ASSUMPTIONS.md`；项目事实快照写入 `PROJECT_MEMORY.md`；具体任务执行计划写入 `docs/superpowers/plans/`；实验数据写入 `reports/`。
+本文件是项目后续规划的唯一主入口：记录阶段顺序、当前优先级、验收门槛和 AI 研究路线。规则细节写入 `docs/RULE_ASSUMPTIONS.md`；项目事实快照写入 `PROJECT_MEMORY.md`；E 盘交接状态写入 `docs/E_DRIVE_HANDOFF_20260614.md`；具体任务执行计划写入 `docs/superpowers/plans/`；实验数据写入 `reports/`。
 
 ---
 
@@ -53,7 +53,7 @@
 | P14 strong rollout 默认替换 | 已完成 | 用户确认将 `rollout_strong_64_loweps` 作为 GUI/release 工作默认 kwargs；实现仍为 `kind="rollout"` + 显式参数。两轮 50+50 合并 118/200 = 59.0%，Wilson CI [52.1%, 65.6%]，bench `illegal/crash/timeout=0/0/0`，max step 约 1920.8ms，max per-side thinking 约 11.4s / 10.9s。strong rollout candidate 门禁按真实稳定性、max step 和单方累计思考预算评估，不套普通候选 500ms average step cap。默认布局和 core 规则未变。 |
 | Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
 
-下一步主线：**长期研究模式（R 系列）**。2026 赛季已结束，赛前冻结解除；比赛形态的 GUI 与 release/v1.0 锁定配置保留为历史基线和对照锚点，工程重心转向 AI 棋力研究。赛前主线（R-0~R-4、S1~S4、P1~P14）全部闭环，历史细节见下文 §4、§5 与 `reports/ai_experiment_stop_list_20260518.md`。
+下一步主线：**长期研究模式（R 系列）**。2026 赛季已结束，赛前冻结解除；比赛形态的 GUI 与 release/v1.0 锁定配置保留为历史基线和对照锚点，工程重心转向 AI 棋力研究。主开发目录已迁移到 `E:\computergame`，C 盘旧目录已弃用但保留未删。赛前主线（R-0~R-4、S1~S4、P1~P14）全部闭环，历史细节见下文 §4、§5 与 `reports/ai_experiment_stop_list_20260518.md`。
 赛前阶段详细方案见：`docs/superpowers/specs/2026-05-16-p6-robustness-lock-rollout-failure-analysis-design.md`
 历史收官方案见：`docs/superpowers/specs/2026-05-12-final-sprint-design.md`
 执行计划见：`docs/superpowers/plans/2026-05-12-final-sprint-plan.md`
@@ -72,10 +72,20 @@ README 红线：README 及对外文档不写比赛结果信息。
 纪律保留：harness-first、core-first、pytest 全绿；旧路线重开必须有新技术假设（stop list 重开条件有效）。
 ```
 
+当前 E 盘落点：
+
+```text
+主开发目录：E:\computergame
+研究数据目录：E:\computergame-data
+pip 缓存目录：E:\pip-cache
+torch 缓存目录：E:\torch-cache
+C 盘旧目录：已弃用，仅保留为迁移前快照
+```
+
 阶段顺序：
 
 ```text
-R-P0 搬家与转型：PR 合并 → 迁移到 E:\computergame → 重建 .venv → 全量验证。
+R-P0 搬家与转型：已完成。代码已推送 GitHub main → 干净 clone 到 E:\computergame → 重建 .venv → E 盘全量验证通过。
 R-P1 地基：perf_probe 性能基线与纯 Python 提速（apply_move 快路径、playout 对象复用，目标 ≥5x）；
           持久 Elo 天梯（P14 默认 = 1500 锚点，输出目录必须显式指定或由 `CG_RESEARCH_DATA_DIR` 派生）；
           真实棋谱复盘（replay_analyze）+ 骰子公平性取证（dice_forensics：卡方 + 条件巧合度检验）。
@@ -96,13 +106,27 @@ scripts/dice_forensics.py   # 走子来源分组的骰子序列审计；不把 s
 requirements-research.txt   # 研究依赖声明；当前只列 numpy，torch 延后到 R-P2B
 ```
 
-本地脚手架验证：新增测试组合 24 passed；全量 `pytest -q` 为 886 passed in 71.78s。审查 follow-up 后，`scripts/ladder.py` CLI 不再默认写 C 盘仓库内 `data/ladder`，没有 `--output-dir` 时必须通过 `CG_RESEARCH_DATA_DIR` 指向研究数据根目录，且非空 `games.jsonl` 会被拒绝以避免报告与历史局混写。R-P0 的 PR、迁移到 `E:\computergame`、重建 `.venv`、pip 缓存持久配置和旧目录处置仍未执行，必须按危险操作约束单独确认。
+本地脚手架验证：新增测试组合 24 passed；全量 `pytest -q` 为 886 passed in 71.78s。审查 follow-up 后，`scripts/ladder.py` CLI 不再默认写仓库内 `data/ladder`，没有 `--output-dir` 时必须通过 `CG_RESEARCH_DATA_DIR` 指向研究数据根目录，且非空 `games.jsonl` 会被拒绝以避免报告与历史局混写。R-P0 已于 2026-06-14 完成：当前主开发目录为 `E:\computergame`，研究数据目录为 `E:\computergame-data`，pip 缓存为 `E:\pip-cache`，torch 缓存为 `E:\torch-cache`；C 盘旧目录保留但弃用。
 
 2026-06-14 R-P1 trusted apply fast path 状态：新增 `docs/superpowers/plans/2026-06-14-rp1-trusted-apply-fastpath-plan.md` 与 `reports/rp1_trusted_apply_fastpath_20260614.md`。`GameState.apply_move()` 继续保留公开完整校验和 canonical capture 语义；新增私有 `_apply_known_legal_move()` 仅供内部已知合法走法热路径使用，并保留终局/当前方便宜检查。`RolloutAI` / `RolloutPairedAI` 内部 rollout apply 点已切到该 helper，固定 seed characterization 锁住推荐走法、root stats、输入状态不变和 RNG progression。post-change perf probe 输出见 `reports/rp1_trusted_apply_fastpath_probe_20260614.json`：8 samples、1900 root visits、root visits/sec 143.7636、0 illegal/crash/timeout；因本轮无同参数 pre-change 保存基线，不声明提速倍数。`tests/test_game_state.py` + `tests/test_rollout_ai.py` 为 36 passed，全量 `pytest -q` 为 926 passed in 73.99s。默认 AI、GUI、release/v1.0、P14 参数和 core 公开规则语义未改变。
 
-2026-06-14 research review follow-up 状态：已修复审查发现的 C 盘默认输出、dice_forensics 威胁巧合度语义、ladder JSONL 元数据/混写风险、RolloutPairedAI characterization、fast path stale guard、MCTS helper 参数透传、PROJECT_BRIEF 研究模式口径和研究缓存/权重 gitignore 防线。`scripts/ladder.py` CLI 不再默认写 C 盘仓库内 `data/ladder`，需 `--output-dir` 或 `CG_RESEARCH_DATA_DIR`；E 盘 clone、重建 `.venv`、pip/torch cache 配置、commit/push 仍待用户确认后执行。受影响模块测试 103 passed；全量 `pytest -q` 为 933 passed in 75.00s。
+2026-06-14 R-P2A recursive Star1 upper-bound pruning 状态：`ExpectimaxV2(chance_pruning="star1")` 已从 root-only 上界剪枝扩展到递归 perspective 方 turn node。实现只在 `whose_turn is perspective` 且已有候选分数时向 child chance node 传 `cutoff_upper_bound=max(scores)`；opponent/minimizing lower-bound pruning 与 Star2 仍不做，`chance_pruning="none"` 仍是默认。新增 scripted recursive test 证明 losing recursive candidate 可以从 6 个骰子缩到 1 个骰子，且 root Star1 回归保持通过。报告见 `reports/rp2a_recursive_star1_20260614.md`。验证：R-P2A targeted 34 passed；全量 `pytest -q` 943 passed。默认 AI、GUI、release/v1.0、P14 rollout 默认和 core 规则均未改变。
+
+2026-07-31 R-P2A minimizing Star1 lower-bound pruning 状态：`ExpectimaxV2(chance_pruning="star1")` 已为 opponent/minimizing turn node 补齐对称下界 cutoff。已有候选后传 `cutoff_lower_bound=min(scores)`；chance node 用固定搜索下界计算剩余骰子的 `min_possible`，严格 `>` 才剪枝以保留并列。剪枝 bound 与 incomplete parent 均不写 exact TT。代码审查无 Critical；Important 测试覆盖缺口已通过生产 `_chance_value_star1()` 公式与 strict-equality 专项测试关闭。报告见 `reports/rp2a_minimizing_star1_20260731.md`。验证：ExpectimaxV2 目标组 37 passed；全量 `pytest -q` 946 passed。默认 AI、GUI、release/v1.0、P14 rollout 默认和 core 规则均未改变；Star2 与终局精确求解器仍待实现。
+
+2026-07-31 R-P2A Star2 frontier probe 状态：新增默认关闭的 `chance_pruning="star2"`。本轮按 Ballard 1983 regular *-minimax 的 one-child probe 思路，只在 `depth=1` 使用可证明的单侧 bound；minimizing child probe 给 upper bound，maximizing child probe 给 lower bound，严格比较保留并列，更深层回退 Star1。新增 probe/cutoff 统计、真实局面穷举等价、双向 cutoff、TT/timeout/状态恢复测试。`balanced_v1` depth-2 单决策记录 228 probes、6 probe cutoffs、`chance_prunes=0`；后者保留 Star1“完全未访问骰子结果”的语义。1 局短 probe 为 19 steps、avg 45.24ms、max 166.09ms、0 illegal/crash/timeout。代码审查无 Critical；唯一 Important 遥测语义问题已修复，并补 lower-bound 等号回归。报告见 `reports/rp2a_star2_frontier_20260731.md`。验证：ExpectimaxV2 目标组 48 passed；全量 `pytest -q` 957 passed。后续已用独立 `star2_recursive` 签名完成递归 probe；R-P2A 仍待终局精确求解器，默认 AI/GUI/release/P14/core 均未改变。
+
+2026-07-31 R-P2A recursive Star2 exact probe 状态：保留 `chance_pruning="star2"` 的 frontier-only 实验签名，新增默认关闭的 `chance_pruning="star2_recursive"`，在所有正深度使用方向安全 one-child probe。选中 move 的后续 chance subtree 走无 sibling pruning 的 exact helper；完整子树可写 exact TT 并供 Star1 fallback 复用，incomplete/timeout 不形成 bound，probe-cut parent 不写 exact TT。该实现未包含 Ballard transformed alpha/beta probe window。`balanced_v1` depth-2 单决策为 1686 nodes、12 TT hits、240 probes、6 probe cutoffs、无 timeout；1 局短 probe 为 17 steps、avg 31.24ms、max 134.65ms、0 illegal/crash/timeout，仅作 wiring 证据。审查无 Critical/Important；已补非恒定 evaluator 的生产 exact-subtree 对照，并明确 node/probe 计数边界。报告见 `reports/rp2a_recursive_star2_20260731.md`。验证：ExpectimaxV2 目标组 61 passed；全量 `pytest -q` 970 passed。默认 AI/GUI/release/P14/core 均未改变；后续 E3 已完成 exact endgame solver，retrograde 残局库仍为远期项。
+
+2026-07-31 R-P2A E3 exact endgame solver 状态：新增独立 `ai/endgame_solver.py` 和实验 kind `endgame_exact`。以活子到各自目标角的 Manhattan 总距离为严格递减势能，在有限 DAG 上无截断递归；chance 六面平均，RED max、BLUE min，TT 存 canonical RED 胜率。公开 gate 为总活子≤3或总距离≤6；终局绕过，非终局超界明确失败，无 evaluator fallback。初始 Chebyshev 势能假设被 RED 测试证伪后已根因修正。审查无 Critical；唯一 Important 退化 oracle 缺口已用非 `0.5` 概率、双向多分支 turn 和异常恢复测试关闭。手算 `P(RED)=1/3` / `P(BLUE)=2/3`；TT on/off 等价，缓存探针 25 nodes/3 hits/14 stores；近终局 match 0 illegal/crash。solver 无 deadline，timeout=0 不表示预算门禁。报告见 `reports/rp2a_exact_endgame_20260731.md`。验证：E3 目标组 21 passed；全量 `pytest -q` 991 passed。默认 AI/GUI/release/P14/core 均未改变；R-P2A E1-E3 已落地，retrograde 残局库远期再议。
+
+2026-06-14 R-P1 GameState clone fast path 状态：新增 `GameState.clone(include_history=True|False)`，并把 `RolloutAI._sample_move_score()` 与 `RolloutPairedAI.choose_move()` 的 root simulation clone 从 `GameState.serialize()` / `deserialize()` 切到 `state.clone(include_history=False)`。固定 seed rollout/paired characterization、caller-state 不变性和 RNG progression 仍由既有测试覆盖；新增 clone 等价与省略 history 测试。perf probe 输出见 `reports/rp1_game_state_clone_fastpath_probe_20260614.json`：8 samples、1833 root visits、root visits/sec 133.42、`game_state_clone_calls=1836`、`game_state_serialize_calls=0`、`game_state_deserialize_calls=0`、0 illegal/crash/timeout。报告见 `reports/rp1_game_state_clone_fastpath_20260614.md`。本轮没有保存同参数 pre-change 基线，不声明 5x 提速；默认 AI、GUI、release/v1.0、P14 参数和 core 公开规则语义未改变。验证：目标测试 59 passed；paired root simulation no-serialize 专项测试已覆盖；全量 `pytest -q` 941 passed。
+
+2026-06-14 research review follow-up 状态：已修复审查发现的 C 盘默认输出、dice_forensics 威胁巧合度语义、ladder JSONL 元数据/混写风险、RolloutPairedAI characterization、fast path stale guard、MCTS helper 参数透传、PROJECT_BRIEF 研究模式口径和研究缓存/权重 gitignore 防线。`scripts/ladder.py` CLI 不再默认写仓库内 `data/ladder`，需 `--output-dir` 或 `CG_RESEARCH_DATA_DIR`。修复已提交并推送到 GitHub main：`4b8b10910502fc9473c28e35c9128c65fafbe45e`。E 盘 clone 已完成，`.venv` 已重建，`pytest` 与 `requirements-research.txt` 已安装；E 盘全量 `pytest -q` 为 933 passed in 79.08s，ladder smoke 已确认写入 `E:\computergame-data\ladder\report.json`。
 
 2026-06-13 R-P2A 开闸状态：新增 `docs/superpowers/plans/2026-06-13-rp2a-expectimax-v2-plan.md`，先固化 ExpectimaxV2 的技术假设与判停条件。Task 1 已完成非行为性搜索基础：`ai/expectimax_v2.py` 增加 stable state key、包含 node type / perspective / depth / dice / evaluator version 的 transposition key、显式 `[-WIN_SCORE, WIN_SCORE]` 值域常量与 bounds 检查。Task 2 已新增默认关闭的 per-search transposition table、`last_search_stats`、exact-only cache 写入策略，timeout/部分搜索结果不写入 TT；`ai_version_signature()` 记录 `use_transposition_table`。Task 3 已新增默认关闭的 `move_ordering`，排序优先直接胜、敌子捕获、推进，并保持相同排序分数的原始 legal 顺序；完整搜索等价性已用 `move_ordering=False` 对照锁定，`ai_version_signature()` 记录 `move_ordering`。Task 4 已新增默认关闭的 `iterative_deepening` 与 `last_search_stats.completed_depth`，fake-clock 测试覆盖“超时返回最后完成深度”“无完成深度回退合法步”和状态不变异，`ai_version_signature()` 记录 `iterative_deepening`。Task 5 Step 1 已补强 Star1/Star2 前置值域门禁：`expectimax_v2_require_score_in_bounds()` 对 leaf、terminal、no-move、chance、turn 与 TT cache hit 值执行显式 bounds 检查。Task 5 Step 2 已新增默认关闭的 `chance_pruning` 实验入口，`none` 为默认，`star1` 在无 cutoff 时走保守精确枚举路径并保持 `chance_prunes=0`；small-depth 值等价、选招等价、状态不变异和签名追踪已测试。Task 5 Step 3 已在 root 候选走法 chance node 上实现上界剪枝：用 incumbent root score 作为 cutoff，以 `EXPECTIMAX_V2_MAX_SCORE` 计算剩余骰子的最大可能平均值，严格 `<` 才剪枝以保留并列；实际跳过骰子时记录 `chance_prunes`，剪枝 bound 不作为 exact TT 值存储。报告见 `reports/rp2a_star_pruning_entry_20260613.md`。`tests/test_expectimax_v2.py` + 签名测试为 32 passed，全量 `pytest -q` 为 913 passed in 73.30s。默认搜索行为、core、GUI、release/v1.0 和 P14 默认 rollout 均未改变；完整递归 Star1/Star2 interval pruning 仍未实现。
+
+2026-06-14 R-P2A bench-only smoke 状态：`scripts/perf_probe.py` CLI 已补 `--red-kwargs` / `--blue-kwargs` JSON 透传和 `--max-turns`，可对配置化研究选手做 match probe，而不被 bare kind 默认参数限制。`reports/rp2a_expectimax_v2_star1_ladder_players_20260614.json` 固化 `expectimax_v2_d2_tt_order_star1`（depth=2、250ms、TT、move ordering、iterative deepening、`chance_pruning="star1"`）玩家配置；小样本 ladder smoke 写入 `E:\computergame-data\ladder\rp2a_expectimax_v2_star1_smoke_20260614\`，只跑 1 局，不解释棋力。perf probe 写入 `reports/rp2a_expectimax_v2_star1_perf_probe_20260614.json`：1 game、14 steps、0 illegal/crash/timeout、avg 563.10ms、max 1774.85ms、rollout decision samples=4、rollout decision clone/serialize/deserialize calls=971/0/0。报告见 `reports/rp2a_expectimax_v2_star1_bench_smoke_20260614.md`。默认搜索行为、core、GUI、release/v1.0 和 P14 默认 rollout 均未改变；完整递归 Star1/Star2 interval pruning 仍未实现。
 
 2026-06-13 R-P2B 开闸状态：L0 已新增 `MCTSAI.leaf_policy` 诊断入口，`static` 为默认旧行为，显式 `playout` 才从叶子局面执行最多 `leaf_playout_turns` 个随机半回合；终局/无合法步返回 `WIN_VALUE/-WIN_VALUE`，截断后回到当前静态 evaluator，并保证搜索局面通过 undo 还原。`MCTSAI.max_step_time_ms` 对齐 `time_limit_ms`，让 match harness 能记录 MCTS timeout telemetry；`ai_version_signature()` 记录 `leaf_policy` / `leaf_playout_turns`，`build_ai("mcts_eval_v1")` 可透传这些参数。`scripts/ladder.py` 支持 `--players-config` JSON 玩家配置与 `--max-turns` 运行边界。R-P2B L0 smoke 已用 P14 锚点、static leaf MCTS、playout leaf MCTS 跑 6 局 round-robin：`seed=62013`、`layout=balanced_v1`、`max_turns=40`，输出当时写入仓库 ignored 目录 `data/ladder/rp2b_mcts_leaf_playout_l0_20260613_v2/`；审查 follow-up 后该目录不得作为默认目标，后续运行必须显式指定外部输出目录或 `CG_RESEARCH_DATA_DIR`。`illegal_moves=0`、`crashes=0`、`timeouts=0`，但样本太小且 `mcts_playout_z_l8` 暂无优于 static leaf 的正信号，不能声称棋力提升。报告见 `reports/rp2b_mcts_leaf_playout_entry_20260613.md`。`tests/test_mcts.py` 为 25 passed，`tests/test_ladder.py` 为 12 passed，全量 `pytest -q` 为 921 passed in 72.91s。默认 AI、core、GUI、release/v1.0 和 P14 默认 rollout 均未改变。
 
@@ -464,6 +488,9 @@ board 旋转/取反以复用同一策略视角的工程思路。
 ## 7. 常用命令
 
 ```powershell
+$env:CG_RESEARCH_DATA_DIR = "E:/computergame-data"
+$env:PIP_CACHE_DIR = "E:/pip-cache"
+$env:TORCH_HOME = "E:/torch-cache"
 & ".venv/Scripts/python.exe" -m pytest
 & ".venv/Scripts/python.exe" "scripts/smoke_test.py"
 & ".venv/Scripts/python.exe" "scripts/run_gui.py"

@@ -111,6 +111,21 @@ class GameState:
     def get_winner(self) -> Player | None:
         return get_winner(self.pieces)
 
+    def clone(self, *, include_history: bool = True) -> "GameState":
+        pieces = {
+            player: {
+                piece_id: piece.copy()
+                for piece_id, piece in player_pieces.items()
+            }
+            for player, player_pieces in self.pieces.items()
+        }
+        history = [move.copy() for move in self.history] if include_history else []
+        return GameState(
+            pieces=pieces,
+            current_player=self.current_player,
+            history=history,
+        )
+
     def serialize(self, *, include_history: bool = True) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "current_player": self.current_player.value,
