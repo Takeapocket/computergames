@@ -41,7 +41,7 @@ from core.types import Player
 from scripts.ladder import estimate_rating_uncertainty, update_ratings
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -147,7 +147,7 @@ class TuningConfig:
     k_factor: float
 
     def __post_init__(self) -> None:
-        if self.profile not in _PROFILE_SPECS:
+        if not isinstance(self.profile, str) or self.profile not in _PROFILE_SPECS:
             raise ValueError(f"unknown tuning profile: {self.profile!r}")
         for field_name in (
             "generations",
@@ -168,16 +168,18 @@ class TuningConfig:
 
         for field_name in ("initial_log_std", "min_log_std", "k_factor"):
             value = getattr(self, field_name)
-            if isinstance(value, bool):
+            if type(value) not in (int, float):
                 raise ValueError(f"{field_name} must be finite and positive")
             numeric = float(value)
             if not math.isfinite(numeric) or numeric <= 0.0:
                 raise ValueError(f"{field_name} must be finite and positive")
-        if isinstance(self.smoothing, bool):
+            object.__setattr__(self, field_name, numeric)
+        if type(self.smoothing) not in (int, float):
             raise ValueError("smoothing must be finite and in (0, 1]")
         smoothing = float(self.smoothing)
         if not math.isfinite(smoothing) or not 0.0 < smoothing <= 1.0:
             raise ValueError("smoothing must be finite and in (0, 1]")
+        object.__setattr__(self, "smoothing", smoothing)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -397,6 +399,110 @@ def _red_score(winner: Player | None) -> float:
     return 0.5
 
 
+def _finite_number(value: Any, *, name: str) -> float:
+    if type(value) not in (int, float):
+        raise ValueError(f"{name} must be a finite number")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be a finite number")
+    return number
+
+
+def _aggregate_game_manifest(manifest: Any) -> dict[str, Any]:
+    if not isinstance(manifest, list) or not manifest:
+        raise ValueError("game_seed_manifest must be a non-empty list")
+
+    wins = 0
+    losses = 0
+    draws = 0
+    illegal_moves = 0
+    crashes = 0
+    timeouts = 0
+    turns: list[int] = []
+    step_times_ms: list[float] = []
+    termination_reasons: list[str] = []
+    for game_index, game in enumerate(manifest):
+        if not isinstance(game, Mapping):
+            raise ValueError(f"game_seed_manifest[{game_index}] must be an object")
+        candidate_score = _finite_number(
+            game.get("candidate_score"),
+            name=f"game_seed_manifest[{game_index}].candidate_score",
+        )
+        if candidate_score == 1.0:
+            wins += 1
+        elif candidate_score == 0.5:
+            draws += 1
+        elif candidate_score == 0.0:
+            losses += 1
+        else:
+            raise ValueError("candidate_score must be 0.0, 0.5, or 1.0")
+
+        for field_name in ("illegal_moves", "crashes", "timeouts"):
+            value = game.get(field_name)
+            if type(value) is not int or value < 0:
+                raise ValueError(
+                    f"game_seed_manifest[{game_index}].{field_name} "
+                    "must be a non-negative integer"
+                )
+        illegal_moves += game["illegal_moves"]
+        crashes += game["crashes"]
+        timeouts += game["timeouts"]
+
+        game_turns = game.get("turns")
+        if type(game_turns) is not int or game_turns < 0:
+            raise ValueError(
+                f"game_seed_manifest[{game_index}].turns "
+                "must be a non-negative integer"
+            )
+        turns.append(game_turns)
+
+        game_step_times = game.get("step_times_ms")
+        if not isinstance(game_step_times, list):
+            raise ValueError(
+                f"game_seed_manifest[{game_index}].step_times_ms must be a list"
+            )
+        for step_index, value in enumerate(game_step_times):
+            duration = _finite_number(
+                value,
+                name=(
+                    f"game_seed_manifest[{game_index}]."
+                    f"step_times_ms[{step_index}]"
+                ),
+            )
+            if duration < 0.0:
+                raise ValueError("step time must not be negative")
+            step_times_ms.append(duration)
+
+        reason = game.get("termination_reason")
+        if not isinstance(reason, str) or not reason:
+            raise ValueError("termination_reason must be a non-empty string")
+        termination_reasons.append(reason)
+
+    games = len(manifest)
+    return {
+        "games": games,
+        "wins": wins,
+        "losses": losses,
+        "draws": draws,
+        "illegal_moves": illegal_moves,
+        "crashes": crashes,
+        "timeouts": timeouts,
+        "valid": illegal_moves == crashes == timeouts == 0,
+        "turns": turns,
+        "total_turns": sum(turns),
+        "average_turns": math.fsum(turns) / games,
+        "step_times_ms": step_times_ms,
+        "average_step_time_ms": (
+            math.fsum(step_times_ms) / len(step_times_ms)
+            if step_times_ms
+            else 0.0
+        ),
+        "max_step_time_ms": max(step_times_ms, default=0.0),
+        "termination_reasons": termination_reasons,
+        "termination_reason_counts": dict(Counter(termination_reasons)),
+    }
+
+
 def evaluate_candidate(
     *,
     profile: str,
@@ -422,15 +528,6 @@ def evaluate_candidate(
     candidate_params = _validated_candidate_params(profile, params)
     candidate_rating = 1500.0
     anchor_rating = 1500.0
-    wins = 0
-    losses = 0
-    draws = 0
-    illegal_moves = 0
-    crashes = 0
-    timeouts = 0
-    turns: list[int] = []
-    step_times_ms: list[float] = []
-    termination_reasons: list[str] = []
     game_seed_manifest: list[dict[str, Any]] = []
     candidate_signature: dict[str, Any] | None = None
     anchor_signature: dict[str, Any] | None = None
@@ -478,6 +575,8 @@ def evaluate_candidate(
                 starting_state=starting_state_for(layout_id),
             )
             red_score = _red_score(result.winner)
+            candidate_rating_before = candidate_rating
+            anchor_rating_before = anchor_rating
             if orientation == "candidate_red":
                 candidate_rating, anchor_rating = update_ratings(
                     candidate_rating,
@@ -493,18 +592,6 @@ def evaluate_candidate(
                     k_factor=factor,
                 )
 
-            if result.winner is None:
-                draws += 1
-            elif result.winner is candidate_color:
-                wins += 1
-            else:
-                losses += 1
-            illegal_moves += int(result.illegal_moves)
-            crashes += int(result.crashes)
-            timeouts += int(result.timeouts)
-            turns.append(int(result.turns))
-            step_times_ms.extend(float(value) for value in result.step_times_ms)
-            termination_reasons.append(str(result.termination_reason))
             game_seed_manifest.append(
                 {
                     "pair_index": pair_index,
@@ -515,37 +602,40 @@ def evaluate_candidate(
                     "anchor_ai_seed": anchor_ai_seed,
                     "red_ai_seed": red_ai_seed,
                     "blue_ai_seed": blue_ai_seed,
+                    "candidate_color": candidate_color.value,
+                    "winner": (
+                        result.winner.value if result.winner is not None else None
+                    ),
+                    "red_score": red_score,
+                    "candidate_score": (
+                        red_score
+                        if orientation == "candidate_red"
+                        else 1.0 - red_score
+                    ),
+                    "turns": int(result.turns),
+                    "illegal_moves": int(result.illegal_moves),
+                    "crashes": int(result.crashes),
+                    "timeouts": int(result.timeouts),
+                    "termination_reason": str(result.termination_reason),
+                    "step_times_ms": [
+                        float(value) for value in result.step_times_ms
+                    ],
+                    "candidate_rating_before": candidate_rating_before,
+                    "anchor_rating_before": anchor_rating_before,
+                    "candidate_rating_after": candidate_rating,
+                    "anchor_rating_after": anchor_rating,
                 }
             )
 
-    games = games_each_side * 2
+    telemetry = _aggregate_game_manifest(game_seed_manifest)
+    games = telemetry["games"]
     candidate_uncertainty = estimate_rating_uncertainty(games)
     anchor_uncertainty = estimate_rating_uncertainty(games)
-    reason_counts = dict(Counter(termination_reasons))
     return {
         "profile": profile,
         "anchor_profile": profile,
         "params": candidate_params,
-        "games": games,
-        "wins": wins,
-        "losses": losses,
-        "draws": draws,
-        "illegal_moves": illegal_moves,
-        "crashes": crashes,
-        "timeouts": timeouts,
-        "valid": illegal_moves == crashes == timeouts == 0,
-        "turns": turns,
-        "total_turns": sum(turns),
-        "average_turns": math.fsum(turns) / len(turns) if turns else 0.0,
-        "step_times_ms": step_times_ms,
-        "average_step_time_ms": (
-            math.fsum(step_times_ms) / len(step_times_ms)
-            if step_times_ms
-            else 0.0
-        ),
-        "max_step_time_ms": max(step_times_ms, default=0.0),
-        "termination_reasons": termination_reasons,
-        "termination_reason_counts": reason_counts,
+        **telemetry,
         "candidate_ai_signature": candidate_signature,
         "anchor_ai_signature": anchor_signature,
         "game_seed_manifest": game_seed_manifest,
@@ -553,6 +643,7 @@ def evaluate_candidate(
         "anchor_rating": anchor_rating,
         "candidate_rating_uncertainty": candidate_uncertainty,
         "anchor_rating_uncertainty": anchor_uncertainty,
+        "k_factor": factor,
         "objective_elo": candidate_rating,
     }
 
@@ -596,19 +687,218 @@ def _generation_seed_manifest(config: TuningConfig) -> list[dict[str, int]]:
     ]
 
 
+def _validate_candidate_row(
+    row: Mapping[str, Any],
+    *,
+    config: TuningConfig,
+) -> None:
+    if row.get("profile") != config.profile:
+        raise ValueError("candidate profile mismatch")
+    if row.get("anchor_profile") != config.profile:
+        raise ValueError("candidate anchor_profile mismatch")
+    params = row.get("params")
+    if not isinstance(params, Mapping):
+        raise ValueError("candidate params must be an object")
+    candidate_params = _validated_candidate_params(config.profile, params)
+
+    manifest = row.get("game_seed_manifest")
+    telemetry = _aggregate_game_manifest(manifest)
+    expected_games = config.games_per_side * 2
+    if telemetry["games"] != expected_games:
+        raise ValueError(
+            f"candidate telemetry must contain exactly {expected_games} games"
+        )
+
+    match_seed = row.get("generation_match_seed")
+    if type(match_seed) is not int or match_seed < 0:
+        raise ValueError("generation_match_seed must be a non-negative integer")
+    k_factor = _finite_number(row.get("k_factor"), name="k_factor")
+    if k_factor != config.k_factor:
+        raise ValueError("candidate k_factor mismatch")
+
+    candidate_rating = 1500.0
+    anchor_rating = 1500.0
+    assert isinstance(manifest, list)
+    for game_index, game in enumerate(manifest):
+        assert isinstance(game, Mapping)
+        pair_index = game_index // 2
+        orientation = "candidate_red" if game_index % 2 == 0 else "candidate_blue"
+        pair_seed = match_seed * 1_000_003 + pair_index
+        candidate_ai_seed = pair_seed * 3 + 1
+        anchor_ai_seed = pair_seed * 3 + 2
+        expected_fields = {
+            "pair_index": pair_index,
+            "orientation": orientation,
+            "match_seed": match_seed,
+            "dice_seed": pair_seed * 3,
+            "candidate_ai_seed": candidate_ai_seed,
+            "anchor_ai_seed": anchor_ai_seed,
+            "red_ai_seed": (
+                candidate_ai_seed
+                if orientation == "candidate_red"
+                else anchor_ai_seed
+            ),
+            "blue_ai_seed": (
+                anchor_ai_seed
+                if orientation == "candidate_red"
+                else candidate_ai_seed
+            ),
+            "candidate_color": (
+                Player.RED.value
+                if orientation == "candidate_red"
+                else Player.BLUE.value
+            ),
+        }
+        for field_name, expected in expected_fields.items():
+            if game.get(field_name) != expected:
+                raise ValueError(
+                    f"game_seed_manifest[{game_index}].{field_name} mismatch"
+                )
+
+        winner = game.get("winner")
+        if winner not in (None, Player.RED.value, Player.BLUE.value):
+            raise ValueError(f"game_seed_manifest[{game_index}].winner is invalid")
+        expected_red_score = {
+            None: 0.5,
+            Player.RED.value: 1.0,
+            Player.BLUE.value: 0.0,
+        }[winner]
+        red_score = _finite_number(
+            game.get("red_score"),
+            name=f"game_seed_manifest[{game_index}].red_score",
+        )
+        if red_score != expected_red_score:
+            raise ValueError(
+                f"game_seed_manifest[{game_index}].red_score does not match winner"
+            )
+        expected_candidate_score = (
+            red_score if orientation == "candidate_red" else 1.0 - red_score
+        )
+        if game.get("candidate_score") != expected_candidate_score:
+            raise ValueError(
+                f"game_seed_manifest[{game_index}].candidate_score mismatch"
+            )
+
+        candidate_before = _finite_number(
+            game.get("candidate_rating_before"),
+            name=f"game_seed_manifest[{game_index}].candidate_rating_before",
+        )
+        anchor_before = _finite_number(
+            game.get("anchor_rating_before"),
+            name=f"game_seed_manifest[{game_index}].anchor_rating_before",
+        )
+        if candidate_before != candidate_rating or anchor_before != anchor_rating:
+            raise ValueError(
+                f"game_seed_manifest[{game_index}] rating chain mismatch"
+            )
+        if orientation == "candidate_red":
+            candidate_rating, anchor_rating = update_ratings(
+                candidate_rating,
+                anchor_rating,
+                red_score=red_score,
+                k_factor=k_factor,
+            )
+        else:
+            anchor_rating, candidate_rating = update_ratings(
+                anchor_rating,
+                candidate_rating,
+                red_score=red_score,
+                k_factor=k_factor,
+            )
+        candidate_after = _finite_number(
+            game.get("candidate_rating_after"),
+            name=f"game_seed_manifest[{game_index}].candidate_rating_after",
+        )
+        anchor_after = _finite_number(
+            game.get("anchor_rating_after"),
+            name=f"game_seed_manifest[{game_index}].anchor_rating_after",
+        )
+        if candidate_after != candidate_rating or anchor_after != anchor_rating:
+            raise ValueError(
+                f"game_seed_manifest[{game_index}] Elo update mismatch"
+            )
+
+    for field_name, expected in telemetry.items():
+        if field_name == "valid":
+            continue
+        if row.get(field_name) != expected:
+            raise ValueError(
+                f"candidate {field_name} does not match game manifest telemetry"
+            )
+    valid = row.get("valid")
+    if type(valid) is not bool or valid is not telemetry["valid"]:
+        raise ValueError("candidate valid does not match game manifest telemetry")
+
+    expected_ratings = {
+        "candidate_rating": candidate_rating,
+        "anchor_rating": anchor_rating,
+        "objective_elo": candidate_rating,
+        "candidate_rating_uncertainty": estimate_rating_uncertainty(expected_games),
+        "anchor_rating_uncertainty": estimate_rating_uncertainty(expected_games),
+    }
+    for field_name, expected in expected_ratings.items():
+        actual = _finite_number(row.get(field_name), name=field_name)
+        if actual != expected:
+            raise ValueError(f"candidate {field_name} mismatch")
+    first_game = manifest[0]
+    candidate_ai = build_ai(
+        config.profile,
+        seed=first_game["candidate_ai_seed"],
+        **candidate_params,
+        randomize_ties=False,
+    )
+    anchor_ai = build_ai(
+        config.profile,
+        seed=first_game["anchor_ai_seed"],
+        randomize_ties=False,
+    )
+    expected_signatures = {
+        "candidate_ai_signature": ai_version_signature(candidate_ai),
+        "anchor_ai_signature": ai_version_signature(anchor_ai),
+    }
+    for field_name, expected in expected_signatures.items():
+        if row.get(field_name) != expected:
+            raise ValueError(f"candidate {field_name} mismatch")
+
+
+def _strict_json_dumps(
+    payload: Mapping[str, Any],
+    *,
+    indent: int | None = None,
+) -> str:
+    try:
+        return json.dumps(
+            payload,
+            ensure_ascii=False,
+            indent=indent,
+            sort_keys=True,
+            allow_nan=False,
+        )
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(
+            "payload must be JSON-compliant and contain only finite numbers"
+        ) from exc
+
+
+def _reject_nonfinite_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is not allowed: {value}")
+
+
 def _atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_suffix(path.suffix + ".tmp")
+    rendered = _strict_json_dumps(payload, indent=2) + "\n"
     tmp_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        rendered,
         encoding="utf-8",
     )
     tmp_path.replace(path)
 
 
 def _append_jsonl(path: Path, row: Mapping[str, Any]) -> None:
+    rendered = _strict_json_dumps(row) + "\n"
     with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        handle.write(rendered)
 
 
 def _candidate_summary(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -743,8 +1033,11 @@ def _load_resume_state(
     if not path.is_file():
         raise ValueError("non-empty resume directory requires state.json")
     try:
-        state = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        state = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=_reject_nonfinite_json_constant,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
         raise ValueError("could not parse state.json") from exc
     if not isinstance(state, dict):
         raise ValueError("state.json must contain a JSON object")
@@ -775,6 +1068,7 @@ def _load_candidate_rows(
     *,
     config: TuningConfig,
     specs: tuple[WeightSpec, ...],
+    next_generation: int,
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     if not path.exists():
         return [], {}
@@ -794,8 +1088,11 @@ def _load_candidate_rows(
         if not line.strip():
             continue
         try:
-            row = json.loads(line)
-        except json.JSONDecodeError as exc:
+            row = json.loads(
+                line,
+                parse_constant=_reject_nonfinite_json_constant,
+            )
+        except (json.JSONDecodeError, ValueError) as exc:
             raise ValueError(
                 f"could not parse candidates.jsonl line {line_number}"
             ) from exc
@@ -827,6 +1124,11 @@ def _load_candidate_rows(
         expected_id = f"g{generation:04d}-c{index:04d}"
         if candidate_id != expected_id:
             raise ValueError(f"candidate {candidate_id} generation/index mismatch")
+        if generation > next_generation:
+            raise ValueError(
+                f"candidate {candidate_id} belongs to a future generation"
+            )
+        _validate_candidate_row(row, config=config)
         rows.append(row)
         rows_by_id[candidate_id] = row
     return rows, rows_by_id
@@ -958,6 +1260,7 @@ def run_tuning(
             candidates_path,
             config=config,
             specs=specs,
+            next_generation=state["next_generation"],
         )
         distribution = _replay_completed_generations(
             config=config,
@@ -1025,11 +1328,13 @@ def run_tuning(
                 "generation_match_seed": seeds["match_seed"],
                 "evaluated_at": _utc_now(),
             }
+            _validate_candidate_row(row, config=config)
+            next_best_candidate = _best_candidate([*rows, row])
             _append_jsonl(candidates_path, row)
             rows.append(row)
             rows_by_id[candidate_id] = row
             generation_rows.append(row)
-            state["best_candidate"] = _best_candidate(rows)
+            state["best_candidate"] = next_best_candidate
             state["completed_candidates"] = len(rows)
             state["updated_at"] = _utc_now()
             _atomic_write_json(state_path, state)

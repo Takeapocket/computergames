@@ -208,7 +208,8 @@ def test_starting_state_for_standard_triangle_returns_baseline_layout() -> None:
 
     state = starting_state_for(STANDARD_TRIANGLE_LAYOUT_ID)
 
-    # standard_triangle_v1: piece 5 在 (1,1)（围死 piece 1），piece 6 在 (2,0)
+    # standard_triangle_v1: piece 5 在 (1,1)，piece 6 在 (2,0)；
+    # R-0 前旧规则下曾围住 piece 1，当前规则允许 piece 1 吃本方棋子。
     assert state.pieces[Player.RED][5].position == Position(1, 1)
     assert state.pieces[Player.RED][6].position == Position(2, 0)
     assert state.pieces[Player.BLUE][5].position == Position(3, 3)

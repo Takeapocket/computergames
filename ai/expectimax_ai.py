@@ -17,10 +17,9 @@ class ExpectimaxAI:
     depth=1 → 我的走法 → 对手骰子期望 → 对手最优回应 → 评估。
     depth=2 → 再加一层我的回应（更贵，暂不建议）。
 
-    **注意（2026-05-10 评测）**：depth=1 + `greedy_risk` 默认 evaluator kwargs 在 200×2 局
-    bench 中合并胜率仅 46.5%，**显著弱于** `greedy_risk`。详见
-    ``reports/4-4-failure-analysis.md``。当前不建议用于竞赛；保留主要供后续 lookahead /
-    evaluator 解耦实验复用。
+    R-0 合规重跑中，depth=1 对 ``greedy_risk`` 的合并胜率为 45.0%，详见
+    ``reports/4-4-rebench.md``。本类作为 legacy 实验实现保留；当前经典搜索研究入口是
+    :class:`ai.expectimax_v2.ExpectimaxV2`，精确残局求解器由独立的 ``endgame_exact`` kind 提供。
     """
 
     def __init__(

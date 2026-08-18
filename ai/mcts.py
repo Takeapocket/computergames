@@ -1,12 +1,12 @@
-"""Phase 1 MCTS 实验候选 AI（kind: ``mcts_eval_v1``）。
+"""实验性 MCTS AI（kind: ``mcts_eval_v1``）。
 
 设计来源：``docs/superpowers/specs/2026-05-13-mcts-phase1-design.md``。
 
 要点：
 - 显式区分 :class:`DecisionNode` 与 :class:`ChanceNode`，骰子节点不参与 UCT，
   按均匀分布采样。
-- 叶节点估值用 :func:`ai.evaluator.evaluate` 的距离 + 子力两项，``expected_risk_weight``
-  与 ``expected_win_risk_weight`` 显式置 0（对手回合语义有问题，见 evaluator docstring）。
+- 叶节点支持 ``static`` 和显式 ``playout``；static 支持 ``current``/``zweistein`` evaluator。
+  默认 ``static/current`` 使用 :func:`ai.evaluator.evaluate`，并把两个单边风险权重置 0。
 - 视角统一为 ``root_player``，回传值 ``[-1, 1]``（``math.tanh(raw / SCALE)``）。
 - 每次 ``choose_move`` 新建一棵树，不做跨步 transposition。
 - 不修改 core，不引入新依赖；只调用 ``legal_moves``/``apply_move``/``undo_move``/``get_winner``/
@@ -100,7 +100,7 @@ def _uct_score(
 
 
 class MCTSAI:
-    """Phase 1 MCTS 候选 AI。
+    """实验性 MCTS AI。
 
     使用：和其他 AI 一致，构造时注入 ``rng`` 以保证可复现；
     ``time_limit_ms`` 控制每步硬截止；``max_iterations`` 可选地额外封顶迭代数，

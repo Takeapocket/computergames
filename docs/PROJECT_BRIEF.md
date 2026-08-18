@@ -1,122 +1,132 @@
-# 爱恩斯坦棋参赛程序项目简介
+# 爱恩斯坦棋 AI 研究项目简介
 
-更新时间：2026-06-14（E 盘迁移交接完成）
+更新时间：2026-08-18
 
 ## 项目定位
 
-本项目已从 2026 年辽宁省大学生计算机博弈大赛爱恩斯坦棋离线 GUI 参赛程序，转型为以该程序为基础的长期 AI 棋力研究平台。
+本项目是一个以爱恩斯坦棋离线 GUI 为基础的长期 AI 棋力研究平台。规则引擎、桌面程序、棋谱与比赛流程已经完成；当前开发重点是搜索算法、评估函数、实验基础设施和后续学习管线。
 
-比赛形态的 GUI、release/v1.0 和 P14 默认参数保留为历史基线与天梯锚点；后续默认目标是研究搜索、rollout/MCTS、天梯评测、真实棋谱复盘与骰子取证。R-P0 迁移已完成：当前主开发目录是 `E:\computergame`，C 盘旧目录 `C:\Users\Takeapocket\Desktop\documents\computergames` 已弃用，仅作为迁移前快照保留。
+`release/v1.0/` 保存历史比赛基线的配置、说明和验收材料。GUI/release 的默认 AI、默认布局和 core 规则不会因单局结果或小样本 smoke 改动。
 
-## 当前阶段判断（2026-06-14，长期研究模式）
+当前唯一主开发目录是 `E:\computergame`。C 盘旧目录仅保留为迁移前快照，不再用于开发、测试、提交或推送。
 
-- 当前主线：在 `E:\computergame` 继续长期 AI 研究；不要回到 C 盘旧目录开发、测试、提交或推送。
-- 迁移状态：审查修复已提交并推送到 GitHub main（`4b8b10910502fc9473c28e35c9128c65fafbe45e`），E 盘已从 GitHub 干净 clone，`.venv` 已重建并通过全量验证。
-- 研究红线：天梯数据、训练数据、模型权重和缓存不默认写入仓库或 C 盘；`scripts/ladder.py` 需要显式 `--output-dir` 或 `CG_RESEARCH_DATA_DIR`。当前推荐环境变量为 `CG_RESEARCH_DATA_DIR=E:/computergame-data`、`PIP_CACHE_DIR=E:/pip-cache`、`TORCH_HOME=E:/torch-cache`。
-- 交接详情：见 `docs/E_DRIVE_HANDOFF_20260614.md`。
-- 赛前/比赛内容以下作为历史基线保留，不再代表当前下一步优先级。
+## 当前基线
 
-- 阶段 0：项目初始化与规则固化已基本补齐。
-- 阶段 1：核心规则引擎已完成，**R-0 已合规修复**（允许吃本方棋子）。**R-0 followup 已清理 `stuck_penalty` 准死代码**（grep 已无残留）。
-- 阶段 2：Tkinter GUI 已实现（棋盘显示、开局录入、骰子录入、程序掷骰、合法走法选择、执行、悔棋、重置、AI 推荐）。
-- 阶段 3：棋谱、计时、比赛模式已完成主链路。R-1 开局录入、R-2 七盘制、R-3 崩溃自救均已实现；S2 headless 自动演练 + 真实 Tk GUI 手动表（2026-05-13，`reports/gui-rehearsal.md` §4，21/21 正常）均已完成，S2 完整闭环。
-- 阶段 4.0 / 4.1 / 4.2：基础对战 harness、GreedyAI、greedy_risk 已完成；**R-0 合规重跑后**门槛全部通过：
-  - 4.1 GreedyAI vs RandomAI 合并 63.75% ≥ 60%（详见 `reports/4-1-rebench.md`）
-  - 4.2 greedy_risk vs greedy 合并 55.75%，2026-05-12 release 验证仍为 55.75%（详见 `release/v1.0/test_report.md`）
-- 阶段 4.4：ExpectimaxAI 在 R-0 合规重跑后仍弱（合并 45.0%），保留为研究/实验代码。
-- **S3 完成（2026-05-12）**：`scripts/quick_bench.py` 新增 Wilson 95% CI；`scripts/tournament.py` pairwise matrix 落地；`stuck_penalty` 死代码清理完毕；`ai/self_capture.py`（默认关闭）/ `scripts/param_sweep.py` / `scripts/search_openings.py` 候选实验流水线建立。
-- **S4 已完成（2026-05-13）**：`release/v1.0/` 目录 README + config + default_params + known_limitations + test_report 已完整落地；`rollout` 已按 harness 门禁晋升为默认 AI，`greedy_risk` 保留为应急回退，默认布局保持 `balanced_v1`，决策见 `reports/ai_promotion_decision.md`。
-- **2026-05-15 code review follow-up 已完成**：当时默认 `rollout` 参数保持旧 flat release 形态（16 rollout / move、80 half-turn cutoff、500ms step deadline、epsilon 0.15）。该默认参数已被 2026-05-16 P3 受控默认替换 supersede；当前以 `gui/main_window.py` 与 `release/v1.0/default_params.json` 为准。adaptive rollout 仅作为显式实验候选；direct vs old rollout 800 局合并胜率 59.00%，未过 60% 默认晋升线。`RolloutAI` 诊断现区分 score / winrate / cutoffs / avg；bench 脚本已聚合真实 `timeouts`。
-- **2026-05-15 P1 / P2 / P2.5 已完成**：`RolloutAI.last_root_stats` 成为 canonical 诊断接口；新增 `rollout_32`、`rollout_risk_playout`、`rollout_cutoff_eval` 三个 benchable 候选。P2 三者均未过门禁；P2.5 只给 `rollout_risk_playout` / `rollout_cutoff_eval` 的 bench profile 注入 `deadline_safety_ms=30.0`，其中仅 `rollout_cutoff_eval` 以 57.0% 胜率、0 timeout 标记为 survivor。默认 AI 和 release 配置不变。
-- **2026-05-15 P3 Zweistein-lite promotion 已通过，2026-05-16 已受控替换默认**：新增 `zweistein_lite_score()` 与 `greedy_zweistein`、`rollout_zweistein_cutoff`、`expectimax_zweistein_d1` 实验 kind。`rollout_zweistein_cutoff` vs 当前默认旧 flat `rollout` 的 candidate 双边 100+100 合并胜率 58.0%，`illegal_moves=0`、`crashes=0`、`timeouts=0`；promotion 双边 400+400 合并胜率 56.75%，Wilson lower 53.29%，`illegal_moves=0`、`crashes=0`、`timeouts=0`，working-baseline promotion 门禁通过。用户已批准替换 GUI/release 工作默认；实现仍使用 `kind="rollout"` + 显式 P3 kwargs，不依赖 `rollout_zweistein_cutoff` factory。
-- **2026-05-16 P4/P4.1 已停止，转 P5**：修复 / 验证 `MCTSAI` opponent DecisionNode 语义；对手节点现在按 root-player 视角最小化，避免把对手当合作方。P4.1 新增最小真实局面测试，并让 MCTS leaf 支持 `current|zweistein` evaluator，默认仍为 `current`。`mcts_eval_v1(leaf_evaluator=zweistein)` 对当前 release 默认 rollout kwargs 双边 10+10，合并胜率 25.0%，0 illegal/crash/timeout，低于用户指定 45% 停止线。未跑正式 200+200 candidate，未改 GUI/release 默认；下一步转 P5。
-- **2026-05-16 P5.0 opening entry guard 已完成**：`scripts/search_openings.py` 已改为使用当前 release 默认 `rollout` 显式 kwargs 评测布局候选，且统计真实 `timeouts`。仅跑小样本 smoke，生成 `reports/p5_opening_entry_guard_20260516.md` / `.json`；未改 GUI/release 默认布局。
-- **2026-05-16 P5.1 opening strata + seed pool 已完成**：`scripts/search_openings.py` 支持 stratified 候选分层和 seed-pool 聚合；P5.1 smoke 三类各 1 个候选、seed pool 2026/2027，validation 结果为 aggressive 1/8、defensive 4/8、balanced 2/8，0 illegal/crash/timeout。报告见 `reports/p51_opening_strata_seed_smoke_20260516.md` / `.json`；样本不足以晋升布局，未改 GUI/release 默认布局。
-- **2026-05-16 P5.2 opening small-scale gate 已完成**：复用当前 release 默认 `rollout` 显式 kwargs，分层候选扩大到每类 2 个、seed pool 2026/2027，train 6 个候选结果为 5/8、4/8、3/8、3/8、3/8、2/8；validation top3 为 3/8、4/8、4/8，0 illegal/crash/timeout。报告见 `reports/p52_opening_small_scale_gate_20260516.md` / `.json`；仍不是布局晋升证据，未改 GUI/release 默认布局。
-- **2026-05-16 P5.3 opening seed3 validation2 gate 已完成**：继续使用当前 release 默认 `rollout` 显式 kwargs，分层候选保持每类 2 个，seed pool 扩到 2026/2027/2028，validation games 提高到每 opponent 2 局；train top3 均为 6/12，validation top3 为 10/24、10/24、11/24，0 illegal/crash/timeout。报告见 `reports/p53_opening_seed3_validation2_20260516.md` / `.json`；当前候选没有布局晋升信号，未改 GUI/release 默认布局。
-- **2026-05-16 P5.4 opening layout duel precheck 已完成**：新增 `scripts/compare_opening_layouts.py`，取 P5.3 validation 最好的 balanced 候选直接对当前默认 `balanced_v1` 做红蓝双边小样本验证。结果：合并 14/24 = 58.3%，Wilson CI [38.8%, 75.5%]；candidate as red 9/12，candidate as blue 5/12，0 illegal/crash/timeout。报告见 `reports/p54_opening_duel_best_balanced_20260516.md` / `.json`；这是前置正信号，但不足以晋升默认布局。
-- **2026-05-16 P5.5 opening duel 60-game expansion 已完成**：复用 P5.4 同一 balanced 候选，扩到 60 局双边复验。结果：合并 23/60 = 38.3%，Wilson CI [27.1%, 51.0%]；candidate as red 13/30，candidate as blue 10/30，0 illegal/crash/timeout。报告见 `reports/p55_opening_duel_best_balanced_60g_20260516.md` / `.json`；P5.4 小样本正信号未复现，停止该候选晋升路线，未改 GUI/release 默认布局。
-- **2026-05-17 P6 robustness lock 已完成**：`tests/test_release_consistency.py` 锁定 release/GUI 默认 AI、fallback 与 `balanced_v1`；`scripts/preflight_check.py` 可一条命令跑 pytest、smoke、S2 rehearsal，并以 `READY FOR MATCH` 作为成功结论。GUI 推荐兜底链已实现为 default rollout -> `greedy_risk` -> 第一条合法步 -> 无合法步；损坏 auto-save 启动清理已覆盖。P6.4 timing probe 120 样本：0 illegal、0 exception、p99≈641ms、max≈720ms，1 个 timeout/fallback 样本已列入报告。
-- **2026-05-17 P7 rollout failure analysis 已完成，候选未晋升**：P7.0 默认 rollout vs `greedy_risk` 120 局为 87 胜 / 33 负，0 illegal/crash/timeout；`missed_direct_win=0`，所以 P7.1 direct-win guard 不成立。P7.2 `rollout_adaptive_close_sample` 已注册为显式实验候选，双边 100+100 在 `balanced_v1` 布局对当前 release 默认 rollout 合并胜率 50.0%，未过 55% candidate 门槛，不能默认启用。报告见 `reports/p7_rollout_failure_analysis_20260516.*` 与 `reports/p72_candidate_rollout_adaptive_close_sample_20260516.*`。
-- **2026-05-17 P8 threat defense audit 已完成，候选未实现**：新增 `scripts/analyze_threat_defense.py`，对当时 release 默认 `rollout` + P3 参数在 `balanced_v1` 下审计 chosen move 与 alternatives 的 `opponent_winning_dice_set`。120 局审计得到 `audited_positions=307`、`chosen_allowed_direct_loss_positions=59`、`threat_reducing_alternative_positions=5`、`low_confidence.threat_reducing_ratio=0.0120`、`self_capture allowed-direct-loss rate=0.0167`。gate 不支持 `rollout_threat_rerank`，因此未实现候选；默认布局、core 规则和 release 规则语义未变。
-- **2026-05-17 P9 Zweistein-DP chance-aware evaluation 已完成，候选未晋升**：新增 `ai/zweistein_dp.py` 概率估值表和 `rollout_zweistein_dp_cutoff` / `rollout_exact_opp1_zdp` 显式候选。P9.0 smoke 显示 DP 表尺寸为 `15625 x 20`，测试通过；P9.1 双边 candidate 合并胜率 45.0%，未过 55% candidate 门槛；P9.2 双边 candidate 合并胜率 51.5%，未过 55% candidate 门槛，且低于 P9.3 启动线 52%，因此不启动 TT / move ordering。默认 AI、默认布局、core 规则和 release 配置均未变。
-- **2026-05-17 R-4 GUI 程序掷骰已完成**：新增 `core/dice.py::roll_die()`，GUI 在骰子 Spinbox 右侧新增"程序掷骰"按钮。按钮只在 playing 且等待骰子时启用，掷完立即禁用，执行走法进入下一轮后再启用；手动输入骰子仍保留。代码审查 follow-up 已覆盖 Spinbox `FocusOut` 与程序掷骰按钮点击/禁用状态的边界。默认 AI、默认布局、core 规则语义和 release 配置均未变。验证：688 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
-- **2026-05-17 现场一键启动器已完成**：新增根目录 `启动项目.cmd` 和 `scripts/launcher.py`。双击可打开现场菜单；菜单支持启动 GUI、一键赛前总检查、完整 pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示。`scripts/launcher.py` 提供 `--list`、`--dry-run`、`--run` 入口并有测试覆盖；`scripts/preflight_check.py` 已把启动器文件纳入必备文件检查；`.gitattributes` 固定 `启动项目.cmd` 为 CRLF，避免 Windows `cmd.exe` 解析异常。验证：699 pytest passed，启动器 `--list` / `--dry-run 4` / `--run status` 正常。
-- **2026-05-17 计时判负安全开关已完成并补审查 follow-up**：比赛模式弹窗新增"单方时限（秒）"和"程序自动超时判负"；默认只提示超时，不自动 finalize 本盘，现场判罚以裁判为准。裁判确认超时判负后可用计时面板按钮手动记分，写入 `reason="timeout"` 并推进下一盘；只有裁判要求双方程序自行计时判负时才勾选自动判负。`scripts/run_gui.py --auto-timeout` 可作为命令行等价入口；`--total-seconds` 仍可设置启动默认时限，且拒绝 `nan/inf/非正数`；auto-save / 棋谱内计时数据也会拒绝 `nan/inf/负数`；比赛中取消/加载损坏棋谱不会提前清掉当前 match。最新验证：744 pytest passed、smoke OK、S2 rehearsal 8/8 PASS、preflight 输出 `READY FOR MATCH`。
-- **2026-05-18 P14 默认 rollout 参数受控替换已完成**：用户确认将 `rollout_strong_64_loweps` 作为 GUI/release 工作默认 kwargs；实现仍为 `kind="rollout"`，显式参数为 64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety（`deadline_safety_ms=80.0`）。两轮 50+50 合并为 118/200 = 59.0%，Wilson CI [52.1%, 65.6%]，bench `illegal/crash/timeout=0/0/0`。默认布局仍是 `balanced_v1`，`greedy_risk` 仍是应急回退，core 规则语义未变。
+| 项目 | 当前配置 |
+|---|---|
+| GUI/release 默认 AI | `kind="rollout"`，使用 P14 显式参数 |
+| P14 参数 | 64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、`greedy_risk` playout、Zweistein cutoff、`deadline_safety_ms=80.0` |
+| 回退 AI | `greedy_risk` |
+| GUI/release 默认布局 | `balanced_v1` |
+| 天梯锚点 | P14 固定为 1500；这是本地比较起点，不是外部等级分 |
+| 当前回归 | 2026-08-18：`1071 passed in 74.51s`，`scripts/smoke_test.py` 通过 |
 
-下一会话优先级：
-1. 从 `E:\computergame` 开始，先读 `PROJECT_MEMORY.md`、`PROJECT_PHASES.md`、`README.md`、`docs/E_DRIVE_HANDOFF_20260614.md`，并确认 `git status --short`。
-2. 设置研究环境变量：`CG_RESEARCH_DATA_DIR=E:/computergame-data`、`PIP_CACHE_DIR=E:/pip-cache`、`TORCH_HOME=E:/torch-cache`。
-3. 继续 R-P1/R-P2A/R-P2B 研究主线：性能基线、持久 Elo 天梯、真实棋谱复盘、dice forensics、ExpectimaxV2 与 MCTS/learning 线。每项先写技术假设和门禁，再跑 harness。
+比赛主链路包括开局录入、手动或程序掷骰、对手走法录入、AI 推荐、单方计时、七盘制、JSON 棋谱、自动保存和崩溃恢复。详细操作见 `docs/MATCH_CHECKLIST.md` 与 `docs/EMERGENCY_GUIDE.md`。
 
-## 当前技术栈
+## 研究进度
+
+### R-P1：研究地基
+
+已经实现：
+
+- `scripts/perf_probe.py`：对局耗时、Rollout visits 和热路径计数
+- `scripts/ladder.py`：双人或 round-robin Elo 评测与不确定度
+- `scripts/replay_analyze.py`：GameRecord/MatchRecord 复盘和 P14 推荐对照
+- `scripts/dice_forensics.py`：骰子分布、卡方统计和条件巧合度审计
+- `GameState._apply_known_legal_move()` 与 `GameState.clone(include_history=False)` 两项内部快路径
+
+现有性能报告没有保存同参数修改前基线，因此不能声称达到研究设计中的 5 倍提速目标。真实棋谱复盘和骰子取证也仍需要外部棋谱输入。
+
+### R-P2A：经典搜索
+
+当前定义的 E1 至 E3 已实现：
+
+- ExpectimaxV2 的稳定状态键、值域门禁和 exact-only TT
+- 走法排序与迭代加深
+- 递归 Star1 上下界剪枝
+- `star2` frontier probe 与独立的 `star2_recursive` exact-probe 模式
+- 受局面门限约束的精确残局求解器
+
+精确残局求解器只接受总活子不超过 3，或所有活子到目标角的 Manhattan 总距离不超过 6 的非终局。它没有 deadline，也尚未并入完整对局混合 AI。
+
+这些结果证明实现与正确性边界，没有证明 ExpectimaxV2、Star2 或残局求解器强于 P14。默认 AI、GUI、release 和 core 规则均未改变。
+
+### R-P2B：MCTS 与学习线
+
+- L0 已接通 MCTS static leaf 与 playout leaf。6 局 smoke 为 `illegal_moves=0`、`crashes=0`、`timeouts=0`，样本不支持 playout leaf 更强的结论。
+- L1 已完成确定性、可恢复的 CEM 评估权重调参 harness。E 盘 smoke 为 1 代、2 个候选、4 局；它只验证优化器、Elo 证据链和恢复逻辑，没有晋升默认权重。
+- L2 价值网络设计已经形成，当前等待书面确认。确认后才能编写实施计划；自对弈数据生成、PyTorch 训练、checkpoint 和神经 Rollout/MCTS 适配器尚未实现，`requirements-research.txt` 仍只有 NumPy。
+
+L2 的首版教师固定为 P14 rollout self-play。设计使用绝对方向的 `13×5×5 float32` 特征、RED 视角 `+1/-1/0` 标签，并按 game ID 切分训练集和验证集。PyTorch 必须保持研究路径惰性导入，不能成为 core、GUI、release 或默认 AI 的依赖。
+
+## 技术栈与分层
 
 - Python 3.11
+- Tkinter 桌面 GUI
 - pytest
-- tkinter 标准库 GUI
-- Windows 双击启动入口：`启动项目.cmd` + `scripts/launcher.py`
-- 当前不依赖网络服务、数据库或统一平台 API
+- NumPy，当前仅用于研究脚本
+- PyTorch 尚未加入依赖；L2 实施时再固定兼容版本和 CUDA 来源
 
-## 已有能力
+目录职责：
 
-- 5×5 棋盘。
-- 双方 1-6 号棋子。
-- 骰子点数到可动棋子的选择规则（含距离最近映射、双向并列）。
-- GUI 支持双方同意时由本程序生成 1-6 骰子，也支持手动录入对方程序、裁判或实体骰子给出的点数。
-- 合法走法生成（含吃本方棋子，R-0 已合规）。
-- 吃对方/本方子、胜负判断、走子和撤销。
-- 状态序列化和反序列化。
-- 最小随机 AI、GreedyAI、greedy_risk（带 distance-weighted capture risk）、RolloutAI（默认推荐，release 参数为 P14 promotion 显式 kwargs）、P2/P3/P14 rollout/Zweistein 显式实验候选、MCTSAI（实验性，P4.1 已停止，不进入 promotion）、ExpectimaxAI（实验性）。
-- Tkinter GUI（含开局录入、手动骰子录入、程序掷骰、推荐走法 by rollout；rollout 异常时回退到 `greedy_risk` / 第一条合法步）。
-- 现场启动器：根目录 `启动项目.cmd` 双击菜单，覆盖 GUI、preflight、pytest、smoke、S2 rehearsal、timing probe 和 release/default 状态显示。
-- 对战 harness（`scripts/quick_bench.py`，slim JSON 默认）+ 验证脚本（`scripts/_grid_validate_4_2.py`）+ P6/P7/P8 报告脚本（`scripts/preflight_check.py`、`scripts/timing_budget_probe.py`、`scripts/analyze_rollout_failures.py`、`scripts/analyze_threat_defense.py`）。
-- 棋谱 JSON 保存 / 加载 / 回放 / 悔棋。
-- 单方计时（默认 4 分钟包干，比赛模式弹窗可调整；默认只提示超时，不自动判负；裁判确认后可用 GUI 按钮记分）。
+- `core/`：棋盘状态、规则、合法步、胜负、走子/撤销和序列化
+- `ai/`：评估函数、搜索算法和 AI 构造入口
+- `gui/`：显示、输入和 core/AI 调用，不复制规则
+- `record/`：棋谱、自动保存和恢复
+- `scripts/`：启动、测试、评测和研究工具
+- `adapters/`：外部平台协议预留；当前没有实现
 
-## 当前规则假设
+## 数据与存储边界
 
-完整规则细节以 `docs/RULE_ASSUMPTIONS.md` 为准（已与国赛官网规则对齐）。当前关键事实：
+```text
+仓库：E:\computergame
+研究数据、天梯、调参、自对弈和模型：E:\computergame-data
+pip 缓存：E:\pip-cache
+torch 缓存：E:\torch-cache
+C 盘旧目录：仅迁移前快照
+```
 
-- 红方目标角为右下角 (4, 4)。
-- 蓝方目标角为左上角 (0, 0)。
-- 红方可向下、右、右下移动；蓝方可向上、左、左上移动。
-- 到达目标角或吃光对方棋子立即获胜，**没有和棋**。
-- **开局可任意摆放**（赛事规则明确允许，无组委会强制布局）。
-- 单方时限 4 分钟包干；GUI 默认不自动判负，裁判确认后可用 GUI 按钮记分，裁判要求时可开启程序自动超时判负。
-- 7 盘制，先胜 4 盘为胜方，轮流先手。
-- **吃本方棋子是合法走法**（赛事规则明确，core/rules.py R-0 已实现）。
+研究脚本必须接收显式输出目录，或从 `CG_RESEARCH_DATA_DIR` 派生目录。训练数据、模型、checkpoint、缓存和大体积棋谱不得默认写入仓库。
 
-## 开发边界
+## 工程与证据约束
 
-短期内不要做：
+- 规则变化先改 `core/` 和测试，再接 GUI 或 AI。
+- AI 强弱只由可复现的批量对战或带完整证据的 Elo 实验判断。
+- 固定 seed、AI 签名、双方颜色、错误统计、耗时和置信区间必须随报告保存。
+- 单局、少量 smoke、训练损失或一次性能探针不能作为棋力晋升证据。
+- 默认 AI、布局或 release 参数变更前，候选必须直接对 P14 基线通过单独设计的门禁。
+- 未确认平台协议前，不在 core 或 GUI 预写平台逻辑。
 
-- 深度学习训练。
-- 未确认协议的平台适配。
-- 联网功能。
-- 正式 release 打包（等阶段 8/9）。
-- 没有 harness 数据支撑的 AI 强度结论。
+## 当前未闭环事项
 
-新增功能应优先保持分层：
-
-- 规则改动先进入 `core/` 并补测试。
-- GUI 只展示状态和转发操作。
-- 棋谱和计时进入 `record/` 与 `gui/` 的明确边界。
-- 平台适配只放入 `adapters/`。
+1. R-P1 的性能优化缺少同参数修改前后对照；真实棋谱分析缺输入数据。
+2. R-P2A 已完成算法组件，但没有相对 P14 的持久天梯结论，也没有完整对局混合 AI。
+3. R-P2B L0 只有接线 smoke；任何棋力判断都需要独立扩样实验。
+4. R-P2B L2 的下一道门是设计稿书面确认，之后才能编写实施计划。计划批准前不安装 PyTorch、不生成训练数据、不修改生产路径。
 
 ## 常用命令
 
 ```powershell
-& ".venv/Scripts/python.exe" -m pytest
+$env:CG_RESEARCH_DATA_DIR = "E:/computergame-data"
+$env:PIP_CACHE_DIR = "E:/pip-cache"
+$env:TORCH_HOME = "E:/torch-cache"
+& ".venv/Scripts/python.exe" -m pytest -q
 & ".venv/Scripts/python.exe" "scripts/smoke_test.py"
 & ".venv/Scripts/python.exe" "scripts/run_gui.py"
-& ".venv/Scripts/python.exe" "scripts/quick_bench.py" --red greedy_risk --blue greedy --games 200 --seed 2026
+& ".venv/Scripts/python.exe" "scripts/ladder.py" --help
+& ".venv/Scripts/python.exe" "scripts/tune_eval_weights.py" --help
 ```
 
-## 下一步建议（下一会话）
+## 相关文档
 
-详见 `PROJECT_PHASES.md` §2.5、`docs/E_DRIVE_HANDOFF_20260614.md` 与 `docs/superpowers/specs/2026-06-13-research-transition-design.md`。简版顺序：
+- `README.md`：仓库入口、安装与使用
+- `PROJECT_PHASES.md`：阶段顺序、门禁和历史实验路线
+- `PROJECT_MEMORY.md`：按日期保存的项目事实记录
+- `docs/RULE_ASSUMPTIONS.md`：规则依据与实现边界
+- `docs/E_DRIVE_HANDOFF_20260614.md`：迁移事实和当前接手步骤
+- `docs/superpowers/specs/2026-06-13-research-transition-design.md`：长期研究总体设计
+- `docs/superpowers/specs/2026-08-03-rp2b-l2-value-network-design.md`：L2 价值网络设计
+- `reports/rp2b_l1_cem_tuning_20260803.md`：L1 CEM 实现与验证报告
+- `reports/rp2a_exact_endgame_20260731.md`：精确残局求解器报告
 
-1. **E 盘接手**：只在 `E:\computergame` 工作；C 盘旧目录已弃用。
-2. **环境固定**：研究数据和缓存使用 `E:\computergame-data`、`E:\pip-cache`、`E:\torch-cache`。
-3. **研究主线**：R-P1 地基稳定后继续 ExpectimaxV2 / MCTS / 天梯评测，棋力结论只认持久天梯和批量对战数据。
+赛前实验和比赛基线的完整历史保留在 `PROJECT_PHASES.md`、`PROJECT_MEMORY.md`、`reports/` 与 `release/v1.0/`，不在本简介重复展开。

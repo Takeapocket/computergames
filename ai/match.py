@@ -28,17 +28,18 @@ TERMINATION_REASONS: tuple[TerminationReason, ...] = get_args(TerminationReason)
 
 
 STARTING_LAYOUT_ID = "default_no_stuck_corner_v1"
-"""开局布局的稳定标识。阶段 7 引入候选开局库后，会从单一字符串升级为 dict 选择器。
+"""历史 harness 默认布局的稳定标识。
 
-含义：把标准三角形开局里 5/6 号棋子从 (1,1)/(2,0) 调到 (2,0)/(3,1)（蓝方对称），
-让 1 号角子在初始局面就有合法走法，规避不可控的 dice=1 强制 forfeit。
+这个 ID 在 R-0 前用于区分规避 dice=1 no-move 的调整布局。当前规则允许吃本方棋子，
+标准三角布局的角子也有合法走法；旧 ID 只为报告和 seed 复现继续保留。候选布局由
+``PRESETS``/``LAYOUTS`` 提供，GUI/release 默认布局是 ``balanced_v1``。
 """
 
 STANDARD_TRIANGLE_LAYOUT_ID = "standard_triangle_v1"
 """标准三角形开局：piece 5 在 (1,1) / piece 6 在 (2,0)（蓝方对称）。
 
-仅用于 reproducer 复现 4.1 baseline (commit baea8bb 之前未保留的开局)。
-production 默认用 ``default_no_stuck_corner_v1``。
+该布局用于复现 4.1 历史 baseline。R-0 前禁止吃本方棋子时，角子可能因三个目标格
+均被本方占据而 no-move；当前规则允许合法自吃，不再有这项限制。
 """
 
 
@@ -95,13 +96,11 @@ STRONG_ROLLOUT_DEFAULTS: dict[str, dict[str, Any]] = {
 
 
 def default_starting_state() -> GameState:
-    """返回 5x5 默认开局：近三角形布局，确保每枚棋子初始都有至少一个合法走法。
+    """返回历史 harness 默认开局。
 
-    与标准三角形（角子被自家围死）相比，这里把 5/6 号棋子从 (1,1)/(2,0) 调到 (2,0)/(3,1)
-    （蓝方对称），让 1 号棋子在 (0,0) 时能向 (1,1) 移动。规避了"dice 强制选中已被围死的
-    角子→无合法走法→当前方负"这个不可控的 1/6 forfeit 上限。
-
-    阶段 7 引入候选开局库后，这个布局会被多个候选阵型替代。
+    5/6 号棋子的位置与标准三角布局不同，稳定 ID 为 ``default_no_stuck_corner_v1``。
+    名称和位置为历史报告复现保留，不表示当前规则仍存在 corner-stuck 问题。GUI/release
+    使用 ``balanced_v1``；研究脚本也可以通过 ``LAYOUTS`` 选择其他预设。
     """
     return GameState.from_layout(
         red={
@@ -125,11 +124,10 @@ def default_starting_state() -> GameState:
 
 
 def standard_triangle_state() -> GameState:
-    """4.1 baseline 的"标准三角形"开局：piece 5 在 (1,1) / piece 6 在 (2,0)。
+    """返回 4.1 历史 baseline 的标准三角形开局。
 
-    Red 1 在 (0,0)，三个走法方向 (1,0)/(0,1)/(1,1) 分别被 Red 4/2/5 占据 → 角子被围死。
-    任何 dice=1 都会强制选 piece 1 但 legal_moves=[] → 当前方判负。
-    用于复现 reports/bench_20260509_081311_greedy_vs_random.json (0.59 / 48 forfeit)。
+    R-0 前的旧规则禁止吃本方棋子，因此 Red 1 的三个目标格被 Red 4/2/5 占据时，
+    dice=1 会产生 no-move。当前规则允许 Red 1 吃本方棋子，三个方向都是合法走法。
     """
     return GameState.from_layout(
         red={

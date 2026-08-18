@@ -11,6 +11,7 @@ import pytest
 import ai.evaluator as evaluator
 import ai.zweistein as zweistein
 import scripts.tune_eval_weights as tuning
+from ai.match import ai_version_signature, build_ai
 from core.types import Player
 from scripts.tune_eval_weights import (
     CEMDistribution,
@@ -40,6 +41,42 @@ def test_cem_profiles_cover_greedy_risk_and_zweistein_weights():
         "capture_risk_weight",
         "target_win_risk_weight",
     }
+
+
+def test_default_evaluator_weights_and_ai_signatures_are_locked():
+    greedy_defaults = {
+        "distance_weight": 1.0,
+        "material_weight": 10.0,
+        "expected_risk_weight": 3.0,
+        "expected_win_risk_weight": 500.0,
+    }
+    zweistein_defaults = {
+        "progress_weight": 12.0,
+        "material_weight": 90.0,
+        "mobility_weight": 6.0,
+        "capture_risk_weight": 120.0,
+        "target_win_risk_weight": 600.0,
+    }
+
+    assert {
+        spec.name: spec.initial for spec in profile_specs("greedy_risk")
+    } == greedy_defaults
+    assert {
+        spec.name: spec.initial for spec in profile_specs("greedy_zweistein")
+    } == zweistein_defaults
+
+    greedy_signature = ai_version_signature(
+        build_ai("greedy_risk", seed=0, randomize_ties=False)
+    )
+    zweistein_signature = ai_version_signature(
+        build_ai("greedy_zweistein", seed=0, randomize_ties=False)
+    )
+    assert {
+        name: greedy_signature[name] for name in greedy_defaults
+    } == greedy_defaults
+    assert {
+        name: zweistein_signature[name] for name in zweistein_defaults
+    } == zweistein_defaults
 
 
 def test_cem_profiles_source_initial_values_from_evaluator_defaults(monkeypatch):
@@ -453,6 +490,109 @@ def test_evaluate_candidate_routes_every_game_through_ladder_elo_and_telemetry(
     }
     assert row["candidate_ai_signature"] == {"name": "greedy_risk"}
     assert row["anchor_ai_signature"] == {"name": "greedy_risk"}
+    assert row["k_factor"] == 16.0
+    first_game = {
+        "pair_index": 0,
+        "orientation": "candidate_red",
+        "candidate_color": "red",
+        "winner": None,
+        "red_score": 0.5,
+        "candidate_score": 0.5,
+        "turns": 4,
+        "illegal_moves": 0,
+        "crashes": 0,
+        "timeouts": 0,
+        "termination_reason": "draw_max_turns",
+        "step_times_ms": [1.0, 3.0],
+        "candidate_rating_before": 1500.0,
+        "anchor_rating_before": 1500.0,
+        "candidate_rating_after": 1510.0,
+        "anchor_rating_after": 1490.0,
+    }
+    second_game = {
+        "pair_index": 0,
+        "orientation": "candidate_blue",
+        "candidate_color": "blue",
+        "winner": "blue",
+        "red_score": 0.0,
+        "candidate_score": 1.0,
+        "turns": 6,
+        "illegal_moves": 1,
+        "crashes": 2,
+        "timeouts": 3,
+        "termination_reason": "illegal_move",
+        "step_times_ms": [2.0],
+        "candidate_rating_before": 1510.0,
+        "anchor_rating_before": 1490.0,
+        "candidate_rating_after": 1505.0,
+        "anchor_rating_after": 1495.0,
+    }
+    assert {
+        key: row["game_seed_manifest"][0][key] for key in first_game
+    } == first_game
+    assert {
+        key: row["game_seed_manifest"][1][key] for key in second_game
+    } == second_game
+
+
+def test_game_manifest_recomputes_objective_elo_without_replaying_games(
+    monkeypatch,
+):
+    results = iter(
+        (
+            _match_result(Player.RED, termination_reason="winner_target_corner"),
+            _match_result(Player.RED, termination_reason="winner_target_corner"),
+            _match_result(None),
+            _match_result(Player.BLUE, termination_reason="winner_target_corner"),
+        )
+    )
+    monkeypatch.setattr(
+        tuning,
+        "build_ai",
+        lambda kind, *, seed=None, **kwargs: SimpleNamespace(name=kind),
+    )
+    monkeypatch.setattr(tuning, "play_one_game", lambda **_kwargs: next(results))
+    monkeypatch.setattr(tuning, "starting_state_for", lambda _layout_id: object())
+    monkeypatch.setattr(tuning, "ai_version_signature", lambda ai: {"name": ai.name})
+
+    row = tuning.evaluate_candidate(
+        profile="greedy_risk",
+        params={spec.name: spec.initial for spec in profile_specs("greedy_risk")},
+        games_per_side=2,
+        match_seed=107,
+        k_factor=20.0,
+    )
+    assert [game["candidate_score"] for game in row["game_seed_manifest"]] == [
+        1.0,
+        0.0,
+        0.5,
+        1.0,
+    ]
+
+    candidate_rating = 1500.0
+    anchor_rating = 1500.0
+    for game in row["game_seed_manifest"]:
+        assert game["candidate_rating_before"] == pytest.approx(candidate_rating)
+        assert game["anchor_rating_before"] == pytest.approx(anchor_rating)
+        if game["orientation"] == "candidate_red":
+            candidate_rating, anchor_rating = tuning.update_ratings(
+                candidate_rating,
+                anchor_rating,
+                red_score=game["red_score"],
+                k_factor=row["k_factor"],
+            )
+        else:
+            anchor_rating, candidate_rating = tuning.update_ratings(
+                anchor_rating,
+                candidate_rating,
+                red_score=game["red_score"],
+                k_factor=row["k_factor"],
+            )
+        assert game["candidate_rating_after"] == pytest.approx(candidate_rating)
+        assert game["anchor_rating_after"] == pytest.approx(anchor_rating)
+
+    assert candidate_rating == pytest.approx(row["objective_elo"])
+    assert anchor_rating == pytest.approx(row["anchor_rating"])
 
 
 def _tuning_config(**overrides):
@@ -477,7 +617,7 @@ def _tuning_config(**overrides):
 def test_tuning_config_is_frozen_and_has_explicit_schema():
     config = _tuning_config()
 
-    assert tuning.SCHEMA_VERSION == 1
+    assert tuning.SCHEMA_VERSION == 2
     assert config.to_dict() == {
         "profile": "greedy_risk",
         "generations": 2,
@@ -507,10 +647,13 @@ def test_tuning_config_is_frozen_and_has_explicit_schema():
         {"elite_count": 5},
         {"initial_log_std": 0.0},
         {"initial_log_std": math.inf},
+        {"initial_log_std": "0.5"},
         {"smoothing": 0.0},
         {"smoothing": 1.01},
         {"smoothing": math.nan},
+        {"smoothing": "0.7"},
         {"min_log_std": 0.0},
+        {"min_log_std": "0.05"},
         {"games_per_side": 0},
         {"seed": -1},
         {"seed": 1.0},
@@ -518,6 +661,7 @@ def test_tuning_config_is_frozen_and_has_explicit_schema():
         {"max_turns": 0},
         {"k_factor": 0.0},
         {"k_factor": math.inf},
+        {"k_factor": "24.0"},
     ],
 )
 def test_tuning_config_strictly_rejects_invalid_values(overrides):
@@ -581,9 +725,81 @@ def _synthetic_evaluator(calls, *, fail_on_call=None):
         if fail_on_call is not None and len(calls) == fail_on_call:
             raise RuntimeError("synthetic interruption")
 
-        objective = 1500.0 + math.fsum(kwargs["params"].values()) / 1000.0
         games = kwargs["games_per_side"] * 2
+        candidate_rating = 1500.0
+        anchor_rating = 1500.0
+        game_manifest = []
+        for pair_index in range(kwargs["games_per_side"]):
+            pair_seed = kwargs["match_seed"] * 1_000_003 + pair_index
+            for orientation in ("candidate_red", "candidate_blue"):
+                candidate_rating_before = candidate_rating
+                anchor_rating_before = anchor_rating
+                red_score = 1.0 if orientation == "candidate_red" else 0.0
+                if orientation == "candidate_red":
+                    candidate_rating, anchor_rating = tuning.update_ratings(
+                        candidate_rating,
+                        anchor_rating,
+                        red_score=red_score,
+                        k_factor=kwargs["k_factor"],
+                    )
+                    winner = "red"
+                    candidate_color = "red"
+                else:
+                    anchor_rating, candidate_rating = tuning.update_ratings(
+                        anchor_rating,
+                        candidate_rating,
+                        red_score=red_score,
+                        k_factor=kwargs["k_factor"],
+                    )
+                    winner = "blue"
+                    candidate_color = "blue"
+                game_manifest.append(
+                    {
+                        "pair_index": pair_index,
+                        "orientation": orientation,
+                        "match_seed": kwargs["match_seed"],
+                        "dice_seed": pair_seed * 3,
+                        "candidate_ai_seed": pair_seed * 3 + 1,
+                        "anchor_ai_seed": pair_seed * 3 + 2,
+                        "red_ai_seed": (
+                            pair_seed * 3 + 1
+                            if orientation == "candidate_red"
+                            else pair_seed * 3 + 2
+                        ),
+                        "blue_ai_seed": (
+                            pair_seed * 3 + 2
+                            if orientation == "candidate_red"
+                            else pair_seed * 3 + 1
+                        ),
+                        "candidate_color": candidate_color,
+                        "winner": winner,
+                        "red_score": red_score,
+                        "candidate_score": 1.0,
+                        "turns": 3,
+                        "illegal_moves": 0,
+                        "crashes": 0,
+                        "timeouts": 0,
+                        "termination_reason": "winner_target_corner",
+                        "step_times_ms": [0.25],
+                        "candidate_rating_before": candidate_rating_before,
+                        "anchor_rating_before": anchor_rating_before,
+                        "candidate_rating_after": candidate_rating,
+                        "anchor_rating_after": anchor_rating,
+                    }
+                )
+        candidate_ai = tuning.build_ai(
+            kwargs["profile"],
+            seed=game_manifest[0]["candidate_ai_seed"],
+            **kwargs["params"],
+            randomize_ties=False,
+        )
+        anchor_ai = tuning.build_ai(
+            kwargs["profile"],
+            seed=game_manifest[0]["anchor_ai_seed"],
+            randomize_ties=False,
+        )
         return {
+            "anchor_profile": kwargs["profile"],
             "games": games,
             "wins": games,
             "losses": 0,
@@ -592,17 +808,23 @@ def _synthetic_evaluator(calls, *, fail_on_call=None):
             "crashes": 0,
             "timeouts": 0,
             "turns": [3] * games,
+            "total_turns": games * 3,
+            "average_turns": 3.0,
             "step_times_ms": [0.25] * games,
+            "average_step_time_ms": 0.25,
+            "max_step_time_ms": 0.25,
             "termination_reasons": ["winner_target_corner"] * games,
-            "candidate_ai_signature": {"name": kwargs["profile"]},
-            "anchor_ai_signature": {"name": kwargs["profile"]},
-            "game_seed_manifest": [{"match_seed": kwargs["match_seed"]}],
-            "candidate_rating": objective,
-            "anchor_rating": 3000.0 - objective,
-            "candidate_rating_uncertainty": 10.0,
-            "anchor_rating_uncertainty": 10.0,
+            "termination_reason_counts": {"winner_target_corner": games},
+            "candidate_ai_signature": tuning.ai_version_signature(candidate_ai),
+            "anchor_ai_signature": tuning.ai_version_signature(anchor_ai),
+            "game_seed_manifest": game_manifest,
+            "candidate_rating": candidate_rating,
+            "anchor_rating": anchor_rating,
+            "candidate_rating_uncertainty": tuning.estimate_rating_uncertainty(games),
+            "anchor_rating_uncertainty": tuning.estimate_rating_uncertainty(games),
+            "k_factor": float(kwargs["k_factor"]),
             "valid": True,
-            "objective_elo": objective,
+            "objective_elo": candidate_rating,
         }
 
     return evaluate
@@ -702,6 +924,52 @@ def test_run_tuning_persists_two_generation_synthetic_run(tmp_path):
     )
 
 
+def test_run_tuning_real_match_wiring_smoke(tmp_path):
+    output_dir = tmp_path / "real-match"
+    report = tuning.run_tuning(
+        config=_tuning_config(
+            generations=1,
+            population_size=1,
+            elite_count=1,
+            games_per_side=1,
+            max_turns=2,
+            seed=919,
+        ),
+        output_dir=output_dir,
+    )
+
+    rows = _read_jsonl(output_dir / "candidates.jsonl")
+    assert report["candidate_count"] == len(rows) == 1
+    row = rows[0]
+    assert row["games"] == 2
+    assert row["valid"] is True
+    assert row["illegal_moves"] == row["crashes"] == row["timeouts"] == 0
+    assert [game["orientation"] for game in row["game_seed_manifest"]] == [
+        "candidate_red",
+        "candidate_blue",
+    ]
+    candidate_signature = row["candidate_ai_signature"]
+    anchor_signature = row["anchor_ai_signature"]
+    assert candidate_signature["name"] == "greedy_risk"
+    assert anchor_signature["name"] == "greedy_risk"
+    expected_anchor_weights = {
+        "distance_weight": 1.0,
+        "material_weight": 10.0,
+        "expected_risk_weight": 3.0,
+        "expected_win_risk_weight": 500.0,
+    }
+    assert {
+        name: anchor_signature[name] for name in expected_anchor_weights
+    } == expected_anchor_weights
+    assert {
+        name: candidate_signature[name] for name in row["params"]
+    } == row["params"]
+    assert any(
+        candidate_signature[name] != anchor_signature[name]
+        for name in row["params"]
+    )
+
+
 def test_run_tuning_rejects_nonempty_new_run_without_resume(tmp_path):
     output_dir = tmp_path / "occupied"
     output_dir.mkdir()
@@ -716,6 +984,51 @@ def test_run_tuning_rejects_nonempty_new_run_without_resume(tmp_path):
         )
 
     assert calls == []
+
+
+def test_run_tuning_validates_objective_before_appending_candidate(tmp_path):
+    output_dir = tmp_path / "invalid-objective"
+
+    def invalid_evaluator(**kwargs):
+        row = _synthetic_evaluator([])(**kwargs)
+        row["objective_elo"] = math.nan
+        return row
+
+    with pytest.raises(ValueError, match="objective_elo.*finite"):
+        tuning.run_tuning(
+            config=_tuning_config(generations=1, population_size=2, elite_count=1),
+            output_dir=output_dir,
+            evaluator=invalid_evaluator,
+        )
+
+    candidates_path = output_dir / "candidates.jsonl"
+    assert not candidates_path.exists() or candidates_path.read_text(
+        encoding="utf-8"
+    ) == ""
+    state = json.loads((output_dir / "state.json").read_text(encoding="utf-8"))
+    assert state["completed_candidates"] == 0
+    assert state["best_candidate"] is None
+
+
+def test_run_tuning_rejects_nested_nonfinite_json_before_append(tmp_path):
+    output_dir = tmp_path / "nonfinite-signature"
+
+    def invalid_evaluator(**kwargs):
+        row = _synthetic_evaluator([])(**kwargs)
+        row["extra_metadata"] = {"nonfinite": math.nan}
+        return row
+
+    with pytest.raises(ValueError, match="JSON|finite|compliant"):
+        tuning.run_tuning(
+            config=_tuning_config(generations=1, population_size=2, elite_count=1),
+            output_dir=output_dir,
+            evaluator=invalid_evaluator,
+        )
+
+    candidates_path = output_dir / "candidates.jsonl"
+    assert not candidates_path.exists() or candidates_path.read_text(
+        encoding="utf-8"
+    ) == ""
 
 
 def test_run_tuning_resume_after_interruption_only_evaluates_missing_candidates(
@@ -821,10 +1134,77 @@ def test_resume_replays_fully_appended_generation_when_state_did_not_advance(
     assert resumed_state["completed_candidates"] == 3
 
 
+def test_resume_rejects_tampered_initial_distribution_at_generation_zero(tmp_path):
+    config = _tuning_config(generations=1, population_size=2, elite_count=1)
+    output_dir = tmp_path / "tampered-initial-distribution"
+    with pytest.raises(RuntimeError, match="synthetic interruption"):
+        tuning.run_tuning(
+            config=config,
+            output_dir=output_dir,
+            evaluator=_synthetic_evaluator([], fail_on_call=1),
+        )
+
+    state_path = output_dir / "state.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["next_generation"] == 0
+    first_name = next(iter(state["distribution"]["log_means"]))
+    state["distribution"]["log_means"][first_name] += 0.01
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="distribution mismatch"):
+        tuning.run_tuning(
+            config=config,
+            output_dir=output_dir,
+            resume=True,
+            evaluator=_synthetic_evaluator([]),
+        )
+
+
+def test_resume_rejects_candidate_rows_from_future_generation(tmp_path):
+    config = _tuning_config(generations=2, population_size=2, elite_count=1)
+    fresh_dir = tmp_path / "fresh-complete"
+    tuning.run_tuning(
+        config=config,
+        output_dir=fresh_dir,
+        evaluator=_synthetic_evaluator([]),
+    )
+    future_row = next(
+        row
+        for row in _read_jsonl(fresh_dir / "candidates.jsonl")
+        if row["generation"] == 1 and row["index"] == 0
+    )
+
+    interrupted_dir = tmp_path / "interrupted-at-generation-zero"
+    with pytest.raises(RuntimeError, match="synthetic interruption"):
+        tuning.run_tuning(
+            config=config,
+            output_dir=interrupted_dir,
+            evaluator=_synthetic_evaluator([], fail_on_call=1),
+        )
+    state = json.loads(
+        (interrupted_dir / "state.json").read_text(encoding="utf-8")
+    )
+    assert state["next_generation"] == 0
+    (interrupted_dir / "candidates.jsonl").write_text(
+        json.dumps(future_row) + "\n",
+        encoding="utf-8",
+    )
+    resume_calls = []
+
+    with pytest.raises(ValueError, match="future generation"):
+        tuning.run_tuning(
+            config=config,
+            output_dir=interrupted_dir,
+            resume=True,
+            evaluator=_synthetic_evaluator(resume_calls),
+        )
+    assert resume_calls == []
+
+
 @pytest.mark.parametrize(
     ("field", "replacement", "message"),
     [
-        ("schema_version", 999, "schema_version"),
+        ("schema_version", 1, "schema_version"),
         ("profile", "greedy_zweistein", "profile"),
         ("config", {"incompatible": True}, "config"),
         ("specs", [{"incompatible": True}], "specs"),
@@ -874,7 +1254,7 @@ def test_resume_rejects_candidate_params_mismatch_and_duplicate_id(tmp_path):
         "\n".join(json.dumps(row) for row in params_rows) + "\n",
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match="params"):
+    with pytest.raises(ValueError, match="params|signature"):
         tuning.run_tuning(
             config=config,
             output_dir=params_dir,
@@ -896,6 +1276,141 @@ def test_resume_rejects_candidate_params_mismatch_and_duplicate_id(tmp_path):
         tuning.run_tuning(
             config=config,
             output_dir=duplicate_dir,
+            resume=True,
+            evaluator=_synthetic_evaluator([]),
+        )
+
+
+def test_resume_rejects_conflicting_candidate_telemetry(tmp_path):
+    config = _tuning_config(generations=1, population_size=2, elite_count=1)
+    output_dir = tmp_path / "telemetry-mismatch"
+    tuning.run_tuning(
+        config=config,
+        output_dir=output_dir,
+        evaluator=_synthetic_evaluator([]),
+    )
+    candidates_path = output_dir / "candidates.jsonl"
+    rows = _read_jsonl(candidates_path)
+    rows[0]["wins"] -= 1
+    candidates_path.write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="wins.*manifest|telemetry"):
+        tuning.run_tuning(
+            config=config,
+            output_dir=output_dir,
+            resume=True,
+            evaluator=_synthetic_evaluator([]),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement", "message"),
+    [
+        ("valid", False, "valid.*manifest"),
+        ("anchor_profile", "greedy_zweistein", "anchor_profile"),
+        ("candidate_ai_signature", {"name": "tampered"}, "signature"),
+        ("anchor_ai_signature", {"name": "tampered"}, "signature"),
+    ],
+)
+def test_resume_rejects_candidate_evidence_tampering(
+    tmp_path,
+    field,
+    replacement,
+    message,
+):
+    config = _tuning_config(generations=1, population_size=2, elite_count=1)
+    output_dir = tmp_path / field
+    tuning.run_tuning(
+        config=config,
+        output_dir=output_dir,
+        evaluator=_synthetic_evaluator([]),
+    )
+    candidates_path = output_dir / "candidates.jsonl"
+    rows = _read_jsonl(candidates_path)
+    rows[0][field] = replacement
+    candidates_path.write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=message):
+        tuning.run_tuning(
+            config=config,
+            output_dir=output_dir,
+            resume=True,
+            evaluator=_synthetic_evaluator([]),
+        )
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    [
+        ("dice_seed", "dice_seed.*mismatch"),
+        ("red_score", "red_score.*winner"),
+        ("candidate_rating_after", "Elo update mismatch"),
+        ("objective_elo", "objective_elo.*mismatch"),
+    ],
+)
+def test_resume_rejects_manifest_and_elo_chain_tampering(
+    tmp_path,
+    tamper,
+    message,
+):
+    config = _tuning_config(generations=1, population_size=2, elite_count=1)
+    output_dir = tmp_path / tamper
+    tuning.run_tuning(
+        config=config,
+        output_dir=output_dir,
+        evaluator=_synthetic_evaluator([]),
+    )
+    candidates_path = output_dir / "candidates.jsonl"
+    rows = _read_jsonl(candidates_path)
+    game = rows[0]["game_seed_manifest"][0]
+    if tamper == "dice_seed":
+        game["dice_seed"] += 1
+    elif tamper == "red_score":
+        game["red_score"] = 0.0 if game["red_score"] != 0.0 else 1.0
+    elif tamper == "candidate_rating_after":
+        game["candidate_rating_after"] += 1.0
+    else:
+        rows[0]["objective_elo"] += 1.0
+    candidates_path.write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=message):
+        tuning.run_tuning(
+            config=config,
+            output_dir=output_dir,
+            resume=True,
+            evaluator=_synthetic_evaluator([]),
+        )
+
+
+def test_resume_rejects_nonstandard_nonfinite_json_constant(tmp_path):
+    config = _tuning_config(generations=1, population_size=2, elite_count=1)
+    output_dir = tmp_path / "nonfinite-json"
+    tuning.run_tuning(
+        config=config,
+        output_dir=output_dir,
+        evaluator=_synthetic_evaluator([]),
+    )
+    candidates_path = output_dir / "candidates.jsonl"
+    rows = _read_jsonl(candidates_path)
+    rows[0]["candidate_ai_signature"]["nonfinite"] = math.inf
+    candidates_path.write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="non-finite|parse candidates"):
+        tuning.run_tuning(
+            config=config,
+            output_dir=output_dir,
             resume=True,
             evaluator=_synthetic_evaluator([]),
         )

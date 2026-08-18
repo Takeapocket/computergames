@@ -35,7 +35,7 @@ def evaluate(
 
     注意：当 ``expected_risk_weight`` 或 ``expected_win_risk_weight`` 非零时，本函数不保证
     ``evaluate(state, RED) == -evaluate(state, BLUE)``。当前用途是 GreedyAI 对同一视角下候选
-    走法排序；后续 Minimax/MCTS/Expectimax 若依赖零和评估，需要改为显式计算双方风险差。
+    走法排序；依赖零和评估的搜索路径必须关闭这两个单边风险项，或显式计算双方风险差。
     """
     perspective = Player.from_value(perspective)
     winner = state.get_winner()

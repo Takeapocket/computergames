@@ -66,37 +66,37 @@ illegal/crash/timeout. No promotion follows from this item.
 - Modify: `scripts/tune_eval_weights.py`
 - Modify: `tests/test_tune_eval_weights.py`
 
-- [ ] Evaluate every candidate as RED and BLUE against the same-kind default
+- [x] Evaluate every candidate as RED and BLUE against the same-kind default
   anchor with common fixed seeds and deterministic ties.
-- [ ] Update candidate/anchor ratings only through `scripts.ladder.update_ratings`
+- [x] Update candidate/anchor ratings only through `scripts.ladder.update_ratings`
   and record Elo uncertainty, game/error/timing telemetry, params, and AI
   signatures.
-- [ ] Require E-drive-safe output resolution, append candidate JSONL rows, write
+- [x] Require E-drive-safe output resolution, append candidate JSONL rows, write
   state/report files, and reject nonempty output without `--resume`.
-- [ ] Resume only when schema/profile/spec/config match; never duplicate completed
+- [x] Resume only when schema/profile/spec/config match; never duplicate completed
   generation/candidate IDs.
-- [ ] Add CLI smoke tests using `tmp_path` and monkeypatched match execution.
+- [x] Add CLI smoke tests using `tmp_path` and monkeypatched match execution.
 
 ### Task 4: Bounded E-Drive Smoke And Documentation
 
 **Files:**
-- Create: `reports/rp2b_l1_cem_tuning_20260731.md`
+- Create: `reports/rp2b_l1_cem_tuning_20260803.md`
 - Modify: `PROJECT_MEMORY.md`
 - Modify: `PROJECT_PHASES.md`
 
-- [ ] Run one generation with a tiny population and one game per side under an
+- [x] Run one generation with a tiny population and one game per side under an
   explicit `E:/computergame-data/tuning/...` output directory.
-- [ ] Verify JSONL/state/report reproducibility metadata, bilateral games, Elo
+- [x] Verify JSONL/state/report reproducibility metadata, bilateral games, Elo
   objective, and zero illegal/crash/timeout.
-- [ ] Run focused tests, full `pytest -q`, diagnostics, and `git diff --check`.
-- [ ] Record that this is optimizer/harness evidence only; do not change defaults
+- [x] Run focused tests, full `pytest -q`, diagnostics, and `git diff --check`.
+- [x] Record that this is optimizer/harness evidence only; do not change defaults
   or claim strength.
 
 ### Task 5: Independent Code Review
 
-- [ ] Request a read-only reviewer focused on default drift, log-space math,
+- [x] Request a read-only reviewer focused on default drift, log-space math,
   deterministic sampling, Elo fact-source reuse, bilateral seed fairness,
   persistence/resume safety, E-drive boundaries, telemetry, and test realism.
-- [ ] Fix every Critical/Important finding and rerun affected tests plus full
+- [x] Fix every Critical/Important finding and rerun affected tests plus full
   pytest whenever production code changes.
-- [ ] Obtain review confirmation that all blockers are closed.
+- [x] Obtain review confirmation that all blockers are closed.

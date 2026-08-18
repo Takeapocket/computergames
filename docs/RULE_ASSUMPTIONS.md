@@ -1,6 +1,6 @@
 # 爱恩斯坦棋规则记录（以国赛官方规则为准）
 
-更新时间：2026-05-17（R-4 GUI 程序掷骰后同步）
+更新时间：2026-08-18
 
 **权威来源**：
 - `全国计算机博弈竞赛总则.md`（CAAI 中国人工智能学会 计算机博弈专委会，国赛总则）
@@ -46,15 +46,15 @@
 
 - 旧：`core/rules.py:52-54` 中 `if occupant.player is piece.player: continue` 跳过本方棋子。
 - 修复后：删除该分支，统一捕获 occupant。
-- 历史验收（2026-05-11）：`tests/test_rules.py::test_piece_can_capture_own_piece`、`tests/test_game_state.py::test_apply_self_capture_marks_own_piece_dead` 通过；当日 pytest 207 passed；4.1 / 4.2 / 4.4 bench 重跑后所有验收门槛通过（详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`）。当前全量测试数量以 `release/v1.0/test_report.md` 为准。
+- 历史验收（2026-05-11）：`tests/test_rules.py::test_piece_can_capture_own_piece`、`tests/test_game_state.py::test_apply_self_capture_marks_own_piece_dead` 通过；当日 pytest 207 passed；4.1 / 4.2 / 4.4 bench 重跑后所有验收门槛通过（详见 `reports/4-1-rebench.md` / `reports/4-2-rebench.md` / `reports/4-4-rebench.md`）。历史 release 验收见 `release/v1.0/test_report.md`，当前回归结果见 `README.md` 与 `docs/PROJECT_BRIEF.md`。
 
 ### R-0 副作用 / R-0-followup
 
-- `count_stuck_pieces()`（stuck penalty）在合规规则下基本恒为 0（任何"被本方围死"的棋子都能自残脱困）。`STUCK_PIECE_PENALTY = 100.0` 已成准死代码，但保留以最小化 R-0 改动；完整删除 / CLI flag 清理留待 R-0-followup。
-- `ai/risk.py:expected_capture_risk` 对**对手威胁我方**的评估保持正确（对手自残不影响我方），但 evaluator 缺乏对**我方主动自残的战略价值**建模，留待 R-0-followup。
-- `reports/4-x-failure-analysis.md` 全文重写留待 R-0-followup（rebench 报告已经覆盖关键结论）。
+- `count_stuck_pieces()` 与 `STUCK_PIECE_PENALTY` 已在 R-0 follow-up 中删除，当前源码没有 stuck penalty 第二事实源。
+- `ai/self_capture.py` 已提供自吃机动性评估入口，`SELF_CAPTURE_WEIGHT` 默认仍为 0；相关候选只用于实验，没有进入 P14 默认配置。
+- R-0 后的 4.1 / 4.2 / 4.4 结论以三份 rebench 报告为准，旧规则下的失败分析仅作为历史材料保留。
 
-## 未修复的合规/能力缺口
+## 历史能力缺口及现状
 
 ### ~~P1-1~~ 开局录入 GUI 缺失 — 已实现
 
@@ -71,12 +71,12 @@
 ### ~~P1-3~~ 崩溃自救 — 已实现
 
 - 每步保存当前局面到 `replays/auto_save.json`，整轮保存到 `replays/auto_save_match.json`。
-- 崩溃后可恢复盘内局面、整轮比分和计时快照；真实 GUI 手动恢复演练仍需在 S2 表格中填写。
+- 崩溃后可恢复盘内局面、整轮比分和计时快照；S2 headless 演练与 2026-05-13 真实 GUI 手动表均已完成。
 
-### P3 决赛加赛 10 分钟快棋
+### ~~P3~~ 决赛加赛 10 分钟快棋 — 已具备配置入口
 
-- `--total-seconds 600` 或比赛模式弹窗的"单方时限（秒）"已能复用 timer_panel 跑快棋，无需大改。
-- 决赛触发概率低，赛前一周再补。
+- `--total-seconds 600` 或比赛模式弹窗的"单方时限（秒）"可以复用现有 timer panel 运行 10 分钟包干快棋。
+- 当前不需要单独的快棋规则分支；现场流程仍以裁判要求为准。
 
 ## 历史问题：3 分钟版本的考量
 

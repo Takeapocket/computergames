@@ -1,6 +1,6 @@
-# 爱恩斯坦棋参赛程序阶段规划
+# 爱恩斯坦棋 AI 研究项目阶段规划
 
-更新时间：2026-07-31
+更新时间：2026-08-18
 项目目标：长期 AI 棋力研究（2026-06-13 起）；原 2026 年辽宁省赛参赛目标对应的赛季已结束
 项目方向：以离线 GUI 参赛程序为基础的爱恩斯坦棋 AI 研究平台
 
@@ -10,13 +10,13 @@
 
 ## 1. 总目标与优先级
 
-目标是在比赛现场交付一个离线、稳定、可操作、可解释的爱恩斯坦棋程序。现场价值优先于算法复杂度。
+目标是在规则与比赛基线稳定的前提下，建立可复现、可审计的爱恩斯坦棋 AI 研究平台。`release/v1.0` 继续作为历史比赛基线，研究代码不得在缺少证据时改变默认行为。
 
 ```text
-规则正确 > 现场稳定 > GUI 可操作 > 默认 AI 强度 > 数据化 AI 增强 > 开局与参数优化 > 界面美观
+规则正确 > 可复现实验 > 本地稳定 > GUI 可操作 > 基础 AI 强度 > Expectimax/MCTS 强化 > 开局库与参数优化 > 界面美观
 ```
 
-当前默认假设：比赛现场不依赖网络和统一平台。骰子来源按双方协商或裁判要求确定；操作员可手动录入外部骰子结果，也可在双方同意时使用 GUI "程序掷骰"。程序维护局面、校验合法性、输出我方建议走法。若后续确认统一平台或 API，只在 `adapters/` 增加适配层，不修改 core 规则语义。
+当前研究默认离线、本地运行，不依赖网络服务或统一平台。GUI 仍支持手动录入外部骰子与本机程序掷骰。若未来确认统一平台或 API，只在 `adapters/` 增加适配层，不修改 core 规则语义。
 
 ---
 
@@ -33,7 +33,7 @@
 | 崩溃自救 R-3 | 已完成 | `record/auto_save.py`、启动恢复、走子/悔棋自动保存已实现并有测试。 |
 | 七盘制 R-2 | 已完成 | `gui/match_mode.py`、`record/match_record.py`、`auto_save_match` 已落地；R-2 review Critical+Important 修复已合并；甲乙身份选择、先手序列、盘内/整轮 auto-save 全链路打通。 |
 | S2 GUI 全流程演练 | 已完成 | `scripts/s2_rehearsal.py` 8/8 PASS；`docs/MATCH_CHECKLIST.md` + `docs/EMERGENCY_GUIDE.md` 落地；2026-05-13 操作员真实 Tk GUI 手动表填写完成（`reports/gui-rehearsal.md` §4，21/21 正常）。 |
-| 默认 AI | 已晋升 | `rollout` 作为当前默认参赛 AI；`greedy_risk` 保留为应急回退。2026-05-18 起 release 默认参数为 P14 `rollout_strong_64_loweps` 显式 kwargs：64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety（`deadline_safety_ms=80.0`）。 |
+| 默认 AI | 已晋升 | `rollout` 作为 GUI/release 默认 AI 和研究锚点；`greedy_risk` 保留为应急回退。2026-05-18 起 release 默认参数为 P14 `rollout_strong_64_loweps` 显式 kwargs：64 rollout / move、80 half-turn cutoff、2000ms step deadline、epsilon 0.05、close sample 96、risk-aware playout、Zweistein cutoff、80ms deadline safety（`deadline_safety_ms=80.0`）。 |
 | Adaptive rollout | 实验候选 | 32 初采样 + close sample 到 128 + 低置信提示已实现为显式参数候选，但 direct vs old rollout 800 局合并胜率 59.00%，未达 60% 默认晋升线，不进入 `release/v1.0/default_params.json`。 |
 | Rollout 根节点诊断 P1 | 已完成 | `RolloutAI.last_root_stats` + `RootMoveStats` 已成为 canonical 诊断接口，`last_diagnostics` 保持兼容；GUI 优先显示 root stats，并展示 visits / score / winrate / wins / losses / draws / avg / 低置信标记。默认 AI 参数和 release 配置未变。 |
 | Rollout 候选 P2 | 已完成，未晋升 | 已注册 `rollout_32` / `rollout_risk_playout` / `rollout_cutoff_eval` 并生成 candidate 报告。三者均未过门禁：`rollout_32` 胜率 54.5% 且 timeouts=4；`rollout_risk_playout` 胜率 57.0% 但 timeouts=10；`rollout_cutoff_eval` 胜率 57.5% 但 timeouts=11。默认 AI 和 release 配置不变。 |
@@ -51,7 +51,11 @@
 | P8 threat defense audit | 已完成，候选未实现 | `scripts/analyze_threat_defense.py` 生成 P8 审计报告，统计 chosen vs alternatives 的 opponent winning dice、low-confidence threat-reducing ratio 与 self-capture 相关性。审计 307 个失败方走子位置，仅 5 个存在 threat-reducing alternative，低置信 threat-reducing ratio 为 0.0120；gate 不支持 `rollout_threat_rerank`，因此未实现候选。P14 后默认 AI 为 `rollout` kind + P14 promotion 显式参数，默认布局仍为 `balanced_v1`，core/release 规则语义未变。 |
 | P9 Zweistein-DP chance-aware evaluation | 已完成，候选未晋升 | P9.0 DP 概率估值已实现并测试通过；P9.1 `rollout_zweistein_dp_cutoff` candidate 胜率 45.0%，未过 candidate；P9.2 `rollout_exact_opp1_zdp` candidate 胜率 51.5%，未过 candidate，且低于 P9.3 启动线 52%，因此 TT / move ordering 不启动。全量验证通过，`scripts/preflight_check.py` 输出 `READY FOR MATCH`。P14 后默认 AI 为 `rollout` kind + P14 promotion 显式参数，默认布局仍为 `balanced_v1`，core/release 规则语义未变。 |
 | P14 strong rollout 默认替换 | 已完成 | 用户确认将 `rollout_strong_64_loweps` 作为 GUI/release 工作默认 kwargs；实现仍为 `kind="rollout"` + 显式参数。两轮 50+50 合并 118/200 = 59.0%，Wilson CI [52.1%, 65.6%]，bench `illegal/crash/timeout=0/0/0`，max step 约 1920.8ms，max per-side thinking 约 11.4s / 10.9s。strong rollout candidate 门禁按真实稳定性、max step 和单方累计思考预算评估，不套普通候选 500ms average step cap。默认布局和 core 规则未变。 |
-| Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为默认参赛 AI。 |
+| Expectimax | 实验性 | `depth=1` 合并胜率 45.0%，弱于 `greedy_risk`，不能作为 GUI/release 默认 AI。 |
+| R-P1 研究地基 | 工具已落地，证据未完全收口 | perf probe、Elo 天梯、棋谱复盘、骰子审计与两项内部快路径已实现；没有同参数修改前基线，不能声称 5 倍提速，真实棋谱分析仍缺输入。 |
+| R-P2A E1-E3 | 已实现，未晋升 | ExpectimaxV2 的 TT、排序、迭代加深、递归 Star1、两种 Star2 probe 与精确残局求解器已完成；当前只有正确性和接线证据。 |
+| R-P2B L0/L1 | 接线与 harness 已完成 | MCTS leaf playout 仅有 6 局 smoke；CEM 调参仅有 4 局 smoke，没有默认权重晋升。 |
+| R-P2B L2 | 设计已形成，等待书面确认 | 确认后才能编写实施计划；尚无自对弈生成、PyTorch 训练、checkpoint 或神经评估适配器，PyTorch 未加入依赖。 |
 
 下一步主线：**长期研究模式（R 系列）**。2026 赛季已结束，赛前冻结解除；比赛形态的 GUI 与 release/v1.0 锁定配置保留为历史基线和对照锚点，工程重心转向 AI 棋力研究。主开发目录已迁移到 `E:\computergame`，C 盘旧目录已弃用但保留未删。赛前主线（R-0~R-4、S1~S4、P1~P14）全部闭环，历史细节见下文 §4、§5 与 `reports/ai_experiment_stop_list_20260518.md`。
 赛前阶段详细方案见：`docs/superpowers/specs/2026-05-16-p6-robustness-lock-rollout-failure-analysis-design.md`
@@ -86,11 +90,9 @@ C 盘旧目录：已弃用，仅保留为迁移前快照
 
 ```text
 R-P0 搬家与转型：已完成。代码已推送 GitHub main → 干净 clone 到 E:\computergame → 重建 .venv → E 盘全量验证通过。
-R-P1 地基：perf_probe 性能基线与纯 Python 提速（apply_move 快路径、playout 对象复用，目标 ≥5x）；
-          持久 Elo 天梯（P14 默认 = 1500 锚点，输出目录必须显式指定或由 `CG_RESEARCH_DATA_DIR` 派生）；
-          真实棋谱复盘（replay_analyze）+ 骰子公平性取证（dice_forensics：卡方 + 条件巧合度检验）。
-R-P2A 经典搜索线：ExpectimaxV2 加 TT/move ordering/迭代加深 → Star1/Star2 机会节点剪枝 → 终局精确求解器。
-R-P2B 学习线：MCTS 叶子 playout 对照实验 → 评估权重 SPSA/CEM 自动调参 → 价值网络（PyTorch）→ AZ-lite 闭环。
+R-P1 地基：工具和两项快路径已完成；5x 性能目标、真实棋谱结论与充分天梯数据尚未闭环。
+R-P2A 经典搜索线：E1-E3 已完成；任何棋力晋升或完整对局混合 AI 需要单独设计和验证。
+R-P2B 学习线：L0 MCTS leaf 接线、L1 CEM harness 已完成；L2 设计已形成，等待书面确认。
 R-P3 可选：Rust core 热路径（仅当天梯证明算力是瓶颈）、外部 EWN bot 对手池、布局-策略联合研究。
 ```
 
@@ -103,7 +105,7 @@ scripts/perf_probe.py       # match step timing + rollout root-visits baseline�
 scripts/ladder.py           # P14 release default = 1500 锚点；需 --output-dir 或 CG_RESEARCH_DATA_DIR；双人 probe + round-robin + Elo 不确定度 + Markdown 报告
 scripts/replay_analyze.py   # GameRecord/MatchRecord JSON 复盘摘要、基础 step 标签、P14 推荐逐步对比
 scripts/dice_forensics.py   # 走子来源分组的骰子序列审计；不把 source 字段误写成独立骰子来源
-requirements-research.txt   # 研究依赖声明；当前只列 numpy，torch 延后到 R-P2B
+requirements-research.txt   # 研究依赖声明；当前只列 numpy，L2 实施时再固定 torch 版本
 ```
 
 本地脚手架验证：新增测试组合 24 passed；全量 `pytest -q` 为 886 passed in 71.78s。审查 follow-up 后，`scripts/ladder.py` CLI 不再默认写仓库内 `data/ladder`，没有 `--output-dir` 时必须通过 `CG_RESEARCH_DATA_DIR` 指向研究数据根目录，且非空 `games.jsonl` 会被拒绝以避免报告与历史局混写。R-P0 已于 2026-06-14 完成：当前主开发目录为 `E:\computergame`，研究数据目录为 `E:\computergame-data`，pip 缓存为 `E:\pip-cache`，torch 缓存为 `E:\torch-cache`；C 盘旧目录保留但弃用。
@@ -112,9 +114,9 @@ requirements-research.txt   # 研究依赖声明；当前只列 numpy，torch �
 
 2026-06-14 R-P2A recursive Star1 upper-bound pruning 状态：`ExpectimaxV2(chance_pruning="star1")` 已从 root-only 上界剪枝扩展到递归 perspective 方 turn node。实现只在 `whose_turn is perspective` 且已有候选分数时向 child chance node 传 `cutoff_upper_bound=max(scores)`；opponent/minimizing lower-bound pruning 与 Star2 仍不做，`chance_pruning="none"` 仍是默认。新增 scripted recursive test 证明 losing recursive candidate 可以从 6 个骰子缩到 1 个骰子，且 root Star1 回归保持通过。报告见 `reports/rp2a_recursive_star1_20260614.md`。验证：R-P2A targeted 34 passed；全量 `pytest -q` 943 passed。默认 AI、GUI、release/v1.0、P14 rollout 默认和 core 规则均未改变。
 
-2026-07-31 R-P2A minimizing Star1 lower-bound pruning 状态：`ExpectimaxV2(chance_pruning="star1")` 已为 opponent/minimizing turn node 补齐对称下界 cutoff。已有候选后传 `cutoff_lower_bound=min(scores)`；chance node 用固定搜索下界计算剩余骰子的 `min_possible`，严格 `>` 才剪枝以保留并列。剪枝 bound 与 incomplete parent 均不写 exact TT。代码审查无 Critical；Important 测试覆盖缺口已通过生产 `_chance_value_star1()` 公式与 strict-equality 专项测试关闭。报告见 `reports/rp2a_minimizing_star1_20260731.md`。验证：ExpectimaxV2 目标组 37 passed；全量 `pytest -q` 946 passed。默认 AI、GUI、release/v1.0、P14 rollout 默认和 core 规则均未改变；Star2 与终局精确求解器仍待实现。
+2026-07-31 R-P2A minimizing Star1 lower-bound pruning 状态：`ExpectimaxV2(chance_pruning="star1")` 已为 opponent/minimizing turn node 补齐对称下界 cutoff。已有候选后传 `cutoff_lower_bound=min(scores)`；chance node 用固定搜索下界计算剩余骰子的 `min_possible`，严格 `>` 才剪枝以保留并列。剪枝 bound 与 incomplete parent 均不写 exact TT。代码审查无 Critical；Important 测试覆盖缺口已通过生产 `_chance_value_star1()` 公式与 strict-equality 专项测试关闭。报告见 `reports/rp2a_minimizing_star1_20260731.md`。验证：ExpectimaxV2 目标组 37 passed；全量 `pytest -q` 946 passed。默认 AI、GUI、release/v1.0、P14 rollout 默认和 core 规则均未改变；本步骤完成时 Star2 与终局求解器尚未实现，后续状态已记录两者完成。
 
-2026-07-31 R-P2A Star2 frontier probe 状态：新增默认关闭的 `chance_pruning="star2"`。本轮按 Ballard 1983 regular *-minimax 的 one-child probe 思路，只在 `depth=1` 使用可证明的单侧 bound；minimizing child probe 给 upper bound，maximizing child probe 给 lower bound，严格比较保留并列，更深层回退 Star1。新增 probe/cutoff 统计、真实局面穷举等价、双向 cutoff、TT/timeout/状态恢复测试。`balanced_v1` depth-2 单决策记录 228 probes、6 probe cutoffs、`chance_prunes=0`；后者保留 Star1“完全未访问骰子结果”的语义。1 局短 probe 为 19 steps、avg 45.24ms、max 166.09ms、0 illegal/crash/timeout。代码审查无 Critical；唯一 Important 遥测语义问题已修复，并补 lower-bound 等号回归。报告见 `reports/rp2a_star2_frontier_20260731.md`。验证：ExpectimaxV2 目标组 48 passed；全量 `pytest -q` 957 passed。后续已用独立 `star2_recursive` 签名完成递归 probe；R-P2A 仍待终局精确求解器，默认 AI/GUI/release/P14/core 均未改变。
+2026-07-31 R-P2A Star2 frontier probe 状态：新增默认关闭的 `chance_pruning="star2"`。本轮按 Ballard 1983 regular *-minimax 的 one-child probe 思路，只在 `depth=1` 使用可证明的单侧 bound；minimizing child probe 给 upper bound，maximizing child probe 给 lower bound，严格比较保留并列，更深层回退 Star1。新增 probe/cutoff 统计、真实局面穷举等价、双向 cutoff、TT/timeout/状态恢复测试。`balanced_v1` depth-2 单决策记录 228 probes、6 probe cutoffs、`chance_prunes=0`；后者保留 Star1“完全未访问骰子结果”的语义。1 局短 probe 为 19 steps、avg 45.24ms、max 166.09ms、0 illegal/crash/timeout。代码审查无 Critical；唯一 Important 遥测语义问题已修复，并补 lower-bound 等号回归。报告见 `reports/rp2a_star2_frontier_20260731.md`。验证：ExpectimaxV2 目标组 48 passed；全量 `pytest -q` 957 passed。后续已用独立 `star2_recursive` 签名完成递归 probe，E3 终局精确求解器也已完成；默认 AI/GUI/release/P14/core 均未改变。
 
 2026-07-31 R-P2A recursive Star2 exact probe 状态：保留 `chance_pruning="star2"` 的 frontier-only 实验签名，新增默认关闭的 `chance_pruning="star2_recursive"`，在所有正深度使用方向安全 one-child probe。选中 move 的后续 chance subtree 走无 sibling pruning 的 exact helper；完整子树可写 exact TT 并供 Star1 fallback 复用，incomplete/timeout 不形成 bound，probe-cut parent 不写 exact TT。该实现未包含 Ballard transformed alpha/beta probe window。`balanced_v1` depth-2 单决策为 1686 nodes、12 TT hits、240 probes、6 probe cutoffs、无 timeout；1 局短 probe 为 17 steps、avg 31.24ms、max 134.65ms、0 illegal/crash/timeout，仅作 wiring 证据。审查无 Critical/Important；已补非恒定 evaluator 的生产 exact-subtree 对照，并明确 node/probe 计数边界。报告见 `reports/rp2a_recursive_star2_20260731.md`。验证：ExpectimaxV2 目标组 61 passed；全量 `pytest -q` 970 passed。默认 AI/GUI/release/P14/core 均未改变；后续 E3 已完成 exact endgame solver，retrograde 残局库仍为远期项。
 
@@ -130,6 +132,10 @@ requirements-research.txt   # 研究依赖声明；当前只列 numpy，torch �
 
 2026-06-13 R-P2B 开闸状态：L0 已新增 `MCTSAI.leaf_policy` 诊断入口，`static` 为默认旧行为，显式 `playout` 才从叶子局面执行最多 `leaf_playout_turns` 个随机半回合；终局/无合法步返回 `WIN_VALUE/-WIN_VALUE`，截断后回到当前静态 evaluator，并保证搜索局面通过 undo 还原。`MCTSAI.max_step_time_ms` 对齐 `time_limit_ms`，让 match harness 能记录 MCTS timeout telemetry；`ai_version_signature()` 记录 `leaf_policy` / `leaf_playout_turns`，`build_ai("mcts_eval_v1")` 可透传这些参数。`scripts/ladder.py` 支持 `--players-config` JSON 玩家配置与 `--max-turns` 运行边界。R-P2B L0 smoke 已用 P14 锚点、static leaf MCTS、playout leaf MCTS 跑 6 局 round-robin：`seed=62013`、`layout=balanced_v1`、`max_turns=40`，输出当时写入仓库 ignored 目录 `data/ladder/rp2b_mcts_leaf_playout_l0_20260613_v2/`；审查 follow-up 后该目录不得作为默认目标，后续运行必须显式指定外部输出目录或 `CG_RESEARCH_DATA_DIR`。`illegal_moves=0`、`crashes=0`、`timeouts=0`，但样本太小且 `mcts_playout_z_l8` 暂无优于 static leaf 的正信号，不能声称棋力提升。报告见 `reports/rp2b_mcts_leaf_playout_entry_20260613.md`。`tests/test_mcts.py` 为 25 passed，`tests/test_ladder.py` 为 12 passed，全量 `pytest -q` 为 921 passed in 72.91s。默认 AI、core、GUI、release/v1.0 和 P14 默认 rollout 均未改变。
 
+R-P2B L1 状态：2026-08-03 完成 `greedy_risk` / `greedy_zweistein` 评估权重的确定性 CEM 调参 harness，2026-08-18 通过最终 schema 2 复核。候选按有界 log-space 采样，使用同类默认 anchor、RED/BLUE 双向共同种子对局和 `scripts.ladder` Elo 目标；逐局 seed、结果、telemetry、评分前后值、AI 签名与 Elo±不确定度持久化到 JSONL，state/report 支持严格配置匹配和无重复 resume，非有限 JSON、证据篡改和超出 state 边界的未来代候选会被拒绝。E 盘 smoke 位于 `E:/computergame-data/tuning/rp2b_l1_cem_smoke_20260803`：1 代、2 候选、4 局、两候选均 `1-1-0` / `1501.47±202.073`，0 illegal/crash/timeout；schema 2 最终 smoke 位于 `E:/computergame-data/tuning/rp2b_l1_cem_schema2_smoke_20260818`，同配置 `--resume` 保持 2 个候选。该样本只关闭 optimizer/harness 接线，不晋升默认权重，也不作棋力结论。报告见 `reports/rp2b_l1_cem_tuning_20260803.md`。最终验证：L1 目标 72 passed，跨模块目标 116 passed，全量 `pytest -q` 1071 passed in 74.51s；独立规格审查 PASS，代码质量审查无 actionable findings。
+
+2026-08-03 R-P2B L2 状态：用户已选择方案 A，即首版教师使用 P14 rollout self-play；设计采用绝对方向 `13×5×5 float32` 特征、RED 视角 `+1/-1/0` 标签和按 game ID 切分。设计稿当前等待书面确认，确认后才能编写实施计划。当前没有自对弈生成、PyTorch 训练、checkpoint 或神经评估适配器；计划批准前不安装 torch 或修改生产路径。
+
 ---
 
 ## 3. 开发纪律
@@ -140,7 +146,7 @@ requirements-research.txt   # 研究依赖声明；当前只列 numpy，torch �
 - 小步迭代：每次只改一个明确能力，输出可运行、可测试的最小结果。
 - 不默认执行 `git commit`、`git push`、`git reset --hard`、删除文件、批量移动文件或全局安装依赖。
 - 不引入联网依赖；比赛版本必须离线可运行。
-- 不优先深度学习；短期采用规则评估、风险枚举、搜索、rollout、开局搜索和参数评测。
+- L2 是下一项待确认的学习研究切片；设计稿书面确认后才能编写实施计划，PyTorch 只能在计划批准后加入研究依赖，并保持默认 GUI/core/release 路径无 torch 依赖。
 
 ---
 
@@ -384,7 +390,7 @@ RolloutAI 不改 core，只通过 GameState / legal_moves / apply_move 运行模
 greedy / greedy_risk 只能做 smoke 或辅助诊断；候选和晋升基线必须是 current release default rollout kwargs。默认变更必须保留报告。
 ```
 
-不做事项：短期不引入 Gymnasium、Stable-Baselines3、AlphaZero 或神经网络训练。
+赛前历史边界：当时不引入 Gymnasium、Stable-Baselines3、AlphaZero 或神经网络训练。当前学习路线以 §2.5 和 L2 设计审批状态为准。
 
 ### A3：开局布局搜索
 
@@ -480,7 +486,7 @@ board 旋转/取反以复用同一策略视角的工程思路。
 ```text
 不引入 Gymnasium/SB3 作为赛前依赖。
 不照搬 evaluator；其右下方玩家目标距离计算疑似有问题。
-不采用深度学习训练作为短期主线。
+赛前阶段不采用深度学习训练；当前学习路线以 §2.5 为准。
 ```
 
 ---

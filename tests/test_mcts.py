@@ -1,4 +1,4 @@
-"""Phase 1 MCTS 候选 AI 的单元测试。
+"""实验性 MCTS AI 的单元测试。
 
 设计依据：docs/superpowers/specs/2026-05-13-mcts-phase1-design.md 第 10 节。
 """

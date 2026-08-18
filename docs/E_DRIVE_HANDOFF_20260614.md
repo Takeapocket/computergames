@@ -1,115 +1,128 @@
 # E 盘开发交接说明
 
-更新时间：2026-06-14
+迁移完成：2026-06-14
 
-## 当前结论
+研究状态复核：2026-08-18
 
-`E:\computergame` 是后续唯一主开发目录。C 盘旧仓库
-`C:\Users\Takeapocket\Desktop\documents\computergames` 已弃用，仅作为迁移前快照保留，不再用于开发、测试、提交或推送。
+## 不变结论
 
-本次交接已经完成从 GitHub 干净 clone 到 E 盘，而不是复制旧目录：
+`E:\computergame` 是唯一主开发目录。C 盘旧仓库 `C:\Users\Takeapocket\Desktop\documents\computergames` 仅作为迁移前快照保留，不再用于开发、测试、提交或推送。
+
+训练数据、模型、checkpoint、自对弈棋谱和缓存不得默认写入仓库或 C 盘。
 
 ```text
 GitHub 仓库：https://github.com/Takeapocket/computergames.git
-当前分支：main
-当前提交：4b8b10910502fc9473c28e35c9128c65fafbe45e
+当前开发分支：main
 E 盘项目：E:\computergame
 E 盘研究数据：E:\computergame-data
 pip 缓存：E:\pip-cache
 torch 缓存：E:\torch-cache
 ```
 
-## 已完成动作
+## 2026-06-14 迁移记录
 
-- 修复 `scripts/ladder.py` 的 C 盘默认输出问题：CLI 不再默认写仓库内 `data/ladder`，必须显式传 `--output-dir` 或设置 `CG_RESEARCH_DATA_DIR`。
-- 修复代码审查 Important 及以下问题：ladder JSONL 元数据、非空 `games.jsonl` 混写保护、dice forensics 威胁巧合度语义、chi-square 统计输出、fast path stale guard、MCTS helper 参数透传、RolloutPairedAI characterization、研究缓存/权重 `.gitignore` 防线和相关文档口径。
-- 当前修复已提交并推送到 GitHub `main`：`4b8b109 Add research scaffolding and review fixes`。
-- 已从 GitHub clone 到 `E:\computergame`。
-- 已在 `E:\computergame` 重建 `.venv`。
-- 已用 `E:\pip-cache` 安装测试依赖和 `requirements-research.txt`；当前研究依赖只有 `numpy`，`torch` 延后到 R-P2B 需要时再引入。
-- 已创建 `E:\computergame-data`、`E:\pip-cache`、`E:\torch-cache`。
-- C 盘旧目录未删除；其中 ignored 的旧 `data/ladder` 产物也未删除。
+迁移使用 GitHub 干净 clone，没有复制 C 盘旧目录。迁移基线提交为：
 
-## 已验证状态
-
-在 `E:\computergame` 中验证：
-
-```powershell
-$env:CG_RESEARCH_DATA_DIR = "E:/computergame-data"
-$env:PIP_CACHE_DIR = "E:/pip-cache"
-$env:TORCH_HOME = "E:/torch-cache"
-& ".venv/Scripts/python.exe" -m pytest -q
+```text
+4b8b10910502fc9473c28e35c9128c65fafbe45e
+Add research scaffolding and review fixes
 ```
 
-结果：
+当时完成的动作：
+
+- 从 GitHub clone 到 `E:\computergame`
+- 在 E 盘重建 `.venv`
+- 使用 `E:\pip-cache` 安装 pytest 和研究依赖
+- 创建 `E:\computergame-data`、`E:\pip-cache` 与 `E:\torch-cache`
+- 修复 ladder 默认写仓库的问题，要求 `--output-dir` 或 `CG_RESEARCH_DATA_DIR`
+- 补齐 ladder 元数据与混写保护、dice forensics 统计语义、fast path stale guard、MCTS 参数透传和研究产物 `.gitignore` 防线
+- 保留 C 盘旧目录及其中 ignored 产物，没有删除原文件
+
+迁移时的全量验证为：
 
 ```text
 933 passed in 79.08s
 ```
 
-ladder smoke：
+迁移时还用 `games=0` 的 ladder smoke 确认 `report.json` 可以写入 `E:\computergame-data\ladder\report.json`。该命令属于历史迁移验证，不作为日常接手步骤，因为它会写共享报告路径。
 
-```powershell
-$env:CG_RESEARCH_DATA_DIR = "E:/computergame-data"
-& ".venv/Scripts/python.exe" "scripts/ladder.py" --red p14_default --blue random --games 0
-```
+## 当前回归快照
 
-结果确认 `report.json` 写入：
+2026-08-18 在当前工作区重新验证：
 
 ```text
-E:\computergame-data\ladder\report.json
+1071 passed in 74.51s
+scripts/smoke_test.py：通过
 ```
 
-`games=0` 不生成 `games.jsonl` 是预期行为；报告内的 `games_jsonl` 路径指向
-`E:\computergame-data\ladder\games.jsonl`。
+当前 `requirements-research.txt` 仍只有 NumPy。PyTorch 尚未加入依赖，默认 GUI、core、release 和默认 AI 构造路径均不依赖它。
 
-## 后续新对话接手步骤
+## 当前研究状态
 
-1. 工作目录使用 `E:\computergame`，不要回到 C 盘旧目录。
-2. 先读：
+`release/v1.0`、P14 Rollout 参数和 `balanced_v1` 布局继续作为历史比赛基线。实验能力均未替换 GUI/release 默认配置。
+
+### R-P1
+
+性能探针、可落盘 Elo 天梯、棋谱复盘、骰子审计、trusted apply 和 `GameState.clone(include_history=False)` 两项内部快路径已经实现。
+
+现有性能报告没有同参数修改前基线，因此不能声称达到研究设计中的 5 倍提速。真实棋谱复盘和骰子取证仍需要外部棋谱输入。
+
+### R-P2A
+
+当前定义的 E1 至 E3 已实现：
+
+- ExpectimaxV2 的 TT、走法排序和迭代加深
+- 递归 Star1 上下界剪枝
+- `star2` frontier probe 与 `star2_recursive` exact-probe 模式
+- 受局面门限约束的精确残局求解器
+
+这些结果验证正确性和接线，不构成相对 P14 的棋力结论。残局求解器尚未组成完整对局混合 AI；Star2 也没有实现 Ballard transformed alpha/beta probe window。
+
+### R-P2B
+
+- L0：MCTS static/playout leaf 接线和 6 局 smoke 已完成，样本不支持 playout leaf 更强的结论。
+- L1：确定性、可恢复的 CEM 调参 harness 已完成。E 盘 smoke 共 4 局，只验证优化器、Elo 证据链和恢复逻辑，没有晋升默认权重。
+- L2：价值网络设计已经形成，当前等待书面确认。确认后才能编写实施计划；自对弈数据生成、PyTorch 训练、checkpoint 和神经 Rollout/MCTS 适配器均尚未实现。
+
+L2 首版教师固定为 P14 rollout self-play。特征为绝对方向的 `13×5×5 float32`，标签为 RED 视角 `+1/-1/0`，训练集与验证集按 game ID 切分。PyTorch 必须保持研究路径惰性导入，不能渗入 core、GUI、release 或默认 AI。
+
+## 新对话接手步骤
+
+1. 确认工作目录为 `E:\computergame`，不要回到 C 盘旧快照。
+2. 读取：
    - `PROJECT_MEMORY.md`
    - `PROJECT_PHASES.md`
    - `README.md`
    - `docs/RULE_ASSUMPTIONS.md`
    - `docs/PROJECT_BRIEF.md`
    - `docs/E_DRIVE_HANDOFF_20260614.md`
-3. 开始前运行：
+3. 若继续 L2，再读取 `docs/superpowers/specs/2026-08-03-rp2b-l2-value-network-design.md`。
+4. 用只读 Git 命令确认当前分支、提交和工作区状态，不要假设交接文档中的历史提交仍是 HEAD。
+5. 设置研究环境变量，再运行验证。
 
 ```powershell
 cd E:\computergame
 git status --short
 git rev-parse --short HEAD
-```
 
-4. 研究脚本默认使用 E 盘环境变量：
-
-```powershell
 $env:CG_RESEARCH_DATA_DIR = "E:/computergame-data"
 $env:PIP_CACHE_DIR = "E:/pip-cache"
 $env:TORCH_HOME = "E:/torch-cache"
-```
 
-5. 常用验证：
-
-```powershell
 & ".venv/Scripts/python.exe" -m pytest -q
-& ".venv/Scripts/python.exe" "scripts/ladder.py" --red p14_default --blue random --games 0
+& ".venv/Scripts/python.exe" "scripts/smoke_test.py"
+& ".venv/Scripts/python.exe" "scripts/ladder.py" --help
+& ".venv/Scripts/python.exe" "scripts/tune_eval_weights.py" --help
 ```
 
-## 当前研究状态
+不要把 `ladder.py --games 0` 作为日常接手验证写入共享 ladder 目录。需要运行 ladder 时，为每次实验使用唯一的新输出目录。
 
-项目已从比赛交付转入长期 AI 棋力研究。`release/v1.0` 和 P14 默认 rollout 参数保留为历史基线与天梯 1500 锚点。
+## 研究纪律
 
-当前可继续推进的主线：
-
-- R-P1：性能基线、fast path 后续优化、持久 Elo 天梯、真实棋谱复盘、骰子取证。
-- R-P2A：ExpectimaxV2 经典搜索线。当前已到 Star1 root chance pruning 入口，完整递归 Star1/Star2 interval pruning 尚未实现。
-- R-P2B：MCTS / learning 线。当前仅完成 leaf playout L0 入口和小样本 smoke，暂无棋力提升结论。
-
-研究纪律：
-
-- AI 棋力结论只认持久天梯或批量 harness 数据。
-- 默认 AI、默认布局、release 配置不得因单局结果变更。
-- 训练数据、模型权重、自对弈棋谱、pip/torch cache 一律放 E 盘。
-- README 及对外文档不写比赛结果信息。
-- 旧失败路线重开必须先写新技术假设和门禁，参考 `reports/ai_experiment_stop_list_20260518.md`。
+- AI 棋力结论只认可复现的批量对战或带完整证据的 Elo 实验。
+- P14 是默认基线和 1500 锚点；小样本结果不得改动默认 AI、布局或 release 参数。
+- 训练数据、模型、checkpoint、自对弈棋谱、pip 缓存和 torch 缓存一律放 E 盘。
+- `scripts/ladder.py` 和 `scripts/tune_eval_weights.py` 必须使用显式输出目录，或从 `CG_RESEARCH_DATA_DIR` 派生目录。
+- 旧失败路线重开前先写新的技术假设和门禁，参考 `reports/ai_experiment_stop_list_20260518.md`。
+- L2 设计稿书面确认后才能编写实施计划；计划批准前不安装 PyTorch、不生成训练数据、不修改生产路径。
+- L2 有界 smoke 只能证明 pipeline 与 wiring 可用，不能作为棋力晋升证据。
