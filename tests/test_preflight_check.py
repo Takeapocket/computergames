@@ -174,7 +174,7 @@ def test_subprocess_runner_uses_project_local_temp(tmp_path, monkeypatch) -> Non
 
         return Result()
 
-    monkeypatch.setattr(preflight_check.subprocess, "run", fake_run)
+    monkeypatch.setattr("scripts._runtime_support.subprocess.run", fake_run)
 
     assert preflight_check._subprocess_runner(("python", "-V"), tmp_path) == 0
     assert captured["cwd"] == tmp_path

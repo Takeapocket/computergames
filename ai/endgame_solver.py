@@ -10,6 +10,7 @@ from core.game_state import GameState
 from core.move import Move
 from core.rules import target_corner
 from core.types import Player
+from core.validation import require_bool, require_int
 
 
 DEFAULT_ENDGAME_MAX_TOTAL_PIECES = 3
@@ -58,12 +59,8 @@ def is_exact_endgame_eligible(
     max_total_pieces: int = DEFAULT_ENDGAME_MAX_TOTAL_PIECES,
     max_total_distance: int = DEFAULT_ENDGAME_MAX_TOTAL_DISTANCE,
 ) -> bool:
-    max_pieces = int(max_total_pieces)
-    max_distance = int(max_total_distance)
-    if max_pieces < 0:
-        raise ValueError("max_total_pieces must be non-negative")
-    if max_distance < 0:
-        raise ValueError("max_total_distance must be non-negative")
+    max_pieces = require_int(max_total_pieces, "max_total_pieces", minimum=0)
+    max_distance = require_int(max_total_distance, "max_total_distance", minimum=0)
     if state.get_winner() is not None:
         return True
     return (
@@ -80,12 +77,10 @@ def exact_endgame_transposition_key(
 ) -> ExactEndgameTranspositionKey:
     if node_type not in ("chance", "turn"):
         raise ValueError("node_type must be 'chance' or 'turn'")
-    normalized_dice = None if dice is None else int(dice)
+    normalized_dice = None if dice is None else require_int(dice, "dice", minimum=1, maximum=6)
     if node_type == "chance" and normalized_dice is not None:
         raise ValueError("chance keys must not include dice")
-    if node_type == "turn" and (
-        normalized_dice is None or not 1 <= normalized_dice <= 6
-    ):
+    if node_type == "turn" and normalized_dice is None:
         raise ValueError("turn keys require dice between 1 and 6")
     return node_type, normalized_dice, expectimax_v2_state_key(state)
 
@@ -105,13 +100,9 @@ class ExactEndgameSolver:
         max_total_distance: int = DEFAULT_ENDGAME_MAX_TOTAL_DISTANCE,
         use_transposition_table: bool = True,
     ) -> None:
-        self.max_total_pieces = int(max_total_pieces)
-        self.max_total_distance = int(max_total_distance)
-        if self.max_total_pieces < 0:
-            raise ValueError("max_total_pieces must be non-negative")
-        if self.max_total_distance < 0:
-            raise ValueError("max_total_distance must be non-negative")
-        self.use_transposition_table = bool(use_transposition_table)
+        self.max_total_pieces = require_int(max_total_pieces, "max_total_pieces", minimum=0)
+        self.max_total_distance = require_int(max_total_distance, "max_total_distance", minimum=0)
+        self.use_transposition_table = require_bool(use_transposition_table, "use_transposition_table")
         self.last_search_stats = ExactEndgameSearchStats()
         self._table: ExactEndgameTranspositionTable | None = None
 
@@ -274,7 +265,7 @@ class ExactEndgameAI(ExactEndgameSolver):
         )
         self._rng = rng or random.Random()
         self.name = str(name)
-        self.randomize_ties = bool(randomize_ties)
+        self.randomize_ties = require_bool(randomize_ties, "randomize_ties")
         self.last_root_probabilities: list[tuple[Move, float]] = []
 
     def choose_move(self, state: GameState, dice: int) -> Move | None:

@@ -23,6 +23,7 @@ from ai.match import build_ai, play_one_game
 from ai.opening_layouts import PRESETS
 from core.game_state import GameState
 from core.types import Player, Position
+from scripts._release_config import load_release_default_ai_config as _load_release_default_ai_config
 
 
 RED_HOME: list[Position] = [
@@ -39,11 +40,7 @@ STYLE_ORDER = ("aggressive", "balanced", "defensive")
 def load_release_default_ai_config(
     path: str | Path = ROOT / "release" / "v1.0" / "default_params.json",
 ) -> tuple[str, dict]:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    if data.get("ai") != "rollout":
-        raise ValueError("release/v1.0/default_params.json must use ai='rollout' for P5 opening baselines")
-    metadata_keys = {"ai", "fallback_ai", "promotion_report"}
-    return "rollout", {key: value for key, value in data.items() if key not in metadata_keys}
+    return _load_release_default_ai_config(path)
 
 
 def _all_permutation_layouts() -> list[dict[int, Position]]:

@@ -24,6 +24,7 @@ from ai.zweistein import zweistein_lite_score
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
+from core.validation import require_finite_number, require_int
 
 
 WIN_VALUE: float = 1.0
@@ -99,6 +100,10 @@ def _uct_score(
     return exploitation + exploration
 
 
+class _SearchTimeout(Exception):
+    """A partial leaf evaluation must not enter MCTS statistics."""
+
+
 class MCTSAI:
     """实验性 MCTS AI。
 
@@ -124,21 +129,21 @@ class MCTSAI:
             raise ValueError(f"unknown leaf_evaluator: {leaf_evaluator!r}")
         if leaf_policy not in {"static", "playout"}:
             raise ValueError(f"unknown leaf_policy: {leaf_policy!r}")
-        normalized_leaf_playout_turns = int(leaf_playout_turns)
-        if normalized_leaf_playout_turns < 0:
-            raise ValueError("leaf_playout_turns must be non-negative")
-        self.time_limit_ms = float(time_limit_ms)
+        self.time_limit_ms = require_finite_number(time_limit_ms, "time_limit_ms", minimum=0.0)
         self.max_step_time_ms = self.time_limit_ms
-        self.c_uct = float(c_uct)
-        self.scale = float(scale)
+        self.c_uct = require_finite_number(c_uct, "c_uct", minimum=0.0)
+        self.scale = require_finite_number(scale, "scale", minimum=0.0)
+        if self.scale == 0.0:
+            raise ValueError("scale must be positive")
         self.max_iterations = (
-            int(max_iterations) if max_iterations is not None else None
+            require_int(max_iterations, "max_iterations", minimum=0)
+            if max_iterations is not None else None
         )
         self._rng = rng or random.Random()
         self.name = name
         self.leaf_evaluator = leaf_evaluator
         self.leaf_policy = leaf_policy
-        self.leaf_playout_turns = normalized_leaf_playout_turns
+        self.leaf_playout_turns = require_int(leaf_playout_turns, "leaf_playout_turns", minimum=0)
         # 报告字段：最近一次 choose_move 的统计，bench 可读取作为 avg_iterations/max_depth 输入。
         self.last_iterations: int = 0
         self.last_max_depth: int = 0
@@ -183,9 +188,9 @@ class MCTSAI:
             return legal_moves[0]
 
         # 按 visit_count 选最强分支，tie-break 用 q。
-        best_key, best_chance = max(
-            root.children.items(),
-            key=lambda kv: (kv[1].visit_count, kv[1].q),
+        best_chance = max(
+            root.children.values(),
+            key=lambda child: (child.visit_count, child.q),
         )
         return best_chance.parent_move
 
@@ -255,10 +260,9 @@ class MCTSAI:
                         else:
                             if time.perf_counter() >= deadline:
                                 return None
-                            raw = self._leaf_score(state, root_player)
+                            value = self._leaf_score(state, root_player, deadline=deadline)
                             if time.perf_counter() >= deadline:
                                 return None
-                            value = _normalize(raw, self.scale)
                         break
 
                     if time.perf_counter() >= deadline:
@@ -287,6 +291,8 @@ class MCTSAI:
                     depth += 1
                     if time.perf_counter() >= deadline:
                         return None
+        except _SearchTimeout:
+            return None
         finally:
             # 任何路径异常都要把 state 还原到 root 局面。
             while len(state.history) > history_size_before:
@@ -321,10 +327,13 @@ class MCTSAI:
         assert best_chance is not None
         return best_chance.parent_move, best_chance
 
-    def _leaf_score(self, state: GameState, perspective: Player) -> float:
+    def _leaf_score(
+        self, state: GameState, perspective: Player, *, deadline: float | None = None,
+    ) -> float:
+        """Return a normalized search value, preserving exact terminal +/-1."""
         if self.leaf_policy == "playout":
-            return self._leaf_playout_score(state, perspective)
-        return self._static_leaf_score(state, perspective)
+            return self._leaf_playout_score(state, perspective, deadline=deadline)
+        return _normalize(self._static_leaf_score(state, perspective), self.scale)
 
     def _static_leaf_score(self, state: GameState, perspective: Player) -> float:
         if self.leaf_evaluator == "zweistein":
@@ -336,10 +345,14 @@ class MCTSAI:
             expected_win_risk_weight=0.0,
         )
 
-    def _leaf_playout_score(self, state: GameState, perspective: Player) -> float:
+    def _leaf_playout_score(
+        self, state: GameState, perspective: Player, *, deadline: float | None = None,
+    ) -> float:
         history_size_before = len(state.history)
         try:
             for _ in range(self.leaf_playout_turns):
+                if deadline is not None and time.perf_counter() >= deadline:
+                    raise _SearchTimeout
                 winner = state.get_winner()
                 if winner is not None:
                     return WIN_VALUE if winner is perspective else -WIN_VALUE
@@ -351,10 +364,12 @@ class MCTSAI:
                     return WIN_VALUE if active.opponent is perspective else -WIN_VALUE
                 state.apply_move(self._rng.choice(legal), dice=dice)
 
+            if deadline is not None and time.perf_counter() >= deadline:
+                raise _SearchTimeout
             winner = state.get_winner()
             if winner is not None:
                 return WIN_VALUE if winner is perspective else -WIN_VALUE
-            return self._static_leaf_score(state, perspective)
+            return _normalize(self._static_leaf_score(state, perspective), self.scale)
         finally:
             while len(state.history) > history_size_before:
                 state.undo_move()

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from core.types import MAX_PIECE_ID, MIN_PIECE_ID, Position
+from core.validation import require_int
 
 
 Layout = dict[int, Position]
@@ -118,7 +119,7 @@ def layout_to_metadata(layout: Mapping[int, Position]) -> dict[str, list[int]]:
 
 def _validate_side(label: str, layout: Mapping[int, Position], zone: frozenset[Position]) -> list[str]:
     errors: list[str] = []
-    ids = {int(piece_id) for piece_id in layout}
+    ids = {require_int(piece_id, "piece_id") for piece_id in layout}
     missing = sorted(EXPECTED_PIECE_IDS - ids)
     unexpected = sorted(ids - EXPECTED_PIECE_IDS)
     if missing:
@@ -175,10 +176,19 @@ def _layout_from_dict(data: Mapping[str, Any]) -> OpeningLayout:
 
 
 def _parse_layout(data: Mapping[str, Any]) -> Layout:
+    if not isinstance(data, Mapping):
+        raise ValueError("invalid layout file")
+    if set(data) != {str(piece_id) for piece_id in EXPECTED_PIECE_IDS}:
+        raise ValueError("layout must contain canonical piece ids 1 through 6")
     layout: Layout = {}
     for piece_id, raw_position in data.items():
+        if not isinstance(raw_position, (list, tuple)) or len(raw_position) != 2:
+            raise ValueError("layout coordinates must be integer pairs")
         row, col = raw_position
-        layout[int(piece_id)] = Position(int(row), int(col))
+        layout[int(piece_id)] = Position(
+            require_int(row, "layout row", minimum=0, maximum=4),
+            require_int(col, "layout col", minimum=0, maximum=4),
+        )
     return layout
 
 

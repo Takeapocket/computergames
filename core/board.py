@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from core.types import BOARD_SIZE, Piece, Player, Position
-
-
-def create_empty_board() -> list[list[Piece | None]]:
-    return [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
+from core.types import Piece, Player, Position
 
 
 def get_piece_at(

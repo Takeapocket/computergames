@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+import gc
 
 import pytest
 
@@ -36,6 +37,8 @@ def tk_root(_tk_root):
     yield top
     if top.winfo_exists():
         top.destroy()
+    # Tk variables must be finalized on the UI thread, before another worker allocates.
+    gc.collect()
 
 
 @pytest.fixture(autouse=True)
@@ -348,6 +351,7 @@ def test_match_restore_setup_phase_clears_stale_single_game_auto_save(
 
     # 1) 残留的单盘 auto-save（模拟 finalize 已写过 match 但崩在 _clear_auto_save 之前）
     stub_record = _stub_game()
+    stub_record.metadata.update({"match_id": "committed-match", "game_index": 1})
     snapshot = TimerSnapshot(
         current_player=Player.RED,
         remaining_seconds={Player.RED: 240.0, Player.BLUE: 240.0},
@@ -364,7 +368,8 @@ def test_match_restore_setup_phase_clears_stale_single_game_auto_save(
         our_role="甲",
         current_game_index=2,
         games_won_us=1,
-        games=[_stub_game()],
+        games=[stub_record],
+        match_id="committed-match",
     )
     auto_save_match(match, path=tmp_path / "auto_save_match.json")
 

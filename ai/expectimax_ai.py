@@ -3,11 +3,12 @@ from __future__ import annotations
 import random
 import time
 
-from ai.evaluator import WIN_SCORE, evaluate
+from ai.evaluator import WIN_SCORE, evaluate, validate_evaluator_weights
 from ai.zweistein import zweistein_lite_score
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player
+from core.validation import require_bool, require_finite_number, require_int
 
 
 class ExpectimaxAI:
@@ -33,16 +34,15 @@ class ExpectimaxAI:
         leaf_evaluator: str = "current",
         **eval_kwargs: float,
     ) -> None:
-        if depth < 0:
-            raise ValueError(f"depth must be >= 0, got {depth}")
+        self.depth = require_int(depth, "depth", minimum=0)
         if leaf_evaluator not in {"current", "zweistein"}:
             raise ValueError(f"unknown leaf_evaluator: {leaf_evaluator!r}")
-        self.depth = depth
-        self.time_limit_ms = time_limit_ms
+        self.time_limit_ms = require_finite_number(time_limit_ms, "time_limit_ms", minimum=0.0)
         self._rng = rng or random.Random()
         self.name = name
-        self.randomize_ties = randomize_ties
+        self.randomize_ties = require_bool(randomize_ties, "randomize_ties")
         self.leaf_evaluator = leaf_evaluator
+        validate_evaluator_weights(**eval_kwargs)
         self._eval_kwargs = eval_kwargs
         # 把 evaluator 类权重提升为公共属性，供 ai_version_signature 反射记录到 bench metadata。
         self.expected_risk_weight = eval_kwargs.get("expected_risk_weight", 0.0)

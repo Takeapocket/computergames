@@ -7,13 +7,6 @@ from __future__ import annotations
 
 import random
 from collections import Counter
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:  # avoid circular import with ai/__init__.py
-    from ai import AIPlayer
-    from core.game_state import GameState
-    from core.move import Move
-    from core.types import Player
 
 
 def pick_max_material(moves, rng: random.Random):

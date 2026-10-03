@@ -9,9 +9,11 @@ NONNEGATIVE_SECONDS_ERROR = "计时秒数必须是非负有限数。"
 
 
 def validate_total_seconds(value: float | str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(TIME_LIMIT_ERROR)
     try:
         total_seconds = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise ValueError(TIME_LIMIT_ERROR) from None
     if not math.isfinite(total_seconds) or total_seconds <= 0.0:
         raise ValueError(TIME_LIMIT_ERROR)
@@ -26,9 +28,11 @@ def parse_total_seconds_arg(value: str) -> float:
 
 
 def validate_nonnegative_seconds(value: float | str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(NONNEGATIVE_SECONDS_ERROR)
     try:
         seconds = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise ValueError(NONNEGATIVE_SECONDS_ERROR) from None
     if not math.isfinite(seconds) or seconds < 0.0:
         raise ValueError(NONNEGATIVE_SECONDS_ERROR)

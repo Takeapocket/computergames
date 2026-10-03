@@ -11,6 +11,7 @@ from ai.zweistein_dp import zweistein_dp_win_prob
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player
+from core.validation import require_bool, require_finite_number, require_int
 
 
 @dataclass(frozen=True)
@@ -120,21 +121,21 @@ class RolloutAI:
             raise ValueError(f"unknown playout_policy: {playout_policy!r}")
         if cutoff_eval not in {"draw", "current", "zweistein", "zweistein_dp"}:
             raise ValueError(f"unknown cutoff_eval: {cutoff_eval!r}")
-        self.rollouts_per_move = int(rollouts_per_move)
-        self.max_rollout_turns = int(max_rollout_turns)
-        self.max_step_time_ms = float(max_step_time_ms)
-        self.epsilon = float(epsilon)
-        self.close_sample_margin = float(close_sample_margin)
+        self.rollouts_per_move = require_int(rollouts_per_move, "rollouts_per_move", minimum=0)
+        self.max_rollout_turns = require_int(max_rollout_turns, "max_rollout_turns", minimum=0)
+        self.max_step_time_ms = require_finite_number(max_step_time_ms, "max_step_time_ms", minimum=0.0)
+        self.epsilon = require_finite_number(epsilon, "epsilon", minimum=0.0, maximum=1.0)
+        self.close_sample_margin = require_finite_number(close_sample_margin, "close_sample_margin", minimum=0.0)
         close_rollouts = (
             self.rollouts_per_move
             if close_sample_rollouts_per_move is None
-            else int(close_sample_rollouts_per_move)
+            else require_int(close_sample_rollouts_per_move, "close_sample_rollouts_per_move", minimum=0)
         )
         self.close_sample_rollouts_per_move = max(self.rollouts_per_move, close_rollouts)
-        self.low_confidence_margin = float(low_confidence_margin)
+        self.low_confidence_margin = require_finite_number(low_confidence_margin, "low_confidence_margin", minimum=0.0)
         self.playout_policy = playout_policy
         self.cutoff_eval = cutoff_eval
-        self.deadline_safety_ms = max(0.0, float(deadline_safety_ms))
+        self.deadline_safety_ms = require_finite_number(deadline_safety_ms, "deadline_safety_ms", minimum=0.0)
         self._rng = rng or random.Random()
         self.name = name
         self.fallback_count = 0
@@ -146,13 +147,16 @@ class RolloutAI:
         self.last_used_fallback = False
         self._playout_hit_deadline = False
 
-    def choose_move(self, state: GameState, dice: int) -> Move | None:
+    def _reset_search_diagnostics(self) -> None:
         self.last_root_stats = []
         self.last_diagnostics = []
         self.last_score_margin = None
         self.last_low_confidence = False
         self.last_timed_out = False
         self.last_used_fallback = False
+
+    def choose_move(self, state: GameState, dice: int) -> Move | None:
+        self._reset_search_diagnostics()
         legal = state.legal_moves(state.current_player, dice)
         if not legal:
             return None
@@ -364,17 +368,12 @@ class RolloutPairedAI(RolloutAI):
         **kwargs,
     ) -> None:
         super().__init__(rng=rng, name=name, **kwargs)
-        self.paired_trial_seed_stride = int(paired_trial_seed_stride)
-        self.paired_shuffle_moves = bool(paired_shuffle_moves)
+        self.paired_trial_seed_stride = require_int(paired_trial_seed_stride, "paired_trial_seed_stride", minimum=1)
+        self.paired_shuffle_moves = require_bool(paired_shuffle_moves, "paired_shuffle_moves")
         self.close_sample_enabled = False
 
     def choose_move(self, state: GameState, dice: int) -> Move | None:
-        self.last_root_stats = []
-        self.last_diagnostics = []
-        self.last_score_margin = None
-        self.last_low_confidence = False
-        self.last_timed_out = False
-        self.last_used_fallback = False
+        self._reset_search_diagnostics()
         legal = state.legal_moves(state.current_player, dice)
         if not legal:
             return None
@@ -486,23 +485,18 @@ class RolloutRootRacingAI(RolloutAI):
         name: str = "rollout_root_racing",
         **kwargs,
     ) -> None:
-        initial = max(1, int(racing_initial_rollouts_per_move))
+        initial = require_int(racing_initial_rollouts_per_move, "racing_initial_rollouts_per_move", minimum=1)
         super().__init__(rng=rng, name=name, **kwargs)
         self.racing_initial_rollouts_per_move = initial
-        self.racing_survivor_count = max(1, int(racing_survivor_count))
-        self.racing_final_survivor_count = max(
-            1,
-            min(int(racing_final_survivor_count), self.racing_survivor_count),
+        self.racing_survivor_count = require_int(racing_survivor_count, "racing_survivor_count", minimum=1)
+        self.racing_final_survivor_count = min(
+            require_int(racing_final_survivor_count, "racing_final_survivor_count", minimum=1),
+            self.racing_survivor_count,
         )
-        self.racing_batch_rollouts_per_move = max(1, int(racing_batch_rollouts_per_move))
+        self.racing_batch_rollouts_per_move = require_int(racing_batch_rollouts_per_move, "racing_batch_rollouts_per_move", minimum=1)
 
     def choose_move(self, state: GameState, dice: int) -> Move | None:
-        self.last_root_stats = []
-        self.last_diagnostics = []
-        self.last_score_margin = None
-        self.last_low_confidence = False
-        self.last_timed_out = False
-        self.last_used_fallback = False
+        self._reset_search_diagnostics()
         legal = state.legal_moves(state.current_player, dice)
         if not legal:
             return None

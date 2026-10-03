@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 
 from core.types import Player
+from core.validation import require_bool, require_finite_number, require_int
 from record.game_record import GameRecord
 
 
@@ -32,9 +33,23 @@ class MatchRecord:
     last_game_winner: Optional[MatchSideOutcome] = None
     phase: MatchPhase = "setup"
     match_id: str = ""
+    time_limit_seconds: float = 240.0
+    auto_timeout_enabled: bool = False
+    _stored_timer_fields: frozenset[str] = field(
+        default_factory=lambda: frozenset({"time_limit_seconds", "auto_timeout_enabled"}),
+        init=False, repr=False, compare=False,
+    )
 
     def __post_init__(self) -> None:
         self.our_side = Player.from_value(self.our_side)
+        for name in ("total_games", "target_wins", "games_won_us", "games_won_them", "current_game_index"):
+            require_int(getattr(self, name), name)
+        self.time_limit_seconds = require_finite_number(self.time_limit_seconds, "time_limit_seconds", minimum=0.0)
+        if self.time_limit_seconds == 0.0:
+            raise ValueError("time_limit_seconds must be positive")
+        require_bool(self.auto_timeout_enabled, "auto_timeout_enabled")
+        if not isinstance(self.started_at, str) or not isinstance(self.match_id, str):
+            raise ValueError("started_at and match_id must be strings")
         if self.our_role not in ("甲", "乙"):
             raise ValueError(f"invalid match role: {self.our_role!r}")
         if self.total_games < 1:
@@ -82,6 +97,7 @@ class MatchRecord:
         self.phase = "playing"
 
     def first_mover(self, game_index: int) -> MatchSideOutcome:
+        require_int(game_index, "game_index")
         if not 1 <= game_index <= self.total_games:
             raise ValueError(f"game_index out of range: {game_index}")
         jia_first = game_index in JIA_FIRST_GAMES
@@ -142,6 +158,8 @@ class MatchRecord:
             "started_at": self.started_at,
             "last_game_winner": self.last_game_winner,
             "phase": self.phase,
+            "time_limit_seconds": self.time_limit_seconds,
+            "auto_timeout_enabled": self.auto_timeout_enabled,
         }
 
     @classmethod
@@ -152,23 +170,28 @@ class MatchRecord:
                 raise ValueError("games must be a list")
             instance = cls(
                 our_side=Player.from_value(data["our_side"]),
-                our_role=str(data["our_role"]),
-                total_games=int(data.get("total_games", 7)),
-                target_wins=int(data.get("target_wins", 4)),
+                our_role=data["our_role"],
+                total_games=data.get("total_games", 7),
+                target_wins=data.get("target_wins", 4),
                 games=[GameRecord.from_dict(item) for item in games_data],
-                games_won_us=int(data.get("games_won_us", 0)),
-                games_won_them=int(data.get("games_won_them", 0)),
-                current_game_index=int(data.get("current_game_index", 1)),
-                started_at=str(data.get("started_at", "")),
+                games_won_us=data.get("games_won_us", 0),
+                games_won_them=data.get("games_won_them", 0),
+                current_game_index=data.get("current_game_index", 1),
+                started_at=data.get("started_at", ""),
                 last_game_winner=data.get("last_game_winner"),
-                phase=str(data.get("phase", "setup")),
-                match_id=str(data.get("match_id", "")),
+                phase=data.get("phase", "setup"),
+                match_id=data.get("match_id", ""),
+                time_limit_seconds=data.get("time_limit_seconds", 240.0),
+                auto_timeout_enabled=data.get("auto_timeout_enabled", False),
             )
         except (AttributeError, KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"invalid match record data: {exc}") from exc
         # R-2 review #2：反序列化路径额外校验 games 数量与比分一致。
         # 构造路径允许 score-only 快捷写法（既有测试与内部用例依赖），
         # 但从 JSON 来的数据必须 len(games) == games_won_us + games_won_them。
+        instance._stored_timer_fields = frozenset(
+            name for name in ("time_limit_seconds", "auto_timeout_enabled") if name in data
+        )
         expected_games = instance.games_won_us + instance.games_won_them
         if len(instance.games) != expected_games:
             raise ValueError(
@@ -176,6 +199,13 @@ class MatchRecord:
                 f"(games={len(instance.games)}, us={instance.games_won_us}, "
                 f"them={instance.games_won_them})"
             )
+        expected_index = (
+            len(instance.games)
+            if instance.is_finished() or len(instance.games) == instance.total_games
+            else len(instance.games) + 1
+        )
+        if instance.current_game_index != expected_index:
+            raise ValueError("invalid match record data: current_game_index inconsistent with games")
         return instance
 
     def to_json(self, *, indent: int | None = None) -> str:

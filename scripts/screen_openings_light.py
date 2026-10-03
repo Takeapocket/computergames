@@ -18,7 +18,6 @@ DEFAULT_OUTPUT = ROOT / "reports" / "opening_light_screen.json"
 DEFAULT_SUMMARY = ROOT / "reports" / "opening_light_screen.md"
 SCHEMA_VERSION = 1
 
-METADATA_KEYS = {"ai", "fallback_ai", "promotion_report"}
 DEFAULT_MAX_CANDIDATES = 8
 DEFAULT_GAMES_PER_SIDE = 1
 DEFAULT_MAX_PLANNED_GAMES = 32
@@ -29,6 +28,7 @@ from ai.match import build_ai, play_one_game
 from ai.opening_layouts import PRESETS, RED_ZONE, Layout, mirror_layout, validate_layout
 from core.game_state import GameState
 from core.types import Player, Position
+from scripts._release_config import load_release_default_ai_config as _load_release_default_ai_config
 
 Mode = Literal["curated", "full"]
 GameRole = Literal["candidate_as_red", "candidate_as_blue"]
@@ -492,14 +492,9 @@ def run_candidate(
 
 
 def load_release_default_ai_config(
-    path=ROOT / "release" / "v1.0" / "default_params.json",
-) -> tuple[str, dict[str, Any]]:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("ai") != "rollout":
-        raise ValueError("release/v1.0/default_params.json must use ai='rollout'")
-
-    kwargs = {key: value for key, value in data.items() if key not in METADATA_KEYS}
-    return "rollout", kwargs
+    path: str | Path = ROOT / "release" / "v1.0" / "default_params.json",
+) -> tuple[str, dict]:
+    return _load_release_default_ai_config(path)
 
 
 def validate_run_limits(

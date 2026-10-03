@@ -325,6 +325,8 @@ def play_one_game(
             )
 
         try:
+            if not isinstance(move, Move):
+                raise ValueError("AI must return a Move or None")
             applied = state.apply_move(move, dice=dice)
         except ValueError:
             illegal_moves += 1
@@ -567,10 +569,10 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
         from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
         from ai.rollout_ai import RolloutAI
 
-        top_k = int(ai_kwargs.pop("top_k", 3))
-        exact_mix = float(ai_kwargs.pop("exact_mix", 0.35))
-        min_time_remaining_ms = float(ai_kwargs.pop("min_time_remaining_ms", 20.0))
-        max_step_time_ms = float(ai_kwargs.pop("max_step_time_ms", RELEASE_DEFAULT_ROLLOUT_KWARGS["max_step_time_ms"]))
+        top_k = ai_kwargs.pop("top_k", 3)
+        exact_mix = ai_kwargs.pop("exact_mix", 0.35)
+        min_time_remaining_ms = ai_kwargs.pop("min_time_remaining_ms", 20.0)
+        max_step_time_ms = ai_kwargs.pop("max_step_time_ms", RELEASE_DEFAULT_ROLLOUT_KWARGS["max_step_time_ms"])
         base_kwargs = {**RELEASE_DEFAULT_ROLLOUT_KWARGS, "max_step_time_ms": max_step_time_ms}
         for key in list(ai_kwargs):
             if key in base_kwargs:
@@ -594,7 +596,7 @@ def build_ai(kind: str, *, seed: int | None = None, **ai_kwargs: Any) -> "AIPlay
         from ai.evaluator import EXPECTED_RISK_WEIGHT, EXPECTED_WIN_RISK_WEIGHT
         from ai.expectimax_ai import ExpectimaxAI
 
-        depth = int(ai_kwargs.pop("depth", 1))
+        depth = ai_kwargs.pop("depth", 1)
         expected_risk_weight = ai_kwargs.pop("expected_risk_weight", EXPECTED_RISK_WEIGHT)
         expected_win_risk_weight = ai_kwargs.pop("expected_win_risk_weight", EXPECTED_WIN_RISK_WEIGHT)
         return ExpectimaxAI(

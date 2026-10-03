@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import json
-import math
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
 from core.types import Player
+from core.validation import require_bool, require_finite_number
 from record.game_record import GameRecord, _atomic_write_text
 from record.match_record import MatchRecord
 
@@ -17,9 +17,14 @@ AUTO_SAVE_METADATA_KEY = "auto_save"
 
 
 class TimerSnapshotLike(Protocol):
-    current_player: Player
-    remaining_seconds: Mapping[Player, float]
-    paused: bool
+    @property
+    def current_player(self) -> Player: ...
+
+    @property
+    def remaining_seconds(self) -> Mapping[Player, float]: ...
+
+    @property
+    def paused(self) -> bool: ...
 
 
 def _load_json_payload(target: Path) -> Any:
@@ -112,14 +117,16 @@ def clear_auto_save(*, path: str | Path = AUTO_SAVE_PATH) -> None:
 
 
 def _timer_metadata(snapshot: TimerSnapshotLike) -> dict[str, Any]:
-    return {
+    metadata = {
         "timer_current_player": Player.from_value(snapshot.current_player).value,
         "timer_remaining": {
-            Player.from_value(player).value: max(0.0, float(seconds))
+            Player.from_value(player).value: require_finite_number(seconds, "timer_remaining", minimum=0.0)
             for player, seconds in snapshot.remaining_seconds.items()
         },
-        "timer_paused": bool(snapshot.paused),
+        "timer_paused": require_bool(snapshot.paused, "timer_paused"),
     }
+    _validate_timer_metadata(metadata)
+    return metadata
 
 
 def _validate_timer_metadata(metadata: dict[str, Any]) -> None:
@@ -137,10 +144,7 @@ def _validate_timer_metadata(metadata: dict[str, Any]) -> None:
 
 
 def _validate_remaining_seconds(value: Any) -> float:
-    seconds = float(value)
-    if not math.isfinite(seconds) or seconds < 0.0:
-        raise ValueError
-    return seconds
+    return require_finite_number(value, "timer_remaining", minimum=0.0)
 
 
 def auto_save_match(

@@ -11,6 +11,7 @@ from core.game_state import GameState
 from core.move import Move
 from core.rules import target_corner
 from core.types import Player, chebyshev_distance
+from core.validation import require_bool, require_finite_number, require_int
 
 
 EXPECTIMAX_V2_MIN_SCORE: float = -WIN_SCORE
@@ -80,13 +81,11 @@ def expectimax_v2_transposition_key(
 ) -> ExpectimaxV2TranspositionKey:
     if node_type not in ("chance", "turn"):
         raise ValueError("node_type must be 'chance' or 'turn'")
-    normalized_dice = None if dice is None else int(dice)
-    if normalized_dice is not None and not 1 <= normalized_dice <= 6:
-        raise ValueError("dice must be between 1 and 6")
+    normalized_dice = None if dice is None else require_int(dice, "dice", minimum=1, maximum=6)
     return (
         node_type,
         Player.from_value(perspective).value,
-        int(depth),
+        require_int(depth, "depth", minimum=0),
         normalized_dice,
         str(evaluator_version),
         expectimax_v2_state_key(state),
@@ -137,14 +136,14 @@ class ExpectimaxV2:
                 "chance_pruning must be one of: "
                 "'none', 'star1', 'star2', 'star2_recursive'"
             )
-        self.depth = int(depth)
-        self.time_limit_ms = float(time_limit_ms)
+        self.depth = require_int(depth, "depth", minimum=0)
+        self.time_limit_ms = require_finite_number(time_limit_ms, "time_limit_ms", minimum=0.0)
         self._rng = rng or random.Random()
         self.name = name
-        self.randomize_ties = bool(randomize_ties)
-        self.use_transposition_table = bool(use_transposition_table)
-        self.move_ordering = bool(move_ordering)
-        self.iterative_deepening = bool(iterative_deepening)
+        self.randomize_ties = require_bool(randomize_ties, "randomize_ties")
+        self.use_transposition_table = require_bool(use_transposition_table, "use_transposition_table")
+        self.move_ordering = require_bool(move_ordering, "move_ordering")
+        self.iterative_deepening = require_bool(iterative_deepening, "iterative_deepening")
         self.chance_pruning = chance_pruning
         self.expected_risk_weight = 0.0
         self.expected_win_risk_weight = 0.0

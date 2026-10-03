@@ -101,7 +101,7 @@ def test_exact_opp1_rerank_selects_topk_move_when_mixed_score_improves(monkeypat
     }
     monkeypatch.setattr(
         "ai.chance_rerank.exact_opp1_zdp_value",
-        lambda state, dice, move, perspective: exact_values[move],
+        lambda state, dice, move, perspective, **kwargs: exact_values[move],
     )
     ai = ExactOpponentDiceRerankAI(base=base, exact_mix=0.35, top_k=3, rng=random.Random(1))
 
@@ -124,7 +124,7 @@ def test_exact_opp1_rerank_keeps_base_when_exact_score_does_not_flip_choice(monk
     exact_values = {base_move: 0.70, alt_move: 0.71}
     monkeypatch.setattr(
         "ai.chance_rerank.exact_opp1_zdp_value",
-        lambda state, dice, move, perspective: exact_values[move],
+        lambda state, dice, move, perspective, **kwargs: exact_values[move],
     )
     ai = ExactOpponentDiceRerankAI(base=base, exact_mix=0.35, top_k=2, rng=random.Random(1))
 
@@ -168,7 +168,7 @@ def test_exact_opp1_rerank_returns_legal_move_without_mutating_state(monkeypatch
     base = _FakeBase(move=legal[0], stats=[_stats(move, 0.5) for move in legal])
     monkeypatch.setattr(
         "ai.chance_rerank.exact_opp1_zdp_value",
-        lambda state, dice, move, perspective: 1.0 if move == legal[-1] else 0.0,
+        lambda state, dice, move, perspective, **kwargs: 1.0 if move == legal[-1] else 0.0,
     )
     ai = ExactOpponentDiceRerankAI(base=base, exact_mix=1.0, top_k=3, rng=random.Random(1))
 

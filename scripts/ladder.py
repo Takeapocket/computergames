@@ -18,6 +18,8 @@ if str(ROOT) not in sys.path:
 from ai.match import ai_version_signature, build_ai, play_one_game, starting_state_for
 from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
 from core.types import Player
+from core.validation import require_finite_number, require_int
+from scripts._release_config import reject_nonfinite_constant, validate_finite_json_numbers
 
 
 @dataclass
@@ -30,12 +32,54 @@ class LadderPlayer:
     games: int = 0
     signature: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _validate_ladder_player(self)
+        self.rating = float(self.rating)
+        self.uncertainty = float(self.uncertainty)
+        self.kwargs = dict(self.kwargs)
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
+def _validate_ladder_player(player: LadderPlayer) -> None:
+    for name in ("player_id", "kind"):
+        value = getattr(player, name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{name} must be a non-empty string")
+    if not isinstance(player.kwargs, dict):
+        raise ValueError("player kwargs must be an object")
+    validate_finite_json_numbers(player.kwargs, field="player kwargs")
+    require_finite_number(player.rating, "rating")
+    require_finite_number(player.uncertainty, "uncertainty", minimum=0)
+    require_int(player.games, "player games", minimum=0)
+
+
+def _validate_ladder_players(players: list[LadderPlayer]) -> None:
+    if len(players) < 2:
+        raise ValueError("at least two players are required")
+    for player in players:
+        _validate_ladder_player(player)
+    ids = [player.player_id for player in players]
+    if len(ids) != len(set(ids)):
+        raise ValueError("player_id values must be unique")
+
+
+def _validate_k_factor(k_factor: float) -> float:
+    validated = require_finite_number(k_factor, "k_factor", minimum=0)
+    if validated == 0:
+        raise ValueError("k_factor must be positive")
+    return validated
+
+
 def expected_score(rating: float, opponent_rating: float) -> float:
-    return 1.0 / (1.0 + 10 ** ((opponent_rating - rating) / 400.0))
+    rating = require_finite_number(rating, "rating")
+    opponent_rating = require_finite_number(opponent_rating, "opponent_rating")
+    difference = opponent_rating / 400.0 - rating / 400.0
+    if difference >= 0:
+        inverse = 10 ** -difference
+        return inverse / (1.0 + inverse)
+    return 1.0 / (1.0 + 10 ** difference)
 
 
 def update_ratings(
@@ -45,11 +89,15 @@ def update_ratings(
     red_score: float,
     k_factor: float = 32.0,
 ) -> tuple[float, float]:
+    red_rating = require_finite_number(red_rating, "red_rating")
+    blue_rating = require_finite_number(blue_rating, "blue_rating")
+    red_score = require_finite_number(red_score, "red_score", minimum=0, maximum=1)
+    k_factor = _validate_k_factor(k_factor)
     red_expected = expected_score(red_rating, blue_rating)
     blue_expected = expected_score(blue_rating, red_rating)
     blue_score = 1.0 - red_score
-    new_red = red_rating + k_factor * (red_score - red_expected)
-    new_blue = blue_rating + k_factor * (blue_score - blue_expected)
+    new_red = require_finite_number(red_rating + k_factor * (red_score - red_expected), "new_red_rating")
+    new_blue = require_finite_number(blue_rating + k_factor * (blue_score - blue_expected), "new_blue_rating")
     return round(new_red, 3), round(new_blue, 3)
 
 
@@ -59,8 +107,10 @@ def estimate_rating_uncertainty(
     initial: float = 350.0,
     floor: float = 30.0,
 ) -> float:
-    played = max(0, int(games))
-    return round(max(float(floor), float(initial) / ((played + 1) ** 0.5)), 3)
+    played = require_int(games, "games", minimum=0)
+    initial = require_finite_number(initial, "initial", minimum=0)
+    floor = require_finite_number(floor, "floor", minimum=0)
+    return round(max(floor, initial / ((played + 1) ** 0.5)), 3)
 
 
 def _rating_interval(player: LadderPlayer) -> dict[str, float]:
@@ -105,13 +155,11 @@ def schedule_round_robin(
     *,
     games_per_pair: int = 2,
 ) -> list[dict[str, Any]]:
-    if len(players) < 2:
-        raise ValueError("at least two players are required")
+    _validate_ladder_players(players)
+    games_per_pair = require_int(games_per_pair, "games_per_pair")
     if games_per_pair <= 0:
         raise ValueError("games_per_pair must be positive")
     ids = [player.player_id for player in players]
-    if len(ids) != len(set(ids)):
-        raise ValueError("player_id values must be unique")
 
     schedule: list[dict[str, Any]] = []
     for pair_index, (first, second) in enumerate(combinations(ids, 2)):
@@ -135,14 +183,15 @@ def register_player(
     kwargs: dict[str, Any] | None = None,
     rating: float = 1500.0,
 ) -> LadderPlayer:
-    ai = build_ai(kind, seed=0, **(kwargs or {}))
-    return LadderPlayer(
+    player = LadderPlayer(
         player_id=player_id,
         kind=kind,
-        kwargs=dict(kwargs or {}),
-        rating=float(rating),
-        signature=ai_version_signature(ai),
+        kwargs={} if kwargs is None else kwargs,
+        rating=rating,
     )
+    ai = build_ai(kind, seed=0, **player.kwargs)
+    player.signature = ai_version_signature(ai)
+    return player
 
 
 def default_anchor_player() -> LadderPlayer:
@@ -158,7 +207,7 @@ def append_jsonl_result(path: str | Path, row: dict[str, Any]) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n")
 
 
 def _red_score_for_winner(winner: Player | None) -> float:
@@ -270,7 +319,7 @@ def render_markdown_report(report: dict[str, Any]) -> str:
 def _write_ladder_reports(output: Path, report: dict[str, Any]) -> None:
     output.mkdir(parents=True, exist_ok=True)
     (output / "report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     (output / "report.md").write_text(render_markdown_report(report), encoding="utf-8")
@@ -287,6 +336,12 @@ def run_ladder_games(
     max_turns: int = 200,
     k_factor: float = 32.0,
 ) -> dict[str, Any]:
+    _validate_ladder_players([red, blue])
+    games = require_int(games, "games", minimum=0)
+    seed = require_int(seed, "seed")
+    max_turns = require_int(max_turns, "max_turns", minimum=1)
+    k_factor = _validate_k_factor(k_factor)
+    starting_state_for(layout_id)
     output = Path(output_dir)
     games_path = output / "games.jsonl"
     _ensure_games_path_unused(games_path)
@@ -329,11 +384,15 @@ def run_ladder_round_robin(
     max_turns: int = 200,
     k_factor: float = 32.0,
 ) -> dict[str, Any]:
-    if len(players) < 2:
-        raise ValueError("at least two players are required")
+    _validate_ladder_players(players)
+    games_per_pair = require_int(games_per_pair, "games_per_pair")
+    if games_per_pair <= 0:
+        raise ValueError("games_per_pair must be positive")
+    seed = require_int(seed, "seed")
+    max_turns = require_int(max_turns, "max_turns", minimum=1)
+    k_factor = _validate_k_factor(k_factor)
+    starting_state_for(layout_id)
     players_by_id = {player.player_id: player for player in players}
-    if len(players_by_id) != len(players):
-        raise ValueError("player_id values must be unique")
 
     output = Path(output_dir)
     games_path = output / "games.jsonl"
@@ -385,8 +444,11 @@ def _player_from_config_entry(entry: Any) -> LadderPlayer:
         raise ValueError("player config entries must be strings or objects")
 
     try:
-        player_id = str(entry["player_id"])
-        kind = str(entry["kind"])
+        player_id = entry["player_id"]
+        kind = entry["kind"]
+        for name, value in (("player_id", player_id), ("kind", kind)):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a non-empty string")
     except KeyError as exc:
         raise ValueError("player config objects require player_id and kind") from exc
 
@@ -395,7 +457,8 @@ def _player_from_config_entry(entry: Any) -> LadderPlayer:
         kwargs = {}
     if not isinstance(kwargs, dict):
         raise ValueError("player config kwargs must be a JSON object")
-    rating = float(entry.get("rating", 1500.0))
+    validate_finite_json_numbers(kwargs, field="player config kwargs")
+    rating = require_finite_number(entry.get("rating", 1500.0), "rating")
 
     if kind == "p14_default":
         player = default_anchor_player()
@@ -406,11 +469,14 @@ def _player_from_config_entry(entry: Any) -> LadderPlayer:
 
 
 def load_players_config(path: str | Path) -> list[LadderPlayer]:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = json.loads(Path(path).read_text(encoding="utf-8"), parse_constant=reject_nonfinite_constant)
+    validate_finite_json_numbers(payload, field="players config")
     entries = payload.get("players") if isinstance(payload, dict) else payload
     if not isinstance(entries, list) or not entries:
         raise ValueError("players config must contain a non-empty players list")
-    return [_player_from_config_entry(entry) for entry in entries]
+    players = [_player_from_config_entry(entry) for entry in entries]
+    _validate_ladder_players(players)
+    return players
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -438,44 +504,33 @@ def main(argv: list[str] | None = None) -> int:
     if output_dir is None:
         parser.error("--output-dir is required unless CG_RESEARCH_DATA_DIR is set")
 
-    if args.players_config:
-        if args.players:
-            parser.error("--players-config cannot be combined with --players")
-        players = load_players_config(args.players_config)
-        report = run_ladder_round_robin(
-            players,
-            games_per_pair=args.games_per_pair,
-            seed=args.seed,
-            output_dir=output_dir,
-            layout_id=args.layout_id,
-            max_turns=args.max_turns,
-        )
-    elif args.players:
-        players = [
-            _player_from_cli_token(token.strip())
-            for token in args.players.split(",")
-            if token.strip()
-        ]
-        report = run_ladder_round_robin(
-            players,
-            games_per_pair=args.games_per_pair,
-            seed=args.seed,
-            output_dir=output_dir,
-            layout_id=args.layout_id,
-            max_turns=args.max_turns,
-        )
-    else:
-        red = _player_from_cli_token(args.red)
-        blue = _player_from_cli_token(args.blue)
-        report = run_ladder_games(
-            red,
-            blue,
-            games=args.games,
-            seed=args.seed,
-            output_dir=output_dir,
-            layout_id=args.layout_id,
-            max_turns=args.max_turns,
-        )
+    try:
+        if args.players_config:
+            if args.players:
+                parser.error("--players-config cannot be combined with --players")
+            players = load_players_config(args.players_config)
+            report = run_ladder_round_robin(
+                players, games_per_pair=args.games_per_pair, seed=args.seed,
+                output_dir=output_dir, layout_id=args.layout_id, max_turns=args.max_turns,
+            )
+        elif args.players:
+            players = [
+                _player_from_cli_token(token.strip())
+                for token in args.players.split(",") if token.strip()
+            ]
+            report = run_ladder_round_robin(
+                players, games_per_pair=args.games_per_pair, seed=args.seed,
+                output_dir=output_dir, layout_id=args.layout_id, max_turns=args.max_turns,
+            )
+        else:
+            red = _player_from_cli_token(args.red)
+            blue = _player_from_cli_token(args.blue)
+            report = run_ladder_games(
+                red, blue, games=args.games, seed=args.seed, output_dir=output_dir,
+                layout_id=args.layout_id, max_turns=args.max_turns,
+            )
+    except (OSError, TypeError, ValueError) as exc:
+        parser.error(str(exc))
     print(
         json.dumps(
             report,

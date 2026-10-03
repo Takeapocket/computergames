@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from core.validation import require_bool, require_int
+
 BOARD_SIZE = 5
 MIN_PIECE_ID = 1
 MAX_PIECE_ID = 6
@@ -18,7 +20,7 @@ class Player(str, Enum):
         return Player.BLUE if self is Player.RED else Player.RED
 
     @classmethod
-    def from_value(cls, value: str | "Player") -> "Player":
+    def from_value(cls, value: str | Player) -> Player:
         if isinstance(value, Player):
             return value
         return cls(value)
@@ -29,12 +31,16 @@ class Position:
     row: int
     col: int
 
+    def __post_init__(self) -> None:
+        require_int(self.row, "position row")
+        require_int(self.col, "position col")
+
     def to_dict(self) -> dict[str, int]:
         return {"row": self.row, "col": self.col}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Position":
-        return cls(row=int(data["row"]), col=int(data["col"]))
+        return cls(row=data["row"], col=data["col"])
 
 
 def chebyshev_distance(a: Position, b: Position) -> int:
@@ -51,8 +57,10 @@ class Piece:
 
     def __post_init__(self) -> None:
         self.player = Player.from_value(self.player)
-        if not MIN_PIECE_ID <= self.piece_id <= MAX_PIECE_ID:
-            raise ValueError("piece_id must be between 1 and 6")
+        require_int(self.piece_id, "piece_id", minimum=MIN_PIECE_ID, maximum=MAX_PIECE_ID)
+        require_bool(self.alive, "piece alive")
+        if not isinstance(self.position, Position):
+            raise ValueError("piece position must be a Position")
         if not 0 <= self.position.row < BOARD_SIZE or not 0 <= self.position.col < BOARD_SIZE:
             raise ValueError("piece position must be inside the 5x5 board")
 
@@ -76,7 +84,7 @@ class Piece:
     def from_dict(cls, data: dict[str, Any]) -> "Piece":
         return cls(
             player=Player.from_value(data["player"]),
-            piece_id=int(data["piece_id"]),
+            piece_id=data["piece_id"],
             position=Position.from_dict(data["position"]),
-            alive=bool(data["alive"]),
+            alive=data["alive"],
         )

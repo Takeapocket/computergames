@@ -24,7 +24,7 @@ class BoardWidget(tk.Canvas):
         self._preview_move: Move | None = None
         self._edit_mode = False
         self._edit_zone_cells: set[Position] = set()
-        self._on_edit_cell_click: Callable[[Position], None] | None = None
+        self._on_edit_cell_click: Callable[[Position], object] | None = None
         board_px = BOARD_SIZE * cell_size
 
         super().__init__(
@@ -55,7 +55,7 @@ class BoardWidget(tk.Canvas):
         enabled: bool,
         *,
         zone_cells: Iterable[Position] = (),
-        on_cell_click: Callable[[Position], None] | None = None,
+        on_cell_click: Callable[[Position], object] | None = None,
     ) -> None:
         self._edit_mode = bool(enabled)
         self._edit_zone_cells = set(zone_cells)

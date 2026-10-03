@@ -31,7 +31,6 @@ import tkinter as tk
 import traceback
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -43,7 +42,6 @@ from gui.main_window import MainWindow  # noqa: E402
 from record.auto_save import (  # noqa: E402
     has_auto_save,
     has_auto_save_match,
-    load_auto_save_match,
 )
 from record.game_record import GameRecord  # noqa: E402
 from record.match_record import MatchRecord  # noqa: E402

@@ -12,6 +12,7 @@ from core.game_state import GameState
 from core.move import Move
 from core.rules import target_corner
 from core.types import chebyshev_distance
+from core.validation import require_bool, require_finite_number, require_int
 
 
 def move_identity(move: Move) -> tuple[int, int, int, int, int]:
@@ -78,12 +79,12 @@ class SelfCaptureGuardAI:
                 **RELEASE_DEFAULT_ROLLOUT_KWARGS,
             )
         self.base = base
-        self.enemy_capture_margin = float(enemy_capture_margin)
-        self.non_self_low_material_margin = float(non_self_low_material_margin)
-        self.prefer_enemy_capture_margin = float(prefer_enemy_capture_margin)
-        self.low_material_threshold = int(low_material_threshold)
-        self.max_score_gap_for_override = float(max_score_gap_for_override)
-        self.require_safe_alternative = bool(require_safe_alternative)
+        self.enemy_capture_margin = require_finite_number(enemy_capture_margin, "enemy_capture_margin", minimum=0.0)
+        self.non_self_low_material_margin = require_finite_number(non_self_low_material_margin, "non_self_low_material_margin", minimum=0.0)
+        self.prefer_enemy_capture_margin = require_finite_number(prefer_enemy_capture_margin, "prefer_enemy_capture_margin", minimum=0.0)
+        self.low_material_threshold = require_int(low_material_threshold, "low_material_threshold", minimum=0, maximum=6)
+        self.max_score_gap_for_override = require_finite_number(max_score_gap_for_override, "max_score_gap_for_override", minimum=0.0)
+        self.require_safe_alternative = require_bool(require_safe_alternative, "require_safe_alternative")
         self.fire_counts: Counter[str] = Counter()
         self.last_root_stats: list[Any] = []
         self.last_diagnostics: list[Any] = []

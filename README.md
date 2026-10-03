@@ -17,6 +17,8 @@
 
 程序运行时不依赖网络服务或数据库。所有规则判断都来自 `core/`，GUI 和 AI 不维护各自的规则副本。
 
+AI 推荐在后台计算，显示“计算中”时仍可选择和执行合法走法；变更骰子、悔棋或加载棋谱后，旧推荐会作废。整轮自动保存失败时，程序保留单盘恢复文件并暂停进入下一盘，可点击“重试保存”继续。恢复文件互不匹配时不会自动拼接比分和局面。
+
 ## 快速开始
 
 项目主要在 Windows 上开发和验证。使用 PowerShell：
@@ -134,6 +136,8 @@ $env:TORCH_HOME = "E:/torch-cache"
 正式规则没有和棋。研究 harness 的 `max_turns` 平局只用于限制实验长度。完整规则和赛事边界见 [规则记录](docs/RULE_ASSUMPTIONS.md)。
 
 ## 文档
+
+本次代码清理、兼容变化和验证结果见 [全项目鲁棒性改造记录](reports/project_robustness_review_20261004.md)。
 
 - [项目简介](docs/PROJECT_BRIEF.md)
 - [研究路线与阶段](PROJECT_PHASES.md)

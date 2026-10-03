@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
@@ -10,16 +11,21 @@ from core.dice import roll_die
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player, Position
+from core.validation import require_int, require_bool, require_finite_number
 from gui.app import create_default_state, format_move_label, player_label
 from gui.board_widget import BoardWidget
 from gui.control_panel import ControlPanel
 from gui.match_mode import MatchModePanel
 from gui.opening_panel import OpeningPanel, OpeningSelection
 from gui.time_limit import validate_nonnegative_seconds, validate_total_seconds
+from gui.recommendation_worker import (
+    RecommendationRequest, RecommendationWorker,
+)
 from gui.timer_panel import DEFAULT_TOTAL_SECONDS, MatchTimer, TimerPanel
 from record.auto_save import (
     AUTO_SAVE_MATCH_PATH,
     AUTO_SAVE_PATH,
+    AUTO_SAVE_METADATA_KEY,
     auto_save,
     auto_save_match,
     clear_auto_save,
@@ -51,22 +57,16 @@ DEFAULT_RECOMMENDER_KWARGS = {
 }
 
 
-def _format_rollout_diagnostic(diagnostic: object) -> str:
-    move = getattr(diagnostic, "move")
-    visits = int(getattr(diagnostic, "visits"))
-    score = float(getattr(diagnostic, "score", getattr(diagnostic, "winrate")))
-    winrate = float(getattr(diagnostic, "winrate", score))
-    wins = float(getattr(diagnostic, "wins", winrate * visits))
-    draws = float(getattr(diagnostic, "draws", getattr(diagnostic, "cutoffs", 0.0)))
-    losses = float(getattr(diagnostic, "losses", max(0.0, visits - wins - draws)))
-    avg = float(getattr(diagnostic, "avg", 2 * score - 1))
-    confidence = ", 置信=低" if getattr(diagnostic, "low_confidence", False) else ""
-    return (
-        f"{format_move_label(move, distinguish_self_capture=True)}\n"
-        f"visits={visits}, score={score:.2f}, winrate={winrate:.2f}, "
-        f"wins={wins:.0f}, losses={losses:.0f}, draws={draws:.0f}, avg={avg:.2f}"
-        f"{confidence}"
-    )
+_RETIRED_WINDOWS: list["MainWindow"] = []
+
+
+def _collect_retired_windows() -> None:
+    # Tk variables can form widget/callback cycles. Release them on the UI thread,
+    # after the detached worker has stopped, so its allocations cannot collect Tk objects.
+    remaining = [window for window in _RETIRED_WINDOWS if window._recommendation_worker.is_alive()]
+    if len(remaining) != len(_RETIRED_WINDOWS):
+        _RETIRED_WINDOWS[:] = remaining
+        gc.collect()
 
 
 class MainWindow(tk.Frame):
@@ -79,11 +79,13 @@ class MainWindow(tk.Frame):
         auto_save_path: str | Path | None = None,
         auto_save_match_path: str | Path | None = None,
     ) -> None:
+        _collect_retired_windows()
         validated_total_seconds = validate_total_seconds(total_seconds)
+        require_bool(auto_timeout_enabled, "auto_timeout_enabled")
         super().__init__(master, padx=16, pady=16)
         self._build_menu(master)
         self._total_seconds = validated_total_seconds
-        self._auto_timeout_enabled = bool(auto_timeout_enabled)
+        self._auto_timeout_enabled = require_bool(auto_timeout_enabled, "auto_timeout_enabled")
         self._timeout_notice_players: tuple[Player, ...] = ()
         self._auto_save_path = Path(auto_save_path) if auto_save_path is not None else AUTO_SAVE_PATH
         self._auto_save_match_path = (
@@ -104,6 +106,14 @@ class MainWindow(tk.Frame):
         self._our_side: Player | None = None
         self._match: MatchRecord | None = None
         self._match_finished_notified = False
+        self._finalization_pending = False
+        self._closed = False
+        self._recommendation_worker = RecommendationWorker()
+        self._recommendation_generation = 0
+        self._recommendation_context: tuple | None = None
+        self._recommendation_pending_key: tuple[int, str] | None = None
+        self._recommendation_cache_diagnostics: tuple[str, ...] = ()
+        self._recommendation_after_id: str | None = None
         # R-2 review Critical #5：AI 在 __init__ 一次构造、复用，避免每次 _refresh 都新建。
         self._recommender = build_ai(DEFAULT_RECOMMENDER_KIND, seed=0, **DEFAULT_RECOMMENDER_KWARGS)
         self._fallback_recommender = build_ai("greedy_risk", seed=0)
@@ -153,8 +163,13 @@ class MainWindow(tk.Frame):
             self._show_setup_phase()
         self._refresh()
         self._schedule_timer_refresh()
+        self._recommendation_after_id = self.after(50, self._poll_recommendation)
 
     def _handle_dice_change(self, value: str) -> None:
+        if self._finalization_pending:
+            self.status_message = "本盘已结束，请先重试保存。"
+            self._refresh()
+            return
         if self._match_is_finished():
             self.status_message = "本轮已结束，不能继续录入骰子。"
             self._clear_selection()
@@ -257,6 +272,11 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _apply_selected_move(self) -> None:
+        if self._can_select_moves() and self._auto_timeout_enabled and self._match is not None and not self._match.is_finished():
+            snapshot = self.timer.snapshot()
+            if snapshot.timeout_players:
+                self._handle_timeout(snapshot.timeout_players[0])
+                return
         if not self._can_select_moves():
             self.status_message = self._blocked_move_message()
             self._clear_selection()
@@ -334,6 +354,8 @@ class MainWindow(tk.Frame):
         if not self._confirm_reset_game():
             return
 
+        self._invalidate_recommendation()
+        self._finalization_pending = False
         self.state = create_default_state()
         self.record = GameRecord.from_state(self.state)
         self.timer.reset(current_player=self.state.current_player)
@@ -357,7 +379,7 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _confirm_reset_game(self) -> bool:
-        active_match = self._match is not None and not self._match.is_finished()
+        active_match = self._match is not None and (not self._match.is_finished() or self._finalization_pending)
         if not active_match and not self._record_dirty:
             return True
 
@@ -371,6 +393,9 @@ class MainWindow(tk.Frame):
         return messagebox.askyesno("确认重置棋局", message, parent=self)
 
     def _start_game_from_opening(self, selection: OpeningSelection) -> None:
+        if self._finalization_pending or self._match_is_finished():
+            return
+        self._invalidate_recommendation()
         if self._match is not None:
             initial_player = self._match.first_mover_color(self._match.current_game_index)
         else:
@@ -414,6 +439,7 @@ class MainWindow(tk.Frame):
             self._mode = "match"
             self._our_side = selection.our_side
         self.status_message = "开局已确认，请录入第一轮骰子。"
+        self._auto_save_current_game()
         self._show_playing_phase()
         self._refresh()
 
@@ -433,13 +459,15 @@ class MainWindow(tk.Frame):
         if not self.controls.winfo_manager():
             self.controls.pack(fill=tk.BOTH, expand=True)
 
-    def _auto_save_current_game(self) -> None:
+    def _auto_save_current_game(self) -> bool:
         try:
             self.record.metadata["time_limit_seconds"] = self._total_seconds
             self.record.metadata["auto_timeout_enabled"] = self._auto_timeout_enabled
             auto_save(self.record, self.timer.snapshot(), path=self._auto_save_path)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             self.status_message = f"自动保存失败：{exc}"
+            return False
+        return True
 
     def _clear_auto_save(self) -> None:
         try:
@@ -447,13 +475,17 @@ class MainWindow(tk.Frame):
         except OSError as exc:
             self.status_message = f"自动保存清理失败：{exc}"
 
-    def _auto_save_current_match(self) -> None:
+    def _auto_save_current_match(self) -> bool:
         if self._match is None:
-            return
+            return False
         try:
+            self._match.time_limit_seconds = self._total_seconds
+            self._match.auto_timeout_enabled = self._auto_timeout_enabled
             auto_save_match(self._match, path=self._auto_save_match_path)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             self.status_message = f"整轮自动保存失败：{exc}"
+            return False
+        return True
 
     def _clear_match_auto_save(self) -> None:
         try:
@@ -493,128 +525,224 @@ class MainWindow(tk.Frame):
             match = load_auto_save_match(path=self._auto_save_match_path)
         except (OSError, ValueError) as exc:
             messagebox.showerror("恢复 match auto-save 失败", str(exc), parent=self)
-            self._clear_match_auto_save()
-            self._clear_auto_save()
             return False
+
+        loaded_record = None
+        loaded_state = None
+        timer_metadata = None
+        relation = "missing"
+        if has_game:
+            try:
+                loaded_record, timer_metadata = load_auto_save(path=self._auto_save_path)
+                loaded_state = loaded_record.restore_state()
+                relation = self._restored_game_relation(match, loaded_record, loaded_state, timer_metadata)
+            except (OSError, ValueError, KeyError) as exc:
+                messagebox.showerror("恢复文件不一致", str(exc), parent=self)
+                # Keep the files for inspection instead of deleting valid but conflicting progress.
+                return False
+            if relation in {"unlinked", "legacy"}:
+                restore_single = messagebox.askyesno(
+                    "恢复文件不匹配",
+                    "整轮与单盘记录缺少匹配的关联信息。是否仅恢复单盘？整轮恢复文件将保留。",
+                    parent=self,
+                )
+                if not restore_single:
+                    return False
+                if not self._restore_single_game_auto_save():
+                    return False
+                self._match = None
+                self.opening_panel.set_side_controls_enabled(True)
+                self.status_message = "已仅恢复单盘；未关联的整轮恢复文件仍保留。"
+                return True
+
+        if relation == "active":
+            assert loaded_record is not None and loaded_state is not None and timer_metadata is not None
+            try:
+                outcome = self._restored_game_outcome(match, loaded_record, loaded_state, timer_metadata)
+                self._install_restored_game(loaded_record, loaded_state, timer_metadata, match=match)
+            except (ValueError, KeyError) as exc:
+                messagebox.showerror("恢复单盘 auto-save 失败", str(exc), parent=self)
+                return False
+            if match.phase == "setup":
+                match.start_playing()
+            if outcome is not None:
+                winner, reason = outcome
+                self._finalize_match_game(winner, reason=reason)
+                return True
+            self.status_message = (
+                f"已恢复第 {match.current_game_index} 盘（比分 {match.games_won_us}:{match.games_won_them}）。"
+            )
+            self._auto_save_current_match()
+            return True
 
         self._match = match
         self._mode = "match"
         self._our_side = match.our_side
+        self._finalization_pending = False
+        self._configure_timer_options(
+            total_seconds=match.time_limit_seconds,
+            auto_timeout_enabled=match.auto_timeout_enabled,
+        )
         self.opening_panel.set_side_controls_enabled(False)
-
         if match.phase == "finished":
-            # R-2 review Important #12：先弹窗告知比分，待用户确认后再清盘。
             messagebox.showinfo(
                 "上轮已结束",
-                (
-                    f"上一轮已结束。最终比分：我方 {match.games_won_us} — 对方 {match.games_won_them}。\n"
-                    f"点击确定后将清理 auto-save，请通过'重置棋局'开始新一轮。"
-                ),
+                f"上一轮已结束。最终比分：我方 {match.games_won_us} — 对方 {match.games_won_them}。\n点击确定后清理已完成的恢复文件。",
                 parent=self,
             )
             self._exit_match_mode()
             return False
 
-        if match.phase == "playing" and has_game:
-            try:
-                loaded_record, timer_metadata = load_auto_save(path=self._auto_save_path)
-                loaded_state = loaded_record.restore_state()
-                timer_current_player = Player.from_value(timer_metadata["timer_current_player"])
-                timer_remaining = self._remaining_seconds_from_auto_save_metadata(timer_metadata)
-            except (OSError, ValueError, KeyError) as exc:
-                messagebox.showerror("恢复单盘 auto-save 失败", str(exc), parent=self)
-                self._clear_auto_save()
-                # 退到 setup 阶段，让用户重新录入当前盘
-                self._start_new_game_in_match()
-                return True
-            # R-2 review Important #13：若单盘恢复后发现该局已结束（finalize 后未及时清盘
-            # 中间崩溃），不要继续以"未结束"状态展示，提示并丢弃单盘 auto-save。
-            if loaded_state.get_winner() is not None:
-                messagebox.showinfo(
-                    "本盘已结束",
-                    "检测到上次本盘已分出胜负但未清理自动保存。将清理后等待下一盘开局。",
-                    parent=self,
-                )
-                self._clear_auto_save()
-                self._start_new_game_in_match()
-                return True
-            self.record = loaded_record
-            self.state = loaded_state
-            self._restore_timer_options_from_record(loaded_record)
-            self.timer.reset(
-                current_player=timer_current_player,
-                remaining_seconds=timer_remaining,
-            )
-            if bool(timer_metadata["timer_paused"]):
-                self.timer.pause()
-            self.current_dice = 6
-            self._clear_selection()
-            self._record_dirty = True
-            self._awaiting_dice = True
-            self._phase = "playing"
-            self._show_playing_phase()
-            self.status_message = (
-                f"已恢复第 {match.current_game_index} 盘（比分 "
-                f"{match.games_won_us}:{match.games_won_them}）。"
-            )
-            return True
-
-        # match.phase == "setup" 或 playing 但无单盘 auto-save
-        if match.phase == "playing" and not has_game:
-            # R-2 review Important #15：盘内进度缺失，不要静默丢失整轮记录。
+        if match.phase == "playing" and relation in {"missing", "committed"}:
             should_continue = messagebox.askyesno(
                 "本盘进度缺失",
-                (
-                    f"检测到整轮记录处于第 {match.current_game_index} 盘进行中，"
-                    f"但本盘的对局自动保存缺失。\n"
-                    f"点'是'按当前盘开局重新录入（保留已完成盘数和比分），"
-                    f"点'否'放弃整轮恢复。"
-                ),
+                f"检测到第 {match.current_game_index} 盘进行中，但单盘恢复文件缺失。\n点“是”重新录入当前盘（保留比分），点“否”放弃整轮恢复。",
                 parent=self,
             )
             if not should_continue:
                 self._exit_match_mode()
                 return False
-        self.status_message = (
-            f"已恢复整轮记录（比分 {match.games_won_us}:{match.games_won_them}），"
-            f"请录入第 {match.current_game_index} 盘开局。"
-        )
-        if has_game:
-            # R-1/R-2/R-3 二审 #3：到这里说明 match.phase == "setup"（或 playing+用户接受继续）
-            # 仍同时残留单盘 auto-save，多半是 finalize 后崩在 _clear_auto_save 之前。
-            # 残留的单盘记录已被整轮 games[] 收录，与即将开始的新一盘无关——丢弃，避免反复弹"是否恢复"。
+        if relation == "committed":
             self._clear_auto_save()
         self._start_new_game_in_match()
         return True
 
-    def _restore_single_game_auto_save(self) -> bool:
-        try:
-            loaded_record, timer_metadata = load_auto_save(path=self._auto_save_path)
-            loaded_state = loaded_record.restore_state()
-            timer_current_player = Player.from_value(timer_metadata["timer_current_player"])
-            timer_remaining = self._remaining_seconds_from_auto_save_metadata(timer_metadata)
-        except (OSError, ValueError, KeyError) as exc:
-            messagebox.showerror("恢复自动保存失败", str(exc), parent=self)
-            self._clear_auto_save()
-            return False
+    def _restored_game_relation(
+        self, match: MatchRecord, record: GameRecord, state: GameState,
+        timer_metadata: dict,
+    ) -> str:
+        metadata = record.metadata
+        if "match_id" not in metadata or "game_index" not in metadata:
+            return "legacy"
+        if metadata["match_id"] != match.match_id:
+            return "unlinked"
+        index = require_int(metadata["game_index"], "game_index", minimum=1, maximum=match.total_games)
+        if index <= len(match.games):
+            saved = match.games[index - 1].to_dict()
+            restored = record.to_dict()
+            saved["metadata"] = dict(saved.get("metadata", {}))
+            restored["metadata"] = dict(restored.get("metadata", {}))
+            saved["metadata"].pop(AUTO_SAVE_METADATA_KEY, None)
+            restored["metadata"].pop(AUTO_SAVE_METADATA_KEY, None)
+            if saved != restored:
+                raise ValueError("已结算盘与单盘恢复内容不一致")
+            return "committed"
+        if index != match.current_game_index or match.phase == "finished":
+            raise ValueError("单盘与整轮盘号不一致")
+        expected_first = match.first_mover_color(index)
+        expected = {
+            "our_side": match.our_side.value,
+            "our_role": match.our_role,
+            "first_mover_color": expected_first.value,
+        }
+        for key, value in expected.items():
+            if key in metadata and metadata[key] != value:
+                raise ValueError(f"恢复记录 {key} 不一致")
+        if record.initial_state["current_player"] != expected_first.value:
+            raise ValueError("恢复记录首手不一致")
+        if Player.from_value(timer_metadata["timer_current_player"]) is not state.current_player:
+            raise ValueError("恢复计时行动方与棋盘不一致")
+        stored_fields = getattr(match, "_stored_timer_fields", frozenset())
+        for key in stored_fields:
+            if key in metadata:
+                value = (require_bool(metadata[key], key) if key == "auto_timeout_enabled"
+                         else require_finite_number(metadata[key], key, minimum=0.0))
+                if value != getattr(match, key):
+                    raise ValueError(f"恢复记录 {key} 不一致")
+        return "active"
 
-        self.record = loaded_record
-        self.state = loaded_state
-        self._restore_timer_options_from_record(loaded_record)
-        self.timer.reset(
-            current_player=timer_current_player,
-            remaining_seconds=timer_remaining,
-        )
-        if bool(timer_metadata["timer_paused"]):
-            self.timer.pause()
+    def _install_restored_game(
+        self, record: GameRecord, state: GameState, timer_metadata: dict,
+        *, match: MatchRecord | None = None,
+    ) -> None:
+        current = Player.from_value(timer_metadata["timer_current_player"])
+        if current is not state.current_player:
+            raise ValueError("恢复计时行动方与棋盘不一致")
+        remaining = self._remaining_seconds_from_auto_save_metadata(timer_metadata)
+        total = match.time_limit_seconds if match is not None else self._total_seconds
+        if "time_limit_seconds" in record.metadata:
+            total = validate_total_seconds(record.metadata["time_limit_seconds"])
+        automatic = record.metadata.get("auto_timeout_enabled", match.auto_timeout_enabled if match is not None else False)
+        automatic = require_bool(automatic, "auto_timeout_enabled")
+        timer = MatchTimer(total_seconds=total, current_player=current)
+        timer.reset(current_player=current, remaining_seconds=remaining)
+        if require_bool(timer_metadata["timer_paused"], "timer_paused"):
+            timer.pause()
+        self._invalidate_recommendation()
+        self._match = match
+        self._finalization_pending = False
+        if match is not None:
+            self._mode = "match"
+            self._our_side = match.our_side
+        self.opening_panel.set_side_controls_enabled(match is None)
+        self.record = record
+        self.state = state
+        self.timer = timer
+        self._total_seconds = total
+        self._auto_timeout_enabled = automatic
+        self._timeout_notice_players = ()
+        if self._match is not None:
+            self._match.time_limit_seconds = total
+            self._match.auto_timeout_enabled = automatic
         self.current_dice = 6
         self._clear_selection()
         self._record_dirty = True
         self._awaiting_dice = True
         self._phase = "playing"
         self._show_playing_phase()
+
+    def _restored_game_outcome(
+        self, match: MatchRecord, record: GameRecord, state: GameState,
+        timer_metadata: dict,
+    ) -> tuple[Player, str] | None:
+        winner = state.get_winner()
+        result = record.result
+        if not result:
+            if winner is None:
+                return None
+            from core.rules import target_corner
+            reason = "target_corner" if any(
+                p.alive and p.position == target_corner(winner)
+                for p in state.pieces[winner].values()
+            ) else "capture_all"
+            return winner, reason
+        result_winner = Player.from_value(result["winner"])
+        reason = result.get("reason")
+        if reason not in {"target_corner", "capture_all", "timeout"}:
+            raise ValueError("恢复盘结果原因无效")
+        if require_int(result["game_index"], "result.game_index") != match.current_game_index:
+            raise ValueError("恢复盘结果盘号不一致")
+        expected_side = "us" if result_winner is match.our_side else "them"
+        if result.get("winner_side", expected_side) != expected_side:
+            raise ValueError("恢复盘结果胜方不一致")
+        if winner is not None and winner is not result_winner:
+            raise ValueError("恢复盘结果与棋盘胜方不一致")
+        if winner is None and (reason != "timeout" or result_winner is not state.current_player.opponent):
+            raise ValueError("恢复盘结果与棋盘不一致")
+        if winner is not None:
+            from core.rules import target_corner
+            actual_reason = "target_corner" if any(
+                p.alive and p.position == target_corner(winner)
+                for p in state.pieces[winner].values()
+            ) else "capture_all"
+            if reason != actual_reason:
+                raise ValueError("恢复盘结果原因与棋盘不一致")
+        else:
+            remaining = self._remaining_seconds_from_auto_save_metadata(timer_metadata)
+            if remaining[result_winner.opponent] != 0.0:
+                raise ValueError("恢复超时结果与计时不一致")
+        return result_winner, reason
+
+    def _restore_single_game_auto_save(self) -> bool:
+        try:
+            loaded_record, timer_metadata = load_auto_save(path=self._auto_save_path)
+            loaded_state = loaded_record.restore_state()
+            self._install_restored_game(loaded_record, loaded_state, timer_metadata)
+        except (OSError, ValueError, KeyError) as exc:
+            messagebox.showerror("恢复自动保存失败", str(exc), parent=self)
+            return False
         self._restore_mode_from_record_metadata()
-        self.status_message = "已恢复上次未完成对局，请录入下一轮骰子。"
+        self.status_message = "已恢复上次对局，请录入下一轮骰子。"
         return True
 
     def _remaining_seconds_from_auto_save_metadata(
@@ -647,29 +775,31 @@ class MainWindow(tk.Frame):
         self._timeout_notice_players = ()
 
     def _save_record(self) -> None:
-        DEFAULT_RECORD_DIR.mkdir(exist_ok=True)
+        if self._finalization_pending:
+            self._retry_finalization_save()
+            return
+        try:
+            DEFAULT_RECORD_DIR.mkdir(exist_ok=True)
+        except OSError as exc:
+            messagebox.showerror("保存棋谱失败", str(exc), parent=self)
+            return
         path = filedialog.asksaveasfilename(
-            parent=self,
-            title="保存棋谱",
-            initialdir=str(DEFAULT_RECORD_DIR),
+            parent=self, title="保存棋谱", initialdir=str(DEFAULT_RECORD_DIR),
             defaultextension=".json",
             filetypes=(("JSON 棋谱", "*.json"), ("所有文件", "*.*")),
         )
         if not path:
             return
-
         try:
             self.record.save(path)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             messagebox.showerror("保存棋谱失败", str(exc), parent=self)
             return
-
         self._record_dirty = False
         self.status_message = f"棋谱已保存：{path}"
         self._refresh()
 
     def _load_record(self) -> None:
-        DEFAULT_RECORD_DIR.mkdir(exist_ok=True)
         path = filedialog.askopenfilename(
             parent=self,
             title="加载棋谱",
@@ -689,7 +819,7 @@ class MainWindow(tk.Frame):
 
         # R-2 review Important #17：比赛进行中加载棋谱会产生混合状态；先确认文件有效，
         # 再让操作员确认退出 match，避免取消/损坏文件清掉当前整轮上下文。
-        if self._match is not None and not self._match.is_finished():
+        if self._match is not None and (not self._match.is_finished() or self._finalization_pending):
             confirm = messagebox.askyesno(
                 "比赛进行中",
                 "当前正在比赛模式，加载棋谱将终止本轮比赛并丢弃整轮记录。是否继续？",
@@ -697,7 +827,10 @@ class MainWindow(tk.Frame):
             )
             if not confirm:
                 return
+        if self._match is not None:
             self._exit_match_mode()
+        self._invalidate_recommendation()
+        self._finalization_pending = False
 
         self.record = loaded_record
         self.state = loaded_state
@@ -717,6 +850,10 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _toggle_timer_pause(self) -> None:
+        if self._finalization_pending:
+            self.status_message = "本盘已结束，请先重试保存。"
+            self._refresh()
+            return
         if self.timer.is_paused:
             self.timer.resume()
             self.status_message = "计时已恢复。"
@@ -766,6 +903,7 @@ class MainWindow(tk.Frame):
         self.board.set_state(self.opening_panel.preview_state())
 
     def _refresh(self) -> None:
+        self._sync_recommendation_context()
         moves = self._current_moves()
         selected_ids = self._selected_piece_ids()
         legal_destinations = self._legal_destinations_for_selection(moves)
@@ -819,6 +957,7 @@ class MainWindow(tk.Frame):
         self.controls.set_moves(move_labels, self.selected_move_index)
         self.controls.set_winner(player_label(winner) if winner is not None else "未结束")
         self.controls.set_status(self.status_message)
+        self.controls.save_button.configure(text="重试保存" if self._finalization_pending else "保存棋谱")
         self.controls.set_can_apply(can_apply)
         self.controls.set_can_undo(self._can_undo_move(winner))
         self.controls.set_dice_enabled(can_enter_dice)
@@ -872,15 +1011,17 @@ class MainWindow(tk.Frame):
     def _can_enter_dice(self, winner: Player | None = None) -> bool:
         if winner is None:
             winner = self.state.get_winner()
-        return self._phase == "playing" and winner is None and not self._match_is_finished()
+        return self._phase == "playing" and winner is None and not self._match_is_finished() and not self._finalization_pending
 
     def _can_select_moves(self, winner: Player | None = None) -> bool:
         return self._can_enter_dice(winner) and not self._awaiting_dice
 
     def _can_undo_move(self, winner: Player | None = None) -> bool:
-        return self._phase == "playing" and not self._match_is_finished() and bool(self.state.history)
+        return self._phase == "playing" and not self._match_is_finished() and not self._finalization_pending and bool(self.record.steps)
 
     def _blocked_move_message(self) -> str:
+        if self._finalization_pending:
+            return "本盘已结束，请先重试保存。"
         if self._match_is_finished():
             return "本轮已结束，不能继续选择或执行走法。"
         if self._phase != "playing":
@@ -892,6 +1033,8 @@ class MainWindow(tk.Frame):
         return "当前不能选择或执行走法。"
 
     def _compute_phase_label(self, winner: Player | None) -> str:
+        if self._finalization_pending:
+            return "本盘已结束，等待重试保存"
         if self._match_is_finished():
             return "本轮已结束"
         if winner is not None:
@@ -908,6 +1051,8 @@ class MainWindow(tk.Frame):
         return "请选择走法"
 
     def _recommendation_text(self, winner: Player | None) -> str:
+        if getattr(self, "_finalization_pending", False):
+            return "本盘已结束，等待重试保存"
         match = getattr(self, "_match", None)
         if match is not None and match.is_finished():
             return "本轮已结束"
@@ -917,93 +1062,104 @@ class MainWindow(tk.Frame):
         our_side = getattr(self, "_our_side", None)
         state = getattr(self, "state", None)
         if mode == "match" and our_side is not None and state is not None and state.current_player is not our_side:
-            if getattr(self, "_awaiting_dice", True):
-                return "等待对方骰子"
-            return "等待对方走法"
+            return "等待对方骰子" if getattr(self, "_awaiting_dice", True) else "等待对方走法"
         if getattr(self, "_awaiting_dice", True):
             return "等待骰子"
-
         move = self._recommended_move()
         if move is None:
-            return "当前骰子无合法走法"
-
+            return "计算中…" if getattr(self, "_recommendation_pending_key", None) is not None else "当前骰子无合法走法"
         source = getattr(self, "_recommendation_cache_source", "rollout")
         source_label = {
             "rollout": DEFAULT_RECOMMENDER_KIND,
             "greedy_risk": "greedy_risk 回退",
-            "rules": "规则兜底",
-            "none": DEFAULT_RECOMMENDER_KIND,
+            "rules": "规则兜底", "none": DEFAULT_RECOMMENDER_KIND,
         }.get(source, DEFAULT_RECOMMENDER_KIND)
         lines = [f"{source_label}：{format_move_label(move, distinguish_self_capture=True)}"]
         if source == "rollout":
-            if getattr(self._recommender, "last_low_confidence", False):
-                margin = getattr(self._recommender, "last_score_margin", None)
-                if margin is None:
-                    lines.append("低置信：建议人工核对候选列表（候选差距过小）")
-                else:
-                    lines.append(f"低置信：建议人工核对候选列表，候选差距={float(margin):.2f}")
-            if getattr(self._recommender, "last_timed_out", False):
-                if getattr(self._recommender, "last_used_fallback", False):
-                    lines.append("采样：超时，已使用 greedy_risk 回退")
-                else:
-                    lines.append("采样：超时，使用已完成样本")
-            diagnostics = getattr(self._recommender, "last_root_stats", None)
-            if diagnostics is None:
-                diagnostics = getattr(self._recommender, "last_diagnostics", [])
-            if diagnostics:
-                lines.append("rollout 候选：")
-                lines.extend(_format_rollout_diagnostic(diagnostic) for diagnostic in diagnostics)
+            lines.extend(getattr(self, "_recommendation_cache_diagnostics", ()))
         return "\n".join(lines)
 
-    def _is_legal_recommendation(self, move: Move | None, legal_moves: list[Move]) -> bool:
-        return move is not None and move in legal_moves
-
-    def _choose_fallback_recommendation(
-        self, legal_moves: list[Move]
-    ) -> tuple[Move | None, Literal["greedy_risk", "rules", "none"]]:
-        try:
-            fallback_move = self._fallback_recommender.choose_move(self.state, self.current_dice)
-        except Exception:  # noqa: BLE001 - GUI fallback must survive AI failures.
-            fallback_move = None
-
-        if self._is_legal_recommendation(fallback_move, legal_moves):
-            return fallback_move, "greedy_risk"
-        if legal_moves:
-            return legal_moves[0], "rules"
-        return None, "none"
-
     def _recommended_move(self) -> Move | None:
+        self._sync_recommendation_context()
+        if not self._can_select_moves() or (
+            self._mode == "match" and self._our_side is not None
+            and self.state.current_player is not self._our_side
+        ):
+            return None
         key = self._recommendation_key()
         if self._recommendation_cache_key == key:
             return self._recommendation_cache_move
-
-        self._recommendation_cache_key = key
-        legal_moves = self.state.legal_moves(self.state.current_player, self.current_dice)
-        if not legal_moves:
-            self._recommendation_cache_move = None
-            self._recommendation_cache_source = "none"
-            return None
-
-        try:
-            rollout_move = self._recommender.choose_move(self.state, self.current_dice)
-        except Exception:  # noqa: BLE001 - GUI must keep producing a safe recommendation.
-            rollout_move = None
-
-        if self._is_legal_recommendation(rollout_move, legal_moves):
-            self._recommendation_cache_move = rollout_move
-            self._recommendation_cache_source = "rollout"
-            return rollout_move
-
-        fallback_move, source = self._choose_fallback_recommendation(legal_moves)
-        self._recommendation_cache_move = fallback_move
-        self._recommendation_cache_source = source
-        return fallback_move
+        if self._recommendation_pending_key != key:
+            self._recommendation_pending_key = key
+            self._recommendation_worker.submit(RecommendationRequest(
+                generation=self._recommendation_generation,
+                key=key,
+                dice=self.current_dice,
+                state=self.state.clone(include_history=False),
+                recommender=self._recommender,
+                fallback=self._fallback_recommender,
+            ))
+        return None
 
     def _recommendation_key(self) -> tuple[int, str]:
         return (
             self.current_dice,
             repr(self.state.serialize(include_history=False)),
         )
+
+    def _invalidate_recommendation(self) -> None:
+        self._recommendation_generation += 1
+        self._recommendation_pending_key = None
+        self._recommendation_cache_key = None
+        self._recommendation_cache_move = None
+        self._recommendation_cache_source = "none"
+        self._recommendation_cache_diagnostics = ()
+        self._recommendation_worker.invalidate()
+
+    def _sync_recommendation_context(self) -> None:
+        context = (
+            self._recommendation_key(), self._mode, self._our_side,
+            self._phase, self._awaiting_dice,
+            self._match.match_id if self._match is not None else None,
+            self._match_is_finished(), self._finalization_pending,
+            id(self._recommender), id(self._fallback_recommender),
+        )
+        if context != self._recommendation_context:
+            self._invalidate_recommendation()
+            self._recommendation_context = context
+
+    def _poll_recommendation(self) -> None:
+        _collect_retired_windows()
+        self._recommendation_after_id = None
+        if self._closed:
+            return
+        self._sync_recommendation_context()
+        accepted = False
+        for result in self._recommendation_worker.drain():
+            if (
+                result.generation != self._recommendation_generation
+                or result.key != self._recommendation_key()
+                or not self._can_select_moves()
+                or (self._mode == "match" and self._our_side is not None
+                    and self.state.current_player is not self._our_side)
+            ):
+                continue
+            legal = self._current_moves()
+            canonical = next((move for move in legal if move == result.move), None)
+            if result.move is not None and canonical is None:
+                continue
+            if result.move is None and legal:
+                continue
+            self._recommendation_pending_key = None
+            self._recommendation_cache_key = result.key
+            self._recommendation_cache_move = canonical
+            self._recommendation_cache_source = result.source
+            self._recommendation_cache_diagnostics = result.diagnostics
+            accepted = True
+        if accepted:
+            self._refresh()
+        if not self._closed:
+            self._recommendation_after_id = self.after(50, self._poll_recommendation)
 
     def _move_source(self, mover: Player) -> Literal["self", "opponent", "unknown"]:
         if self._mode != "match" or self._our_side is None:
@@ -1025,12 +1181,13 @@ class MainWindow(tk.Frame):
     def _set_mode(self, mode: Literal["debug", "match"], *, our_side: Player | None = None) -> None:
         if mode == "match" and our_side is None:
             raise ValueError("match mode requires our_side")
+        self._invalidate_recommendation()
         self._mode = mode
         self._our_side = our_side if mode == "match" else None
         self._refresh()
 
     def _enter_debug_mode(self) -> None:
-        active_match = self._match is not None and not self._match.is_finished()
+        active_match = self._match is not None and (not self._match.is_finished() or self._finalization_pending)
         if active_match:
             confirm = messagebox.askyesno(
                 "退出比赛模式",
@@ -1066,7 +1223,7 @@ class MainWindow(tk.Frame):
         menubar.add_cascade(label="模式", menu=mode_menu)
 
     def _enter_match_mode(self) -> None:
-        if self._match is not None and not self._match.is_finished():
+        if self._match is not None and (not self._match.is_finished() or self._finalization_pending):
             confirm = messagebox.askyesno(
                 "正在比赛模式",
                 "当前已处于比赛模式。重新开始将放弃本轮比赛和当前记录，是否继续？",
@@ -1090,7 +1247,13 @@ class MainWindow(tk.Frame):
         # R-2 review Important #18：进入新一轮前清掉可能残留的旧 auto-save（单盘 + 整轮）。
         self._clear_auto_save()
         self._clear_match_auto_save()
-        self._match = MatchRecord(our_side=our_side, our_role=our_role)
+        self._invalidate_recommendation()
+        self._finalization_pending = False
+        self._match = MatchRecord(
+            our_side=our_side, our_role=our_role,
+            time_limit_seconds=self._total_seconds,
+            auto_timeout_enabled=self._auto_timeout_enabled,
+        )
         self._mode = "match"
         self._our_side = our_side
         self.opening_panel.set_side_controls_enabled(False)
@@ -1100,15 +1263,15 @@ class MainWindow(tk.Frame):
         self._auto_save_current_match()
 
     def _configure_timer_options(
-        self,
-        *,
-        total_seconds: float,
-        auto_timeout_enabled: bool,
+        self, *, total_seconds: float, auto_timeout_enabled: bool,
     ) -> None:
-        self._total_seconds = validate_total_seconds(total_seconds)
-        self._auto_timeout_enabled = bool(auto_timeout_enabled)
+        total = validate_total_seconds(total_seconds)
+        automatic = require_bool(auto_timeout_enabled, "auto_timeout_enabled")
+        timer = MatchTimer(total_seconds=total, current_player=self.state.current_player)
+        self._total_seconds = total
+        self._auto_timeout_enabled = automatic
         self._timeout_notice_players = ()
-        self.timer = MatchTimer(total_seconds=self._total_seconds, current_player=self.state.current_player)
+        self.timer = timer
 
     def _exit_match_mode(self) -> None:
         """R-2 review Important #12/#17：集中清理 match 状态。
@@ -1117,6 +1280,8 @@ class MainWindow(tk.Frame):
         在 finished 弹窗确认后、_load_record 终止比赛、`_restore_match_auto_save` 用户放弃恢复
         等场景统一调用。
         """
+        self._invalidate_recommendation()
+        self._finalization_pending = False
         self._match = None
         self._mode = "debug"
         self._our_side = None
@@ -1125,7 +1290,7 @@ class MainWindow(tk.Frame):
         self._clear_auto_save()
         self.opening_panel.set_side_controls_enabled(True)
 
-    def _show_match_setup_dialog(self) -> tuple[Player, MatchRole, bool, float] | None:
+    def _show_match_setup_dialog(self) -> tuple[Player, MatchRole, bool, float] | tuple[Player, MatchRole] | None:
         dialog = tk.Toplevel(self)
         dialog.title("进入比赛模式")
         dialog.transient(self.winfo_toplevel())
@@ -1191,30 +1356,9 @@ class MainWindow(tk.Frame):
         return chosen  # type: ignore[return-value]
 
     # 旧 API 保留：仅返回颜色，给 _set_mode("match", our_side=...) 这条 legacy 路径使用
-    def _show_pick_side_dialog(self) -> Player | None:
-        dialog = tk.Toplevel(self)
-        dialog.title("选择我方颜色")
-        dialog.transient(self.winfo_toplevel())
-        dialog.grab_set()
-
-        result: dict[str, Player | None] = {"side": None}
-
-        tk.Label(dialog, text="你方使用：", padx=20, pady=10).pack()
-        button_row = tk.Frame(dialog)
-        button_row.pack(padx=20, pady=(0, 16))
-
-        def choose(player: Player) -> None:
-            result["side"] = player
-            dialog.destroy()
-
-        tk.Button(button_row, text="红方", width=10, command=lambda: choose(Player.RED)).pack(side=tk.LEFT, padx=4)
-        tk.Button(button_row, text="蓝方", width=10, command=lambda: choose(Player.BLUE)).pack(side=tk.LEFT, padx=4)
-
-        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
-        self.wait_window(dialog)
-        return result["side"]
-
     def _start_new_game_in_match(self) -> None:
+        if self._finalization_pending:
+            return
         if self._match is None:
             return
         keep = self._match.last_game_winner == "us"
@@ -1241,20 +1385,34 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _finalize_match_game(self, winner: Player, *, reason: str) -> None:
+        if self._finalization_pending:
+            self._retry_finalization_save()
+            return
         if self._match is None or self._match.is_finished():
             return
+        self.timer.pause()
+        self._invalidate_recommendation()
         outcome = "us" if winner is self._match.our_side else "them"
         self.record.result = {
-            "winner": winner.value,
-            "winner_side": outcome,
-            "reason": reason,
-            "game_index": self._match.current_game_index,
+            "winner": winner.value, "winner_side": outcome,
+            "reason": reason, "game_index": self._match.current_game_index,
         }
         self._match.append_finished_game(self.record, outcome)
-        # R-2 review Important #13：先持久化 match auto-save（包含已结束盘），再清单盘 auto-save。
-        # 中间崩溃时 match 已是 setup 含本盘成绩；下次启动会看到 has_game=True 但 state 已结束，
-        # _restore_match_auto_save 里有专门的守卫会清掉它。
-        self._auto_save_current_match()
+        self._record_dirty = True
+        self._finalization_pending = True
+        self._retry_finalization_save()
+
+    def _retry_finalization_save(self) -> None:
+        if not self._finalization_pending or self._match is None:
+            return
+        # A final single-game record also carries timeout adjudication, which the board cannot.
+        game_saved = self._auto_save_current_game()
+        if not self._auto_save_current_match():
+            recovery = "本盘恢复文件已保存。" if game_saved else "本盘结果尚未落盘。"
+            self.status_message += f" {recovery} 请点击“重试保存”，保存成功后再进入下一盘。"
+            self._refresh()
+            return
+        self._finalization_pending = False
         self._clear_auto_save()
         self._refresh()
         if self._match.is_finished():
@@ -1315,6 +1473,7 @@ class MainWindow(tk.Frame):
         return remaining_seconds
 
     def _schedule_timer_refresh(self) -> None:
+        self._cancel_timer_refresh()
         self._timer_after_id = self.after(500, self._refresh_timer)
 
     def _cancel_timer_refresh(self) -> None:
@@ -1327,7 +1486,7 @@ class MainWindow(tk.Frame):
         self._timer_after_id = None
 
     def _refresh_timer(self) -> None:
-        if not self.winfo_exists():
+        if self._closed or not self.winfo_exists():
             return
         snapshot = self.timer.snapshot()
         self.timer_panel.set_snapshot(
@@ -1341,6 +1500,7 @@ class MainWindow(tk.Frame):
             and snapshot.timeout_players
             and self._match is not None
             and not self._match.is_finished()
+            and not self._finalization_pending
         ):
             timed_out = snapshot.timeout_players[0]
             if self._auto_timeout_enabled:
@@ -1366,6 +1526,7 @@ class MainWindow(tk.Frame):
         timeout_players = getattr(snapshot, "timeout_players", ())
         return (
             not self._auto_timeout_enabled
+            and not self._finalization_pending
             and self._phase == "playing"
             and self.state.get_winner() is None
             and bool(timeout_players)
@@ -1413,5 +1574,17 @@ class MainWindow(tk.Frame):
             self._schedule_timer_refresh()
 
     def destroy(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self._invalidate_recommendation()
+        self._recommendation_worker.close()
+        _RETIRED_WINDOWS.append(self)
+        if self._recommendation_after_id is not None:
+            try:
+                self.after_cancel(self._recommendation_after_id)
+            except tk.TclError:
+                pass
+            self._recommendation_after_id = None
         self._cancel_timer_refresh()
         super().destroy()

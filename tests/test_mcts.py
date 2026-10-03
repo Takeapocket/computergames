@@ -311,9 +311,9 @@ def test_mcts_leaf_policy_playout_is_used_during_iteration():
             )
             self.calls = []
 
-        def _leaf_playout_score(self, state, perspective):
+        def _leaf_playout_score(self, state, perspective, *, deadline=None):
             self.calls.append((state.current_player, perspective))
-            return 42.0
+            return 0.42
 
     state = default_starting_state()
     ai = PlayoutSpyMCTS()

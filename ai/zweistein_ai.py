@@ -13,6 +13,7 @@ from ai.zweistein import (
 )
 from core.game_state import GameState
 from core.move import Move
+from core.validation import require_bool
 
 
 class ZweisteinGreedyAI:
@@ -32,7 +33,7 @@ class ZweisteinGreedyAI:
     ) -> None:
         self._rng = rng or random.Random()
         self.name = name
-        self.randomize_ties = randomize_ties
+        self.randomize_ties = require_bool(randomize_ties, "randomize_ties")
         (
             self.progress_weight,
             self.material_weight,

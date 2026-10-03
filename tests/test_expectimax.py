@@ -167,10 +167,10 @@ def test_expectimax_timeout_uses_rng_when_no_moves_scored():
     legal = state.legal_moves(Player.RED, dice)
     assert len(legal) > 1, "测试要求 >1 条合法走法以观测随机性"
 
-    # 负的 time_limit_ms ⇒ deadline 已过去 ⇒ 第一个 move 还没评分就 break
+    # 零预算 ⇒ 第一个 move 还没评分就 break，回退仍使用注入的 RNG。
     moves_seen = set()
     for seed in range(8):
-        ai = ExpectimaxAI(depth=1, rng=random.Random(seed), time_limit_ms=-1.0)
+        ai = ExpectimaxAI(depth=1, rng=random.Random(seed), time_limit_ms=0.0)
         move = ai.choose_move(state, dice)
         assert move is not None
         assert move in legal

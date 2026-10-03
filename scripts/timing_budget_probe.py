@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from ai.match import build_ai, starting_state_for
+from scripts._release_config import load_release_default_ai_config as _load_release_default_ai_config
 
 
 DEFAULT_OUTPUT = ROOT / "reports" / "p6_timing_budget_probe.md"
@@ -22,11 +23,7 @@ DEFAULT_JSON_OUTPUT = ROOT / "reports" / "p6_timing_budget_probe.json"
 def load_release_default_ai_config(
     path: str | Path = ROOT / "release" / "v1.0" / "default_params.json",
 ) -> tuple[str, dict]:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    if data.get("ai") != "rollout":
-        raise ValueError("release/v1.0/default_params.json must use ai='rollout'")
-    metadata_keys = {"ai", "fallback_ai", "promotion_report"}
-    return "rollout", {key: value for key, value in data.items() if key not in metadata_keys}
+    return _load_release_default_ai_config(path)
 
 
 def _percentile(values: list[float], percentile: float) -> float:

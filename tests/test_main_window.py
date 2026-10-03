@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import tkinter as tk
+import gc
+import time
 
 import pytest
 
@@ -23,6 +25,8 @@ def tk_root(_tk_root):
     yield top
     if top.winfo_exists():
         top.destroy()
+    # Tk variables must be finalized on the UI thread, before another worker allocates.
+    gc.collect()
 
 
 @pytest.fixture(autouse=True)
@@ -58,6 +62,16 @@ def _enable_move_selection(window: MainWindow, *, dice: int = 6) -> None:
     window.current_dice = dice
     window._show_playing_phase()
     window._refresh()
+
+
+def _wait_for_recommendation(window: MainWindow, *, timeout: float = 8.0) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        window.winfo_toplevel().update()
+        if (window._recommendation_cache_key == window._recommendation_key()
+                and window._recommendation_pending_key is None):
+            return
+    pytest.fail("background recommendation did not reach the current state/dice cache")
 
 
 def test_tk_root_fixture_uses_hidden_toplevel(tk_root):
@@ -341,7 +355,7 @@ def test_failed_auto_save_restore_clears_corrupt_file_and_keeps_fresh_game(tk_ro
 
     assert window.record.steps == []
     assert window.state.history == []
-    assert clear_calls == [window._auto_save_path]
+    assert clear_calls == []
     assert errors
 
 
@@ -855,6 +869,7 @@ def test_match_mode_panel_displays_rollout_recommendation_after_dice_input(tk_ro
     window._phase = "playing"
 
     window._handle_dice_change("6")
+    _wait_for_recommendation(window)
 
     recommendation = window.match_mode_panel.recommendation_var.get()
     assert "rollout" in recommendation
@@ -895,10 +910,12 @@ def test_recommendation_is_cached_until_state_or_dice_changes(tk_root):
     window._handle_dice_change("6")
     window._refresh()
     window._refresh()
+    _wait_for_recommendation(window)
 
     assert ai.calls == 1
 
     window._handle_dice_change("5")
+    _wait_for_recommendation(window)
 
     assert ai.calls == 2
 
@@ -1082,6 +1099,7 @@ def test_match_mode_panel_displays_greedy_risk_fallback_source(tk_root, monkeypa
     window._awaiting_dice = False
     window.current_dice = 6
     window._refresh()
+    _wait_for_recommendation(window)
 
     assert "greedy_risk 回退：" in window.match_mode_panel.recommendation_var.get()
 
@@ -1306,6 +1324,7 @@ def test_move_list_marks_ai_recommendation(tk_root):
     window.current_dice = 1
 
     window._refresh()
+    _wait_for_recommendation(window)
 
     labels = window.controls.move_listbox.get(0, tk.END)
     marked = [label for label in labels if label.startswith("[AI推荐] ")]

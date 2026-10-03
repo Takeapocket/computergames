@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -14,6 +12,13 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from gui import main_window
+from scripts._runtime_support import (
+    PYTEST_BASETEMP_TOKEN,
+    _expand_runtime_args,
+    _project_temp_dir,
+    _pytest_basetemp,
+    _subprocess_runner,
+)
 
 EXPECTED_RECOMMENDER_KWARGS = {
     "rollouts_per_move": 64,
@@ -97,7 +102,6 @@ REQUIRED_FILES = (
 )
 
 Runner = Callable[[Sequence[str], Path], int]
-PYTEST_BASETEMP_TOKEN = "{PYTEST_BASETEMP}"
 
 
 class PreflightError(RuntimeError):
@@ -106,11 +110,14 @@ class PreflightError(RuntimeError):
 
 def _read_json(path: Path) -> dict[str, object]:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise PreflightError(f"missing file: {path}") from exc
-    except json.JSONDecodeError as exc:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise PreflightError(f"cannot read file: {path}: {exc}") from exc
+    except ValueError as exc:
         raise PreflightError(f"invalid json: {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise PreflightError(f"JSON object required: {path}")
+    return payload
 
 
 def validate_project_root(
@@ -186,37 +193,6 @@ def print_runtime_summary(project_root: Path = PROJECT_ROOT) -> None:
     print(f"[INFO] version: {sys.version.split()[0]}", flush=True)
     print(f"[INFO] project: {project_root}", flush=True)
     print(f"[INFO] temp: {os.environ.get('TEMP', '')}", flush=True)
-
-
-def _project_temp_dir(project_root: Path) -> Path:
-    temp_dir = project_root / ".local-temp"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    return temp_dir
-
-
-def _pytest_basetemp(project_root: Path) -> Path:
-    return _project_temp_dir(project_root) / f"pytest-{os.getpid()}-{time.monotonic_ns()}"
-
-
-def _expand_runtime_args(args: Sequence[str], project_root: Path) -> tuple[str, ...]:
-    basetemp = None
-    expanded: list[str] = []
-    for arg in args:
-        if arg == PYTEST_BASETEMP_TOKEN:
-            if basetemp is None:
-                basetemp = _pytest_basetemp(project_root)
-            expanded.append(str(basetemp))
-        else:
-            expanded.append(str(arg))
-    return tuple(expanded)
-
-
-def _subprocess_runner(args: Sequence[str], cwd: Path) -> int:
-    temp_dir = _project_temp_dir(cwd)
-    env = os.environ.copy()
-    env["TEMP"] = str(temp_dir)
-    env["TMP"] = str(temp_dir)
-    return subprocess.run(args, cwd=cwd, check=False, env=env).returncode
 
 
 def run_external_checks(

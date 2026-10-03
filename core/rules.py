@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 
 from core.move import Move
 from core.types import BOARD_SIZE, MAX_PIECE_ID, MIN_PIECE_ID, Piece, Player, Position
+from core.validation import require_int
 
 
 def is_inside_board(position: Position) -> bool:
@@ -21,6 +22,7 @@ def move_deltas(player: Player) -> tuple[tuple[int, int], ...]:
 
 
 def legal_piece_ids_for_dice(pieces: Mapping[int, Piece], dice: int) -> list[int]:
+    require_int(dice, "dice")
     if not MIN_PIECE_ID <= dice <= MAX_PIECE_ID:
         raise ValueError("dice must be between 1 and 6")
 

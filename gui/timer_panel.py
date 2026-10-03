@@ -36,7 +36,7 @@ class MatchTimer:
         total_seconds: float = DEFAULT_TOTAL_SECONDS,
         current_player: Player = Player.RED,
         now: Callable[[], float] | None = None,
-        remaining_seconds: Mapping[Player | str, float] | None = None,
+        remaining_seconds: Mapping[Player, float] | Mapping[str, float] | Mapping[Player | str, float] | None = None,
     ) -> None:
         self.total_seconds = validate_total_seconds(total_seconds)
         self._now = now or time.monotonic
@@ -101,15 +101,16 @@ class MatchTimer:
         self._running_since = None if was_paused else self._now()
 
     def reset(
-        self,
-        *,
-        current_player: Player = Player.RED,
-        remaining_seconds: Mapping[Player | str, float] | None = None,
+        self, *, current_player: Player = Player.RED,
+        remaining_seconds: Mapping[Player, float] | Mapping[str, float] | Mapping[Player | str, float] | None = None,
     ) -> None:
-        self._current_player = Player.from_value(current_player)
-        self._remaining_seconds = self._normalize_remaining_seconds(remaining_seconds)
+        current = Player.from_value(current_player)
+        remaining = self._normalize_remaining_seconds(remaining_seconds)
+        now = self._now()
+        self._current_player = current
+        self._remaining_seconds = remaining
         self._turn_elapsed_seconds = 0.0
-        self._running_since = self._now()
+        self._running_since = now
 
     def _current_elapsed_seconds(self) -> float:
         if self._running_since is None:
@@ -118,7 +119,7 @@ class MatchTimer:
 
     def _normalize_remaining_seconds(
         self,
-        remaining_seconds: Mapping[Player | str, float] | None,
+        remaining_seconds: Mapping[Player, float] | Mapping[str, float] | Mapping[Player | str, float] | None,
     ) -> dict[Player, float]:
         normalized = {
             Player.RED: self.total_seconds,

@@ -7,6 +7,7 @@ from ai.risk import distance_weighted_capture_risk, expected_target_win_risk
 from core.game_state import GameState
 from core.rules import target_corner
 from core.types import Player, chebyshev_distance
+from core.validation import require_finite_number
 
 
 PROGRESS_WEIGHT = 12.0
@@ -24,22 +25,13 @@ def validate_zweistein_weights(
     capture_risk_weight: float,
     target_win_risk_weight: float,
 ) -> tuple[float, float, float, float, float]:
-    validated: list[float] = []
-    for name, value in (
-        ("progress_weight", progress_weight),
-        ("material_weight", material_weight),
-        ("mobility_weight", mobility_weight),
-        ("capture_risk_weight", capture_risk_weight),
-        ("target_win_risk_weight", target_win_risk_weight),
-    ):
-        try:
-            numeric_value = float(value)
-        except (TypeError, ValueError, OverflowError) as exc:
-            raise ValueError(f"{name} must be finite") from exc
-        if not math.isfinite(numeric_value):
-            raise ValueError(f"{name} must be finite")
-        validated.append(numeric_value)
-    return tuple(validated)
+    return (
+        require_finite_number(progress_weight, "progress_weight"),
+        require_finite_number(material_weight, "material_weight"),
+        require_finite_number(mobility_weight, "mobility_weight"),
+        require_finite_number(capture_risk_weight, "capture_risk_weight"),
+        require_finite_number(target_win_risk_weight, "target_win_risk_weight"),
+    )
 
 
 def zweistein_lite_score(

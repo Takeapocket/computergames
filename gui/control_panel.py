@@ -64,7 +64,8 @@ class ControlPanel(tk.Frame):
 
         record_row = tk.Frame(self)
         record_row.pack(fill=tk.X, pady=(0, 8))
-        tk.Button(record_row, text="保存棋谱", command=on_save).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        self.save_button = tk.Button(record_row, text="保存棋谱", command=on_save)
+        self.save_button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
         tk.Button(record_row, text="加载棋谱", command=on_load).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
 
         tk.Label(self, textvariable=self.winner_var, anchor="w").pack(fill=tk.X, pady=(0, 8))

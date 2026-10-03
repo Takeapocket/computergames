@@ -2,17 +2,24 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal, Sequence
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PYTEST_BASETEMP_TOKEN = "{PYTEST_BASETEMP}"
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts._runtime_support import (
+    PYTEST_BASETEMP_TOKEN,
+    _expand_runtime_args,
+    _project_temp_dir,
+    _pytest_basetemp,
+    _subprocess_runner,
+)
 
 CommandKind = Literal["subprocess", "status"]
 Runner = Callable[[Sequence[str], Path], int]
@@ -145,37 +152,6 @@ def resolve_command(commands: Sequence[LauncherCommand], choice: str) -> Launche
     raise LauncherError(f"未知选项：{choice}")
 
 
-def _project_temp_dir(project_root: Path) -> Path:
-    temp_dir = project_root / ".local-temp"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    return temp_dir
-
-
-def _pytest_basetemp(project_root: Path) -> Path:
-    return _project_temp_dir(project_root) / f"pytest-{os.getpid()}-{time.monotonic_ns()}"
-
-
-def _expand_runtime_args(args: Sequence[str], project_root: Path) -> tuple[str, ...]:
-    basetemp = None
-    expanded: list[str] = []
-    for arg in args:
-        if arg == PYTEST_BASETEMP_TOKEN:
-            if basetemp is None:
-                basetemp = _pytest_basetemp(project_root)
-            expanded.append(str(basetemp))
-        else:
-            expanded.append(str(arg))
-    return tuple(expanded)
-
-
-def _subprocess_runner(args: Sequence[str], cwd: Path) -> int:
-    temp_dir = _project_temp_dir(cwd)
-    env = os.environ.copy()
-    env["TEMP"] = str(temp_dir)
-    env["TMP"] = str(temp_dir)
-    return subprocess.run(args, cwd=cwd, check=False, env=env).returncode
-
-
 def _format_args(args: Sequence[str]) -> str:
     return subprocess.list2cmdline(list(args))
 
@@ -190,6 +166,9 @@ def print_release_status(project_root: Path = PROJECT_ROOT) -> None:
         raise LauncherError(f"缺少 release 配置文件：{exc.filename}") from exc
     except json.JSONDecodeError as exc:
         raise LauncherError(f"release 配置 JSON 无效：{exc}") from exc
+
+    if not isinstance(config, dict) or not isinstance(params, dict):
+        raise LauncherError("release 配置必须是 JSON 对象")
 
     print("当前 release/default 状态：")
     print(f"- 项目根目录：{project_root}")

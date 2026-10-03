@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import math
 import os
 import tempfile
 from collections.abc import Mapping
@@ -12,6 +11,7 @@ from typing import Any, Literal
 from core.game_state import GameState
 from core.move import Move
 from core.types import Player
+from core.validation import require_finite_number, require_int
 
 
 MoveSource = Literal["self", "opponent", "unknown"]
@@ -51,6 +51,8 @@ class MoveRecord:
         object.__setattr__(self, "player", Player.from_value(self.player))
         object.__setattr__(self, "step_seconds", _normalize_step_seconds(self.step_seconds))
         object.__setattr__(self, "remaining_seconds", _normalize_remaining_seconds(self.remaining_seconds))
+        require_int(self.turn, "turn")
+        require_int(self.dice, "dice")
         if self.turn < 1:
             raise ValueError("turn must be positive")
         if not 1 <= self.dice <= 6:
@@ -76,13 +78,13 @@ class MoveRecord:
     def from_dict(cls, data: dict[str, Any]) -> "MoveRecord":
         try:
             return cls(
-                turn=int(data["turn"]),
+                turn=data["turn"],
                 player=Player.from_value(data["player"]),
-                dice=int(data["dice"]),
+                dice=data["dice"],
                 move=Move.from_dict(data["move"]),
                 state_after=dict(data["state_after"]),
-                step_seconds=float(data.get("step_seconds", 0.0)),
-                remaining_seconds=_normalize_remaining_seconds(data.get("remaining_seconds", {})),
+                step_seconds=data.get("step_seconds", 0.0),
+                remaining_seconds=data.get("remaining_seconds", {}),
                 source=data.get("source", "unknown"),
             )
         except (KeyError, TypeError, ValueError) as exc:
@@ -107,7 +109,9 @@ class GameRecord:
         move: Move,
         state_after: GameState,
         step_seconds: float = 0.0,
-        remaining_seconds: Mapping[Player | str, float] | None = None,
+        remaining_seconds: (
+            Mapping[Player, float] | Mapping[str, float] | Mapping[Player | str, float] | None
+        ) = None,
         source: MoveSource = "unknown",
     ) -> MoveRecord:
         step = MoveRecord(
@@ -117,7 +121,7 @@ class GameRecord:
             move=move,
             state_after=state_after.serialize(include_history=False),
             step_seconds=step_seconds,
-            remaining_seconds=_normalize_remaining_seconds(remaining_seconds or {}),
+            remaining_seconds=_normalize_remaining_seconds({} if remaining_seconds is None else remaining_seconds),
             source=source,
         )
         self.steps.append(step)
@@ -177,7 +181,9 @@ class GameRecord:
                         f"step player {step.player.value!r} differs from move player "
                         f"{step.move.player.value!r}"
                     )
-                state.apply_move(step.move, dice=step.dice)
+                canonical_move = state.apply_move(step.move, dice=step.dice)
+                if canonical_move != step.move:
+                    raise ValueError("step move capture metadata does not match replayed move")
                 expected_state_after = GameState.deserialize(step.state_after).serialize(
                     include_history=False
                 )
@@ -208,19 +214,15 @@ class GameRecord:
 
 
 def _normalize_remaining_seconds(
-    remaining_seconds: Mapping[Player | str, float],
+    remaining_seconds: Mapping[Player, float] | Mapping[str, float] | Mapping[Player | str, float],
 ) -> dict[Player, float]:
-    normalized: dict[Player, float] = {}
-    for player, seconds in remaining_seconds.items():
-        value = float(seconds)
-        if not math.isfinite(value) or value < 0.0:
-            raise ValueError("remaining_seconds must be non-negative finite values")
-        normalized[Player.from_value(player)] = value
-    return normalized
+    if not isinstance(remaining_seconds, Mapping):
+        raise ValueError("remaining_seconds must be a mapping")
+    return {
+        Player.from_value(player): require_finite_number(seconds, "remaining_seconds", minimum=0.0)
+        for player, seconds in remaining_seconds.items()
+    }
 
 
 def _normalize_step_seconds(step_seconds: float) -> float:
-    value = float(step_seconds)
-    if not math.isfinite(value) or value < 0.0:
-        raise ValueError("step_seconds must be a non-negative finite value")
-    return value
+    return require_finite_number(step_seconds, "step_seconds", minimum=0.0)

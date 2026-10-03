@@ -91,19 +91,21 @@ def test_pick_max_material_falls_back_to_rng_when_no_captures():
 
 def test_pick_max_material_ignores_self_captures():
     """Self-captures (capturing own piece) must not count as 'material'."""
-    fake_self_piece_move = _move(
+    from core.types import Piece
+
+    self_capture = _move(
         Player.RED, 1, Position(0, 0), Position(1, 1),
-        captured=type("P", (), {"player": Player.RED})(),
+        captured=Piece(Player.RED, 2, Position(1, 1)),
     )
-    fake_opp_capture = _move(
+    opponent_capture = _move(
         Player.RED, 2, Position(2, 2), Position(3, 3),
-        captured=type("P", (), {"player": Player.BLUE})(),
+        captured=Piece(Player.BLUE, 1, Position(3, 3)),
     )
     rng = random.Random(0)
 
-    chosen = pick_max_material([fake_self_piece_move, fake_opp_capture], rng)
+    chosen = pick_max_material([self_capture, opponent_capture], rng)
 
-    assert chosen is fake_opp_capture
+    assert chosen is opponent_capture
 
 
 # -------- find_winning_moves --------

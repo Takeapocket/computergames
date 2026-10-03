@@ -5,6 +5,7 @@ from core.types import BOARD_SIZE, Piece, Player, Position
 from gui.app import create_default_state, format_move_label
 from gui.main_window import MainWindow
 from gui.timer_panel import format_seconds
+from gui.recommendation_worker import RecommendationRequest, calculate_recommendation, diagnostic_lines
 
 
 def test_default_state_has_full_non_overlapping_layout():
@@ -90,7 +91,7 @@ def test_recommendation_text_marks_low_confidence():
 
     class FakeWindow:
         _awaiting_dice = False
-        _recommender = FakeRecommender()
+        _recommendation_cache_diagnostics = diagnostic_lines(FakeRecommender())
 
         def _recommended_move(self):
             return move
@@ -151,7 +152,7 @@ def test_recommendation_text_prefers_root_stats_over_legacy_diagnostics():
 
     class FakeWindow:
         _awaiting_dice = False
-        _recommender = FakeRecommender()
+        _recommendation_cache_diagnostics = diagnostic_lines(FakeRecommender())
 
         def _recommended_move(self):
             return move
@@ -189,24 +190,16 @@ def test_recommended_move_uses_greedy_risk_fallback_when_rollout_raises() -> Non
         def choose_move(self, state, dice):
             return fallback_move
 
-    class FakeWindow:
-        current_dice = 6
-        _recommender = BrokenRollout()
-        _fallback_recommender = FallbackAI()
-        _recommendation_cache_key = None
-        _recommendation_cache_move = None
-        _recommendation_cache_source = "none"
-        _is_legal_recommendation = MainWindow._is_legal_recommendation
-        _choose_fallback_recommendation = MainWindow._choose_fallback_recommendation
+    request = RecommendationRequest(
+        generation=1, key=(6, repr(state.serialize(include_history=False))), dice=6,
+        state=state.clone(include_history=False),
+        recommender=BrokenRollout(),
+        fallback=FallbackAI(),
+    )
+    result = calculate_recommendation(request)
 
-        def _recommendation_key(self):
-            return (self.current_dice, repr(self.state.serialize(include_history=False)))
-
-    window = FakeWindow()
-    window.state = state
-
-    assert MainWindow._recommended_move(window) == fallback_move
-    assert window._recommendation_cache_source == "greedy_risk"
+    assert result.move == fallback_move
+    assert result.source == "greedy_risk"
 
 
 def test_recommended_move_rejects_illegal_rollout_move_and_uses_fallback() -> None:
@@ -232,24 +225,16 @@ def test_recommended_move_rejects_illegal_rollout_move_and_uses_fallback() -> No
         def choose_move(self, state, dice):
             return fallback_move
 
-    class FakeWindow:
-        current_dice = 6
-        _recommender = IllegalRollout()
-        _fallback_recommender = FallbackAI()
-        _recommendation_cache_key = None
-        _recommendation_cache_move = None
-        _recommendation_cache_source = "none"
-        _is_legal_recommendation = MainWindow._is_legal_recommendation
-        _choose_fallback_recommendation = MainWindow._choose_fallback_recommendation
+    request = RecommendationRequest(
+        generation=1, key=(6, repr(state.serialize(include_history=False))), dice=6,
+        state=state.clone(include_history=False),
+        recommender=IllegalRollout(),
+        fallback=FallbackAI(),
+    )
+    result = calculate_recommendation(request)
 
-        def _recommendation_key(self):
-            return (self.current_dice, repr(self.state.serialize(include_history=False)))
-
-    window = FakeWindow()
-    window.state = state
-
-    assert MainWindow._recommended_move(window) == fallback_move
-    assert window._recommendation_cache_source == "greedy_risk"
+    assert result.move == fallback_move
+    assert result.source == "greedy_risk"
 
 
 def test_recommended_move_uses_first_legal_when_fallback_fails() -> None:
@@ -262,24 +247,16 @@ def test_recommended_move_uses_first_legal_when_fallback_fails() -> None:
         def choose_move(self, state, dice):
             raise RuntimeError("no recommendation")
 
-    class FakeWindow:
-        current_dice = 6
-        _recommender = BrokenAI()
-        _fallback_recommender = BrokenAI()
-        _recommendation_cache_key = None
-        _recommendation_cache_move = None
-        _recommendation_cache_source = "none"
-        _is_legal_recommendation = MainWindow._is_legal_recommendation
-        _choose_fallback_recommendation = MainWindow._choose_fallback_recommendation
+    request = RecommendationRequest(
+        generation=1, key=(6, repr(state.serialize(include_history=False))), dice=6,
+        state=state.clone(include_history=False),
+        recommender=BrokenAI(),
+        fallback=BrokenAI(),
+    )
+    result = calculate_recommendation(request)
 
-        def _recommendation_key(self):
-            return (self.current_dice, repr(self.state.serialize(include_history=False)))
-
-    window = FakeWindow()
-    window.state = state
-
-    assert MainWindow._recommended_move(window) == legal[0]
-    assert window._recommendation_cache_source == "rules"
+    assert result.move == legal[0]
+    assert result.source == "rules"
 
 
 def test_recommendation_text_names_greedy_risk_fallback_source() -> None:
@@ -296,7 +273,7 @@ def test_recommendation_text_names_greedy_risk_fallback_source() -> None:
 
     class FakeWindow:
         _awaiting_dice = False
-        _recommender = FakeRecommender()
+        _recommendation_cache_diagnostics = diagnostic_lines(FakeRecommender())
         _recommendation_cache_source = "greedy_risk"
 
         def _recommended_move(self):
@@ -322,7 +299,7 @@ def test_recommendation_text_names_rules_fallback_source() -> None:
 
     class FakeWindow:
         _awaiting_dice = False
-        _recommender = FakeRecommender()
+        _recommendation_cache_diagnostics = diagnostic_lines(FakeRecommender())
         _recommendation_cache_source = "rules"
 
         def _recommended_move(self):

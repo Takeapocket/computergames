@@ -7,9 +7,11 @@ from ai.evaluator import (
     MATERIAL_WEIGHT,
     SELF_CAPTURE_WEIGHT,
     evaluate,
+    validate_evaluator_weights,
 )
 from core.game_state import GameState
 from core.move import Move
+from core.validation import require_bool
 
 
 class GreedyAI:
@@ -33,12 +35,20 @@ class GreedyAI:
     ) -> None:
         self._rng = rng or random.Random()
         self.name = name
-        self.distance_weight = distance_weight
-        self.material_weight = material_weight
-        self.expected_risk_weight = expected_risk_weight
-        self.expected_win_risk_weight = expected_win_risk_weight
-        self.self_capture_weight = self_capture_weight
-        self.randomize_ties = randomize_ties
+        (
+            self.distance_weight,
+            self.material_weight,
+            self.expected_risk_weight,
+            self.expected_win_risk_weight,
+            self.self_capture_weight,
+        ) = validate_evaluator_weights(
+            distance_weight=distance_weight,
+            material_weight=material_weight,
+            expected_risk_weight=expected_risk_weight,
+            expected_win_risk_weight=expected_win_risk_weight,
+            self_capture_weight=self_capture_weight,
+        )
+        self.randomize_ties = require_bool(randomize_ties, "randomize_ties")
 
     def choose_move(self, state: GameState, dice: int) -> Move | None:
         legal_moves = state.legal_moves(state.current_player, dice)

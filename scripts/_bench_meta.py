@@ -18,15 +18,20 @@ SCHEMA_VERSION = 2
 def git_revision(repo_root: Path) -> str:
     try:
         out = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=repo_root, stderr=subprocess.DEVNULL, timeout=5
+            ["git", "-c", f"safe.directory={repo_root.resolve().as_posix()}", "rev-parse", "HEAD"],
+            cwd=repo_root,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
         )
-    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+    except (subprocess.SubprocessError, OSError):
         return "<not-a-git-repo>"
     return out.decode("ascii", errors="replace").strip()
 
 
-def git_dirty(repo_root: Path) -> bool:
+def git_dirty(repo_root: Path) -> bool | None:
     """工作树是否有源码层面的未提交改动。
+
+    Git 不可用或无法读取状态时返回 None，不能把未知状态报告为干净。
 
     会跳过 ``reports/*.json`` 与 ``replays/*.json``，因为它们是 bench/match 脚本的输出
     产物，自身就会被脚本覆写——如果不跳过，串行重跑多份 bench 时 git_dirty 会永远是 True
@@ -34,10 +39,13 @@ def git_dirty(repo_root: Path) -> bool:
     """
     try:
         out = subprocess.check_output(
-            ["git", "status", "--porcelain"], cwd=repo_root, stderr=subprocess.DEVNULL, timeout=5
+            ["git", "-c", f"safe.directory={repo_root.resolve().as_posix()}", "status", "--porcelain"],
+            cwd=repo_root,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
         )
-    except (subprocess.SubprocessError, FileNotFoundError, OSError):
-        return False
+    except (subprocess.SubprocessError, OSError):
+        return None
     for raw in out.decode("ascii", errors="replace").splitlines():
         if len(raw) < 4:
             continue

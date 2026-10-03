@@ -15,6 +15,7 @@ from ai.match import _step_timed_out, build_ai, starting_state_for
 from ai.tactical import find_winning_moves
 from core.move import Move
 from core.types import Player
+from scripts._release_config import load_release_default_ai_config as _load_release_default_ai_config
 
 
 BUCKETS = (
@@ -32,11 +33,7 @@ BUCKETS = (
 def load_release_default_ai_config(
     path: str | Path = ROOT / "release" / "v1.0" / "default_params.json",
 ) -> tuple[str, dict]:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    if data.get("ai") != "rollout":
-        raise ValueError("release/v1.0/default_params.json must use ai='rollout'")
-    metadata_keys = {"ai", "fallback_ai", "promotion_report"}
-    return "rollout", {key: value for key, value in data.items() if key not in metadata_keys}
+    return _load_release_default_ai_config(path)
 
 
 def board_key(state) -> str:
