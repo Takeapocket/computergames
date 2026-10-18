@@ -1,8 +1,22 @@
 # 爱恩斯坦棋 AI 研究项目记忆
 
-更新时间：2026-08-18
+更新时间：2026-10-18
 
-## 当前结论
+## 当前接手结论（优先于下方历史记录）
+
+- **2026-10-18 UI/EXE 第二阶段已交付**：新版 PySide6 0.2 已迁移自定义开局、七盘四胜制、完整计时和自动保存恢复，旧 Tk 保留。原环境完整回归 **1472 passed / 2 Qt 模块 skipped**，桌面专项 **99 passed**；实际 EXE 完成中文含空格目录、不同 cwd、系统 PATH 及 100/150/200% 缩放验收。交付路径、ZIP 哈希和实际流程证据以 `reports/desktop_match_20261018.md` 及同名 selftest JSON 为准。35 个 core/ai/record/release 记录文件哈希与 P14 基线一致；旧 Tk 主窗口不变，计时模型原样提取到共享 `gui/timing.py`。暂停仅停表、仍允许合法录入；悔棋不返还时间。自动保存有限重试，终局保存失败禁止下一盘；不匹配恢复、遗漏当前盘、较早已结算盘残留均明确拒绝并保留文件。独立干净 Windows 机器、断电/写入中强杀进程未验收，下一 UI 工作先做目标机器人工演练。此条更新下方第一阶段的功能限制。
+
+- **2026-10-18 UI/EXE 第一阶段已交付**：按用户指令新增 PySide6 效果稿与单盘样机，旧 Tk 保留。实际便携 ZIP 位于 `dist/desktop-preview-0.1.0-20261018-portable/`；真实 EXE 在中文含空格目录、不同 cwd、无 Python 环境变量和 100/150/200% 缩放自检通过。原环境全量 1428 passed/1 Qt 模块 skipped，桌面专项 37 passed。详见 `reports/desktop_preview_20261018.md`。样机尚无七盘制、完整计时、自动恢复和自定义开局编辑，后续优先补完整流程；独立干净 Windows 机器未验收。规则/P14/GameRecord/旧主窗口哈希不变；显示 formatter 原样抽成共享模块。构建必须隔离子进程 PATH，防止误收外部工具同名 ICU DLL。原研究 `.venv` 未变，桌面依赖只在 `.venv-desktop`。
+
+- 本轮全项目审查确认并修复骰子映射错误：对应号缺失时可选低侧最大号与高侧最小号，不要求等距。事实依据为根目录赛事规则第 2 条“缺 4、5，掷 4 可走 3 或 6”。当前规则版本为 `einstein-nearest-sides-v2`。
+- **2026-10-18 修正规则后的 P14 基线已建立**：用户选择 P14 对历史 P3 Rollout 参数；固定 100 个种子、每种子换色两局，共 200 局。P14 红方 50/100、蓝方 54/100，合并 104/200=52.0%；按 100 对 seed-pairs bootstrap 的 95% 区间为 45.0%–59.0%，不能确认 P14 优势，也不证明等效。错误/非法步/崩溃/截断/实际步时越限均为 0；P14/对照平均步时 1045.708/404.212ms。源码快照与当前 78 文件哈希一致，默认参数未改。原始目录 `E:\computergame-data\benchmarks\p14_rebaseline_v2_20261018`，报告 `reports/p14_rebaseline_v2_20261018.md`。双方保留 2000/750ms 不同预算，不能称同预算比较；不与旧规则胜率或 Elo 合并。
+- 下方截至 2026-10-04 的测试数、棋力结论、性能值、晋升/停止决定均为历史快照。旧规则胜率与 Elo 不作为新规则证据；P14 配置、布局和 release 文件保留，但运行行为随 core 修正而改变。
+- 代码审查见 `reports/project_review_20261018.md`；最新实测与回归见 `reports/p14_rebaseline_v2_20261018.md`；当前事实摘要见 `docs/PROJECT_BRIEF.md`，下一步以 `PROJECT_PHASES.md` 的当前优先级为准。
+- 最新全量验证：P14 评测完成后 `1408 passed in 85.46s`（Tk unraisable warning 视为错误）。新增运行/分析专项 18/16 项通过，独立两局 smoke 和正式 200 局均完成并校验。此前代码审查阶段为 1374 passed、smoke/S2 8/8；16 局面探针仍保留为历史局部证据，不替代本轮完整对照。
+- 立即方向：基线已完成，下一项先做同时间上限的对照与单因素消融，区分预算/采样/epsilon 的作用，再推进现有经典搜索候选；记录实际计算量，默认参数保持不变。L2 仍只有设计，未安装 PyTorch、未开始训练。
+- 赛事功能与材料分开判断：`docs/COMPETITION_COMPLIANCE.md` 记录原文、实现、未确认事项；更新版 Word 明确要求 AI 辅助和个人贡献披露，现存模板未完成。不得把 preflight、自动测试或历史“全部闭环”解释成赛方认证。
+
+## 历史实施记录（保留原日期与结果）
 
 - **2026-08-18 当前状态已复核**：README、项目简介、E 盘交接和规则/源码历史注释已同步到研究模式。GUI/release 默认仍为 P14 Rollout + `balanced_v1`，实验性 ExpectimaxV2、Star1/Star2、精确残局、MCTS leaf playout 与 CEM 均未替换默认配置。当前全量验证为 `1071 passed in 74.51s`，`scripts/smoke_test.py` 通过。
 - **2026-06-14 E 盘迁移与交接已完成**：后续唯一主开发目录为 `E:\computergame`；C 盘旧目录 `C:\Users\Takeapocket\Desktop\documents\computergames` 已弃用，仅作为迁移前快照保留，不再用于开发、测试、提交或推送。本次修复已提交并推送到 GitHub `main`：`4b8b10910502fc9473c28e35c9128c65fafbe45e`（`Add research scaffolding and review fixes`）。`E:\computergame` 已从 GitHub 干净 clone，`.venv` 已重建，`pytest` 与 `requirements-research.txt` 已安装；研究数据目录为 `E:\computergame-data`，pip 缓存为 `E:\pip-cache`，torch 缓存为 `E:\torch-cache`。E 盘全量验证：`933 passed in 79.08s`；ladder smoke 已确认无 `--output-dir` 时通过 `CG_RESEARCH_DATA_DIR=E:/computergame-data` 写入 `E:\computergame-data\ladder\report.json`。交接说明见 `docs/E_DRIVE_HANDOFF_20260614.md`。
@@ -71,7 +85,7 @@
 - **开局**：可任意摆放（**无组委会强制布局**）。
 - **走法**：红向下/右/右下，蓝向上/左/左上，每次一格。
 - **吃子**：目标格有棋子（**含本方**）则吃掉；吃本方子是合法策略。✅ R-0 已修复 core 实现。
-- **骰子映射**：骰子 d 对应棋子已死时，可走最近编号棋子（双向并列时两个都可选）。
+- **骰子映射（2026-10-18 更正）**：骰子 d 对应棋子已死时，分别取较小一侧的最大存活号与较大一侧的最小存活号，两侧都存在即可二选一，不要求等距。
 - **胜负**：到达对方出发区角点 OR 吃光对方棋子 = 胜；**只有胜负，没有和棋**。
 - **单方时限**：每盘每方 4 分钟包干，超时判负；程序默认只提示超时，不自动判负，裁判确认后可用 GUI 按钮记分，裁判要求时可开启程序自动判负。
 - **轮制**：每轮 7 盘，先胜 4 盘为胜方；甲方一四五盘先手，乙方二三六七盘先手；两盘中间不休息。
@@ -124,13 +138,13 @@
 ## 下一次对话建议第一步
 
 1. 工作目录必须使用 `E:\computergame`；C 盘旧目录已弃用，不再作为开发、测试或提交来源。
-2. 先读取本文件、`PROJECT_PHASES.md` §2.5、`README.md`、`docs/PROJECT_BRIEF.md`、`docs/E_DRIVE_HANDOFF_20260614.md`。
+2. 先读取本文件顶部的当前结论、`PROJECT_PHASES.md` §2 当前优先级、`README.md`、`docs/PROJECT_BRIEF.md`、`docs/E_DRIVE_HANDOFF_20260614.md`。研究历史再查 §2.5；赛事要求查 `docs/COMPETITION_COMPLIANCE.md`。
 3. 接手时先确认 `git status --short`，再设置研究环境变量：`CG_RESEARCH_DATA_DIR=E:/computergame-data`、`PIP_CACHE_DIR=E:/pip-cache`、`TORCH_HOME=E:/torch-cache`。
-4. 项目已于 2026-06-13 转入**长期研究模式**；R-0~R-4、S1~S4、P1~P14 全部闭环，GUI/release 默认仍是 `rollout` + P14 参数（64 rollout / move、2000ms step deadline、epsilon 0.05、80ms deadline safety），作为研究天梯的 1500 锚点。
+4. 项目已于 2026-06-13 转入**长期研究模式**。当前规则的 P14 对历史参数基线已完成，读 `reports/p14_rebaseline_v2_20261018.md` 后再决定新实验；本轮 52%/CI 45%–59% 不支持稳定优势。GUI/release 仍使用 `rollout` + P14 参数（64 rollout / move、2000ms step deadline、epsilon 0.05、80ms deadline safety），1500 仅作为本地比较起点。
 5. 硬约束：训练数据/模型权重/自对弈棋谱/pip/torch cache 一律 E 盘；README 不写比赛结果；棋力结论只认天梯/批量对战数据；旧失败路线重开必须有新技术假设（`reports/ai_experiment_stop_list_20260518.md` 重开条件有效）。
 6. R-P1 工具已落地但性能前后对照和真实棋谱证据尚未闭环；R-P2A E1-E3 已实现但没有棋力晋升结论。
 7. R-P2B 下一道门是 L2 设计稿书面确认，之后才能编写实施计划。计划批准前不安装 PyTorch、不生成训练数据、不修改生产路径。
-8. 待外部输入：真实棋谱 JSON（拷回 `records/`，供复盘与骰子取证）。
+8. 待外部输入：真实棋谱 JSON（保存到 `E:\computergame-data` 的独立来源目录，供复盘与骰子取证；记录来源和规则版本，不混入新规则训练集）。
 
 ## 待外部输入或未来确认
 

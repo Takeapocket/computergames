@@ -87,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
 
     replay_path: str | None = None
     if not args.no_save_replay and result.record is not None:
-        result.record.metadata = metadata
+        result.record.metadata.update(metadata)
         result.record.result = result_meta
         replay_dir = Path(args.replay_dir)
         replay_dir.mkdir(parents=True, exist_ok=True)

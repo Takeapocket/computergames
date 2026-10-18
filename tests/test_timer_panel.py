@@ -133,6 +133,26 @@ def test_set_active_player_preserves_paused_state():
     assert snapshot.remaining_seconds[Player.RED] == pytest.approx(236)
 
 
+@pytest.mark.parametrize("operation", ["finish_turn", "set_active_player"])
+@pytest.mark.parametrize("paused", [False, True])
+def test_rejecting_invalid_next_player_preserves_timer(operation, paused):
+    clock = FakeClock()
+    timer = MatchTimer(total_seconds=240, now=clock)
+    clock.advance(8)
+    if paused:
+        timer.pause()
+    before = timer.snapshot()
+
+    with pytest.raises(ValueError):
+        getattr(timer, operation)("invalid")
+
+    assert timer.snapshot() == before
+    clock.advance(2)
+    after = timer.snapshot()
+    assert after.remaining_seconds[Player.RED] == pytest.approx(232 if paused else 230)
+    assert after.current_player is Player.RED
+
+
 def test_reset_clears_remaining_to_total():
     clock = FakeClock()
     timer = MatchTimer(total_seconds=240, now=clock)

@@ -81,11 +81,11 @@ class MainWindow(tk.Frame):
     ) -> None:
         _collect_retired_windows()
         validated_total_seconds = validate_total_seconds(total_seconds)
-        require_bool(auto_timeout_enabled, "auto_timeout_enabled")
+        validated_auto_timeout = require_bool(auto_timeout_enabled, "auto_timeout_enabled")
         super().__init__(master, padx=16, pady=16)
         self._build_menu(master)
         self._total_seconds = validated_total_seconds
-        self._auto_timeout_enabled = require_bool(auto_timeout_enabled, "auto_timeout_enabled")
+        self._auto_timeout_enabled = validated_auto_timeout
         self._timeout_notice_players: tuple[Player, ...] = ()
         self._auto_save_path = Path(auto_save_path) if auto_save_path is not None else AUTO_SAVE_PATH
         self._auto_save_match_path = (
@@ -272,16 +272,24 @@ class MainWindow(tk.Frame):
         self._refresh()
 
     def _apply_selected_move(self) -> None:
-        if self._can_select_moves() and self._auto_timeout_enabled and self._match is not None and not self._match.is_finished():
-            snapshot = self.timer.snapshot()
-            if snapshot.timeout_players:
-                self._handle_timeout(snapshot.timeout_players[0])
-                return
         if not self._can_select_moves():
             self.status_message = self._blocked_move_message()
             self._clear_selection()
             self._refresh()
             return
+
+        try:
+            self.record.validate_continuation_rules()
+        except ValueError as exc:
+            self.status_message = f"无法继续对局：{exc}"
+            self._refresh()
+            return
+
+        if self._auto_timeout_enabled and self._match is not None and not self._match.is_finished():
+            snapshot = self.timer.snapshot()
+            if snapshot.timeout_players:
+                self._handle_timeout(snapshot.timeout_players[0])
+                return
 
         moves = self._current_moves()
         if self.selected_move_index is None or not 0 <= self.selected_move_index < len(moves):
@@ -431,6 +439,7 @@ class MainWindow(tk.Frame):
         self._record_dirty = False
         self._awaiting_dice = True
         self._phase = "playing"
+        self.status_message = "开局已确认，请录入第一轮骰子。"
         if self._match is not None:
             self._match.start_playing()
             self._auto_save_current_match()
@@ -438,7 +447,6 @@ class MainWindow(tk.Frame):
             # 没有 MatchRecord：legacy 单盘 match 模式（沿用 R-1 行为）
             self._mode = "match"
             self._our_side = selection.our_side
-        self.status_message = "开局已确认，请录入第一轮骰子。"
         self._auto_save_current_game()
         self._show_playing_phase()
         self._refresh()
@@ -1260,7 +1268,6 @@ class MainWindow(tk.Frame):
         self._record_dirty = False
         self._match_finished_notified = False
         self._start_new_game_in_match()
-        self._auto_save_current_match()
 
     def _configure_timer_options(
         self, *, total_seconds: float, auto_timeout_enabled: bool,

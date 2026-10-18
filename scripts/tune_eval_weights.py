@@ -37,6 +37,7 @@ from ai.match import (
     play_one_game,
     starting_state_for,
 )
+from core.rules import RULES_VERSION
 from core.types import Player
 from scripts.ladder import estimate_rating_uncertainty, update_ratings
 
@@ -939,6 +940,7 @@ def _new_state(
     now = _utc_now()
     return {
         "schema_version": SCHEMA_VERSION,
+        "rules_version": RULES_VERSION,
         "generated_at": now,
         "updated_at": now,
         "config": config.to_dict(),
@@ -960,6 +962,7 @@ def _render_markdown_report(report: Mapping[str, Any]) -> str:
             "# CEM Evaluator Tuning Report",
             "",
             f"- profile: {report['profile']}",
+            f"- rules_version: {report['rules_version']}",
             f"- completed_generations: {report['completed_generations']}",
             f"- candidate_count: {report['candidate_count']}",
             f"- best_candidate: {best_id}",
@@ -978,6 +981,7 @@ def _write_reports(
 ) -> dict[str, Any]:
     report = {
         "schema_version": SCHEMA_VERSION,
+        "rules_version": RULES_VERSION,
         "generated_at": state["generated_at"],
         "updated_at": _utc_now(),
         "config": state["config"],
@@ -1044,6 +1048,7 @@ def _load_resume_state(
 
     expected_fields = {
         "schema_version": SCHEMA_VERSION,
+        "rules_version": RULES_VERSION,
         "profile": config.profile,
         "config": config.to_dict(),
         "specs": _specs_payload(specs),
@@ -1076,6 +1081,7 @@ def _load_candidate_rows(
     rows_by_id: dict[str, dict[str, Any]] = {}
     expected_common = {
         "schema_version": SCHEMA_VERSION,
+        "rules_version": RULES_VERSION,
         "config": config.to_dict(),
         "profile": config.profile,
         "specs": _specs_payload(specs),
@@ -1317,6 +1323,7 @@ def run_tuning(
             row = {
                 **evaluation,
                 "schema_version": SCHEMA_VERSION,
+                "rules_version": RULES_VERSION,
                 "config": config.to_dict(),
                 "profile": config.profile,
                 "specs": _specs_payload(specs),

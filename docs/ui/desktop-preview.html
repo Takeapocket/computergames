@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>爱恩斯坦棋 · 新版桌面 UI 效果稿</title>
+<style>
+:root{color-scheme:light;--paper:#f3f5f7;--ink:#182735;--muted:#71808b;--line:#e1e6e9;--teal:#0f766e;--red:#d85b59;--blue:#427bb4;--board:clamp(300px,calc(100vh - 394px),490px)}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 "Segoe UI","Microsoft YaHei UI","Microsoft YaHei",sans-serif}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #8acac3;outline-offset:4px}button:disabled{cursor:default}svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.symbols{position:absolute;width:0;height:0;overflow:hidden}.shell{max-width:1280px;margin:auto;padding:26px 32px 18px}.topbar{height:58px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:14px}.brand-mark{width:43px;height:43px;display:grid;place-items:center;border-radius:13px;background:var(--teal);color:white;box-shadow:0 4px 10px #0f766e16}.brand-mark svg{width:27px;height:27px;stroke-width:1.4}.brand h1{font-size:21px;font-weight:650;letter-spacing:.02em;margin:0}.brand p{color:var(--muted);font-size:11px;letter-spacing:.08em;margin:1px 0 0}.top-actions{display:flex;align-items:center;gap:16px}.draft-badge{border:1px solid #d7dfdf;border-radius:6px;padding:5px 9px;color:#5f7376;font-size:11px;background:#f9fbfb}.quiet-button{display:flex;align-items:center;gap:6px;border:0;padding:8px 0;background:transparent;color:#53636e;font-size:12px}.quiet-button:hover{color:var(--teal)}.workspace{margin-top:20px;display:grid;grid-template-columns:minmax(0,1fr) 316px;gap:22px;align-items:stretch}.panel{background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 18px #24384903}.board-panel{padding:20px 24px 16px;display:flex;flex-direction:column;justify-content:space-between}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.panel-title{margin:0;font-size:14px;font-weight:650}.small{font-size:11px;color:var(--muted)}.board-state{display:flex;gap:13px;align-items:center;font-size:11px;color:#60717c}.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px;background:currentColor}.red{color:var(--red)}.blue{color:var(--blue)}.board-frame{width:calc(var(--board) + 24px);margin:12px auto 8px;display:grid;grid-template-columns:24px var(--board);grid-template-rows:22px var(--board);align-items:center}.file-labels{display:grid;grid-template-columns:repeat(5,1fr);text-align:center;color:#86929b;font-size:11px;letter-spacing:.04em}.rank-labels{height:100%;display:grid;grid-template-rows:repeat(5,1fr);align-items:center;color:#86929b;font-size:11px}.board{width:var(--board);height:var(--board);display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);border:1px solid #d8dfe3;border-radius:10px;overflow:hidden;box-shadow:0 7px 20px #253c4c08}.square{position:relative;display:grid;place-items:center;background:#f7f8fa}.square.alt{background:#e9eef0}.square.selected{background:#d4e8e5;box-shadow:inset 0 0 0 2px #0f766e}.square.target:after{content:"";position:absolute;width:15%;height:15%;border-radius:50%;background:#0f766e38}.piece{position:relative;z-index:1;width:64%;height:64%;max-width:63px;max-height:63px;border-radius:50%;display:grid;place-items:center;color:white;font-size:clamp(19px,2.2vw,27px);font-weight:650;line-height:1;box-shadow:inset 0 1px 0 #ffffff40,0 3px 5px #20324618}.piece.red{background:var(--red);border:1px solid #c94f4d}.piece.blue{background:var(--blue);border:1px solid #3770aa}.square.selected .piece{box-shadow:0 0 0 4px #ffffffb0,0 3px 5px #20324618}.goal-corner{position:absolute;width:11px;height:11px;opacity:.45}.goal-blue{top:5px;left:5px;border-top:2px solid var(--blue);border-left:2px solid var(--blue)}.goal-red{bottom:5px;right:5px;border-bottom:2px solid var(--red);border-right:2px solid var(--red)}.board-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px;font-size:11px;color:var(--muted)}.layout-name{color:#5e6e79}.layout-name span{color:#93a0a9;font-size:10px;margin-left:6px}.legend{display:flex;align-items:center;gap:6px}.legend-ring{width:9px;height:9px;border:1.5px solid var(--teal);border-radius:3px;background:#d4e8e5}.side{display:flex;flex-direction:column;gap:14px}.turn-card{padding:18px 20px}.section-label{font-size:11px;color:var(--muted);margin:0 0 10px}.turn-line{display:flex;align-items:center;gap:12px}.turn-token{width:40px;height:40px;border-radius:50%;background:#fcf0ef;color:var(--red);display:grid;place-items:center;font-weight:650;font-size:17px}.turn-text{flex:1}.turn-text strong{font-size:19px;font-weight:650}.turn-text p{margin:0;font-size:11px;color:var(--muted)}.turn-arrow{display:flex;align-items:center;justify-content:center;width:28px;height:28px;color:#95a4ae}.dice-panel{padding:17px 20px 18px}.dice-heading{display:flex;align-items:baseline;justify-content:space-between}.dice-heading span{font-size:10px;color:#97a2aa}.dice-row{display:flex;gap:7px;margin-top:13px}.die{width:40px;height:40px;border:1px solid #dce3e7;border-radius:9px;background:white;color:#667681;display:grid;place-items:center;transition:background .12s,border-color .12s}.die svg{width:23px;height:23px;fill:currentColor;stroke:none}.die:hover{border-color:#6ca59e;background:#f3f9f8}.die[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:white;box-shadow:0 3px 7px #0f766e20}.dice-status{margin:11px 0 0;font-size:11px;color:#74838d}.recommend-panel{padding:19px 20px;flex:1;display:flex;flex-direction:column}.recommend-heading{display:flex;justify-content:space-between;align-items:center;gap:10px}.engine-badge{color:#4e6868;background:#f0f6f5;border:1px solid #e2eeeb;font-size:10px;letter-spacing:.04em;padding:2px 6px;border-radius:5px}.recommend-body{margin:19px 0 17px;display:flex;align-items:flex-start;gap:11px}.recommend-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#f4f6f7;color:#7c8c96;flex-shrink:0}.recommend-message strong{font-size:13px;font-weight:600}.recommend-message p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.8}.recommend-button{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:39px;background:#edf2f2;border:1px solid #e5eceb;border-radius:8px;color:#839894;font-size:12px;margin-top:auto}.boundary{font-size:11px;line-height:1.8;color:#86919a;margin:0 4px;padding:1px 2px}.record-panel{margin-top:18px;padding:15px 22px;display:flex;align-items:center;gap:28px;min-height:84px}.record-heading{min-width:102px}.record-heading h2{margin:0 0 4px;font-size:13px;font-weight:650}.record-heading p{margin:0;color:#8d99a2;font-size:10px}.record-divider{height:36px;width:1px;background:#e5eaed}.record-empty{display:flex;align-items:center;gap:12px;color:#8b99a3}.record-empty svg{width:23px;height:23px;color:#9aa8b2}.record-empty p{margin:0;font-size:12px}.record-empty span{display:block;font-size:10px;color:#9aa5ae;margin-top:2px}.scope-footer{display:flex;justify-content:space-between;gap:14px;margin:12px 2px 0;font-size:10px;color:#8c98a2}.scope-footer p{margin:0}.scope-footer strong{font-weight:500;color:#6d7f8b}
+@media(min-width:1450px){:root{--board:490px}.shell{padding-top:38px}.workspace{margin-top:26px}}
+@media(max-width:950px){.shell{padding:20px}.workspace{grid-template-columns:minmax(0,1fr) 290px;gap:16px}.board-panel{padding:18px 15px 14px}:root{--board:clamp(270px,calc(100vw - 405px),450px)}.dice-panel,.turn-card,.recommend-panel{padding-left:16px;padding-right:16px}.die{width:36px;height:37px}.dice-row{gap:7px}.board-state{gap:8px}.layout-name span{display:none}}
+@media(max-width:750px){:root{--board:min(calc(100vw - 100px),470px)}.shell{padding:18px 16px}.topbar{height:auto;align-items:flex-start}.brand{gap:10px}.brand-mark{width:38px;height:38px;border-radius:11px}.brand h1{font-size:18px}.brand p{font-size:9px}.top-actions{align-items:flex-end;flex-direction:column;gap:7px}.draft-badge{font-size:9px;padding:3px 6px}.quiet-button{font-size:10px;padding:0}.quiet-button svg{width:12px;height:12px}.workspace{grid-template-columns:1fr;margin-top:20px;gap:14px}.board-panel{padding:16px}.board-frame{margin-top:14px;margin-bottom:8px}.board-foot{font-size:10px}.side{display:grid;grid-template-columns:1fr 1fr;gap:12px}.turn-card{padding:16px}.turn-line{gap:8px}.turn-token{width:34px;height:34px;font-size:15px}.turn-text strong{font-size:17px}.turn-arrow{display:none}.dice-panel{padding:16px}.dice-heading{align-items:flex-start;gap:4px}.dice-heading span{display:none}.dice-row{gap:5px;flex-wrap:wrap;margin-top:10px}.die{width:32px;height:32px;border-radius:7px}.die svg{width:19px;height:19px}.dice-status{margin-top:9px;font-size:10px}.recommend-panel{grid-column:1/-1;padding:17px}.recommend-body{margin:15px 0}.boundary{grid-column:1/-1;font-size:10px;margin:0 2px}.record-panel{padding:16px;margin-top:14px;gap:15px}.record-heading{min-width:70px}.record-empty{gap:8px}.record-empty p{font-size:11px}.record-empty span{font-size:9px}.scope-footer{display:block;line-height:1.9;font-size:9px}.scope-footer p:last-child{margin-top:3px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<svg class="symbols" aria-hidden="true"><defs>
+<symbol id="icon-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></symbol>
+<symbol id="icon-arrow" viewBox="0 0 24 24"><path d="m6 6 12 12M7 18h11V7"/></symbol>
+<symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></symbol>
+<symbol id="icon-record" viewBox="0 0 24 24"><path d="M8 3h10a2 2 0 0 1 2 2v15H6a2 2 0 0 1-2-2V7h4V3ZM8 7v10H4m8-10h4m-4 4h4"/></symbol>
+</defs></svg>
+<main class="shell">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 30 30"><path d="M20.5 6.5h-11v17h11M9.5 15h9"/><circle cx="23" cy="15" r="2" fill="currentColor" stroke="none"/></svg></div><div><h1>爱恩斯坦棋</h1><p>Einstein · 单盘桌面预览版</p></div></div>
+    <div class="top-actions"><span class="draft-badge">界面效果稿 / 示例状态</span><button class="quiet-button" id="reset"><svg aria-hidden="true"><use href="#icon-reset"/></svg>重置演示</button></div>
+  </header>
+  <section class="workspace" aria-label="棋盘与操作区">
+    <section class="panel board-panel" aria-labelledby="board-title">
+      <div class="panel-head"><h2 class="panel-title" id="board-title">对局棋盘 <span class="small" style="margin-left:8px;font-weight:400">开局</span></h2><div class="board-state"><span><i class="dot red"></i>红方 6 枚</span><span><i class="dot blue"></i>蓝方 6 枚</span></div></div>
+      <div class="board-frame"><span aria-hidden="true"></span><div class="file-labels" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span></div><div class="rank-labels" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div><div class="board" id="board" role="img" aria-label="balanced_v1 初始棋盘：红方位于左上出发区，蓝方位于右下出发区。棋盘高亮是视觉演示。"></div></div>
+      <div class="board-foot"><span class="layout-name">均衡布局<span>balanced_v1</span></span><span class="legend"><i class="legend-ring" aria-hidden="true"></i>选择与落点高亮示意</span></div>
+    </section>
+    <aside class="side" aria-label="操作区">
+      <section class="panel turn-card"><p class="section-label">当前行动方</p><div class="turn-line"><div class="turn-token" aria-hidden="true">红</div><div class="turn-text"><strong>红方行动</strong><p>从左上走向右下</p></div><span class="turn-arrow" aria-hidden="true"><svg><use href="#icon-arrow"/></svg></span></div></section>
+      <section class="panel dice-panel" aria-labelledby="dice-title"><div class="dice-heading"><h2 class="panel-title" id="dice-title">骰子点数</h2><span>点击体验选中状态</span></div><div class="dice-row" id="dice-row"></div><p class="dice-status" id="dice-status" aria-live="polite">已选 3 点 · 高亮红方 3 号棋子</p></section>
+      <section class="panel recommend-panel" aria-labelledby="recommend-title"><div class="recommend-heading"><h2 class="panel-title" id="recommend-title">走法推荐</h2><span class="engine-badge">P14 ROLLOUT</span></div><div class="recommend-body"><div class="recommend-icon" aria-hidden="true"><svg><use href="#icon-spark"/></svg></div><div class="recommend-message"><strong>等待引擎计算</strong><p>效果稿未连接 AI 引擎。<br>实际推荐将在桌面样机中显示。</p></div></div><button class="recommend-button" disabled aria-label="生成推荐，此效果稿不连接引擎"><svg aria-hidden="true"><use href="#icon-spark"/></svg>生成推荐 · 仅展示</button></section>
+      <p class="boundary">当前展示单盘操作布局。七盘制、完整计时及比赛流程暂时继续使用旧界面。</p>
+    </aside>
+  </section>
+  <section class="panel record-panel" aria-labelledby="record-title"><div class="record-heading"><h2 id="record-title">棋谱记录</h2><p>尚未走子 · 0 手</p></div><div class="record-divider" aria-hidden="true"></div><div class="record-empty"><svg aria-hidden="true"><use href="#icon-record"/></svg><div><p>第一步之后，棋谱从这里开始</p><span>效果稿不执行走子，也不读取或保存棋谱文件。</span></div></div></section>
+  <footer class="scope-footer"><p><strong>交互范围：</strong>骰子选择、棋子及落点高亮。所有状态均为界面演示。</p><p>保留现有规则 · 保留 P14 默认参数 · 兼容现有棋谱</p></footer>
+</main>
+<script>
+// 固定初始布局取自 ai/opening_layouts.py 的 balanced_v1，仅用于视觉效果稿。
+// 此页不实现规则、不执行走子、不读取或修改程序配置。
+const initialPieces = [
+  {side:'red',number:1,row:0,col:0},{side:'red',number:2,row:0,col:1},
+  {side:'red',number:3,row:0,col:2},{side:'red',number:4,row:1,col:0},
+  {side:'red',number:5,row:1,col:1},{side:'red',number:6,row:2,col:0},
+  {side:'blue',number:1,row:4,col:4},{side:'blue',number:2,row:4,col:3},
+  {side:'blue',number:3,row:4,col:2},{side:'blue',number:4,row:3,col:4},
+  {side:'blue',number:5,row:3,col:3},{side:'blue',number:6,row:2,col:4}
+];
+const pipPositions = {
+  1:[[12,12]],2:[[6,6],[18,18]],3:[[6,6],[12,12],[18,18]],
+  4:[[6,6],[18,6],[6,18],[18,18]],5:[[6,6],[18,6],[12,12],[6,18],[18,18]],
+  6:[[6,5],[18,5],[6,12],[18,12],[6,19],[18,19]]
+};
+const board=document.getElementById('board');
+for(let row=0;row<5;row++)for(let col=0;col<5;col++){
+  const cell=document.createElement('div');
+  cell.className='square'+((row+col)%2?' alt':'');
+  cell.dataset.row=row;cell.dataset.col=col;
+  const piece=initialPieces.find(item=>item.row===row&&item.col===col);
+  if(piece){const token=document.createElement('span');token.className='piece '+piece.side;token.textContent=piece.number;cell.append(token);}
+  if((row===0&&col===0)||(row===4&&col===4)){const goal=document.createElement('span');goal.className='goal-corner '+(row===0?'goal-blue':'goal-red');cell.append(goal);}
+  board.append(cell);
+}
+for(let value=1;value<=6;value++){
+  const button=document.createElement('button');button.className='die';button.type='button';button.dataset.value=value;
+  button.setAttribute('aria-label',value+' 点骰子，演示选择');button.setAttribute('aria-pressed','false');
+  button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+pipPositions[value].map(([x,y])=>'<circle cx="'+x+'" cy="'+y+'" r="1.8"/>').join('')+'</svg>';
+  button.addEventListener('click',()=>selectExample(value));document.getElementById('dice-row').append(button);
+}
+function selectExample(value){
+  document.querySelectorAll('.die').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.value)===value)));
+  const selected=initialPieces.find(piece=>piece.side==='red'&&piece.number===value);
+  board.querySelectorAll('.square').forEach(cell=>{
+    const row=Number(cell.dataset.row),col=Number(cell.dataset.col);
+    cell.classList.toggle('selected',row===selected.row&&col===selected.col);
+    // 3 点状态下的三个固定点只展示标记样式，不是规则引擎输出。
+    cell.classList.toggle('target',value===3&&((row===0&&col===3)||(row===1&&col===2)||(row===1&&col===3)));
+  });
+  document.getElementById('dice-status').textContent='已选 '+value+' 点 · 高亮红方 '+value+' 号棋子';
+}
+document.getElementById('reset').addEventListener('click',()=>selectExample(3));
+selectExample(3);
+</script>
+</body>
+</html>

@@ -7,6 +7,9 @@ from core.types import BOARD_SIZE, MAX_PIECE_ID, MIN_PIECE_ID, Piece, Player, Po
 from core.validation import require_int
 
 
+RULES_VERSION = "einstein-nearest-sides-v2"
+
+
 def is_inside_board(position: Position) -> bool:
     return 0 <= position.row < BOARD_SIZE and 0 <= position.col < BOARD_SIZE
 
@@ -34,8 +37,11 @@ def legal_piece_ids_for_dice(pieces: Mapping[int, Piece], dice: int) -> list[int
     if not living_ids:
         return []
 
-    nearest_distance = min(abs(piece_id - dice) for piece_id in living_ids)
-    return [piece_id for piece_id in living_ids if abs(piece_id - dice) == nearest_distance]
+    # Rule 2 selects the nearest survivor on EACH side, regardless of the
+    # relative distances (e.g. missing 4/5 and rolling 4 permits both 3 and 6).
+    lower_ids = [piece_id for piece_id in living_ids if piece_id < dice]
+    upper_ids = [piece_id for piece_id in living_ids if piece_id > dice]
+    return lower_ids[-1:] + upper_ids[:1]
 
 
 def generate_legal_moves_for_piece(

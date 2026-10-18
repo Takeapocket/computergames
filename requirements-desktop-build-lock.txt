@@ -1,0 +1,11 @@
+# Resolved on Windows x64 / Python 3.11.9 for desktop preview 0.1.0.
+# Install only in .venv-desktop. Tests are intentionally separate from runtime.
+altgraph==0.17.5
+packaging==26.3
+pefile==2024.8.26
+PyInstaller==6.22.3
+pyinstaller-hooks-contrib==2026.8
+PySide6-Essentials==6.12.0
+pywin32-ctypes==0.2.3
+shiboken6==6.12.0
+setuptools==65.5.0

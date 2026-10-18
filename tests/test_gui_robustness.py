@@ -179,6 +179,33 @@ def test_match_save_failure_keeps_recovery_and_retry_scores_once(windows, monkey
     assert transitions == (["finished"] if winning_score == 3 else ["round"])
 
 
+@pytest.mark.parametrize("failed_save", ["auto_save_match", "auto_save"])
+def test_opening_confirmation_preserves_autosave_failure_notice(windows, monkeypatch, failed_save):
+    window = windows()
+    window._match = MatchRecord(our_side=Player.RED, our_role="甲")
+    window._mode = "match"
+    window._our_side = Player.RED
+
+    def fail_save(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(f"gui.main_window.{failed_save}", fail_save)
+    from ai.opening_layouts import BLUE_ZONE
+
+    for piece_id, position in enumerate(sorted(BLUE_ZONE, key=lambda pos: (pos.row, pos.col)), start=1):
+        window.opening_panel.set_selected_piece(piece_id)
+        window.opening_panel.handle_board_click(position)
+    window.opening_panel.confirm()
+
+    assert window._phase == "playing"
+    assert "自动保存失败" in window.status_message
+    assert "disk full" in window.status_message
+    if failed_save == "auto_save_match":
+        assert window._auto_save_path.exists()
+    else:
+        assert window._auto_save_match_path.exists()
+
+
 def test_loading_single_game_after_finished_match_unlocks_controls(windows, monkeypatch, tmp_path):
     window = windows()
     window._match = MatchRecord(our_side=Player.RED, our_role="甲", games_won_us=4, current_game_index=4, phase="finished")
@@ -282,3 +309,40 @@ def test_loaded_record_cannot_undo_before_its_initial_snapshot(windows, monkeypa
     window._undo_move()
     assert window.state.serialize() == before
     assert window.record.steps == []
+
+
+def test_loaded_other_rules_record_cannot_continue_or_mutate_progress(windows, monkeypatch, tmp_path):
+    state = GameState.from_layout(
+        red={3: Position(0, 0), 6: Position(4, 3)},
+        blue={1: Position(3, 3)},
+    )
+    record = GameRecord.from_state(state)
+    record.metadata["rules_version"] = "legacy-absolute-nearest-v1"
+    path = tmp_path / "other-rules.json"
+    record.save(path)
+    saved_bytes = path.read_bytes()
+    window = windows()
+    window._recommender = SimpleNamespace(
+        choose_move=lambda state, dice: state.legal_moves(state.current_player, dice)[0],
+    )
+    monkeypatch.setattr("gui.main_window.filedialog.askopenfilename", lambda **kwargs: str(path))
+    window._load_record()
+    window.timer.pause()
+    window._handle_dice_change("4")
+    window.selected_move_index = next(
+        index for index, move in enumerate(window._current_moves()) if move.piece_id == 6
+    )
+    before_state = window.state.serialize()
+    before_record = window.record.to_dict()
+    before_timer = window.timer.snapshot()
+
+    window._apply_selected_move()
+
+    assert "无法继续对局" in window.status_message
+    assert window.state.serialize() == before_state
+    assert window.record.to_dict() == before_record
+    assert window.timer.snapshot() == before_timer
+    assert not window._record_dirty
+    assert not window._awaiting_dice
+    assert path.read_bytes() == saved_bytes
+    assert not window._auto_save_path.exists()

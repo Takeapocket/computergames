@@ -106,6 +106,105 @@ def test_record_rejects_capture_metadata_that_differs_from_core(corruption):
         GameRecord.from_dict(raw)
 
 
+def test_record_append_owns_capture_snapshot():
+    state = GameState.from_layout(
+        red={1: Position(0, 0)},
+        blue={1: Position(1, 1), 2: Position(4, 4)},
+    )
+    record = GameRecord.from_state(state)
+    move = next(move for move in state.legal_moves(Player.RED, 1) if move.is_capture)
+    applied = state.apply_move(move, dice=1)
+    record.append(dice=1, move=applied, state_after=state)
+    expected = record.to_json()
+
+    applied.captured_piece.alive = False
+    applied.captured_piece.position = Position(2, 2)
+
+    assert record.to_json() == expected
+    assert GameRecord.from_json(record.to_json()).restore_state().serialize() == state.serialize()
+
+
+@pytest.mark.parametrize("boundary", ["export", "import"])
+def test_record_serialization_snapshots_are_detached(boundary):
+    record, state = _capture_record()
+    record.metadata["nested"] = {"values": [1]}
+    record.result["nested"] = {"values": [2]}
+    raw = record.to_dict()
+    if boundary == "import":
+        record = GameRecord.from_dict(raw)
+    expected = record.to_json()
+
+    raw["initial_state"]["pieces"]["red"]["1"]["alive"] = False
+    raw["steps"][0]["state_after"]["current_player"] = "red"
+    raw["metadata"]["nested"]["values"].append(9)
+    raw["result"]["nested"]["values"].append(9)
+
+    assert record.to_json() == expected
+    assert GameRecord.from_json(record.to_json()).restore_state().serialize() == state.serialize()
+
+
+def test_move_record_export_state_is_detached():
+    record, _ = _capture_record()
+    step = record.steps[0]
+    expected = copy.deepcopy(step.state_after)
+    raw = step.to_dict()
+    raw["state_after"]["pieces"]["red"]["1"]["alive"] = False
+    assert step.state_after == expected
+
+
+def test_new_records_identify_rules_without_relabeling_legacy_records():
+    from core import RULES_VERSION
+
+    record, _ = _capture_record()
+    assert record.metadata["rules_version"] == RULES_VERSION
+    raw = record.to_dict()
+    raw["metadata"].pop("rules_version")
+    legacy = GameRecord.from_dict(raw)
+    assert "rules_version" not in legacy.metadata
+
+
+@pytest.mark.parametrize("rules_version", ["legacy-global-nearest-v1", "future-rules-v3", None])
+def test_explicit_other_rules_record_is_readable_but_cannot_append(rules_version):
+    state = GameState.from_layout(
+        red={1: Position(0, 0)}, blue={1: Position(4, 4)},
+    )
+    record = GameRecord.from_state(state)
+    first_move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    record.append(dice=1, move=first_move, state_after=state)
+    record.metadata["rules_version"] = rules_version
+    restored = GameRecord.from_json(record.to_json())
+    assert restored.restore_state().serialize() == state.serialize()
+    before = restored.to_dict()
+
+    with pytest.raises(ValueError, match="start a new game record"):
+        restored.validate_continuation_rules()
+    move = state.apply_move(state.legal_moves(Player.BLUE, 1)[0], dice=1)
+    with pytest.raises(ValueError, match="start a new game record"):
+        restored.append(dice=1, move=move, state_after=state)
+
+    assert restored.to_dict() == before
+
+
+@pytest.mark.parametrize("legacy_without_version", [False, True])
+def test_current_and_untagged_records_can_continue_without_relabeling(legacy_without_version):
+    state = GameState.from_layout(
+        red={1: Position(0, 0)}, blue={1: Position(4, 4)},
+    )
+    record = GameRecord.from_state(state)
+    if legacy_without_version:
+        record.metadata.pop("rules_version")
+    restored = GameRecord.from_dict(record.to_dict())
+    metadata_before = copy.deepcopy(restored.metadata)
+
+    restored.validate_continuation_rules()
+    move = state.apply_move(state.legal_moves(Player.RED, 1)[0], dice=1)
+    restored.append(dice=1, move=move, state_after=state)
+
+    assert len(restored.steps) == 1
+    assert restored.metadata == metadata_before
+    assert restored.restore_state().serialize() == state.serialize()
+
+
 @pytest.mark.parametrize("value", [True, 0.99, "0", float("inf")])
 def test_state_coordinates_reject_numeric_coercion(value):
     raw = GameState.from_layout(red={1: Position(0, 0)}).serialize()

@@ -6,6 +6,7 @@ from ai import AIPlayer, RandomAI
 from ai.greedy_ai import GreedyAI
 from ai.match import ai_version_signature, build_ai, default_starting_state
 from core.game_state import GameState
+from core.rules import RULES_VERSION
 from core.types import Player, Position
 
 
@@ -399,6 +400,7 @@ def test_build_ai_registers_exact_endgame_signature():
 
     assert ai_version_signature(ai) == {
         "name": "endgame_exact",
+        "rules_version": RULES_VERSION,
         "randomize_ties": True,
         "use_transposition_table": False,
         "max_total_pieces": 2,
@@ -426,3 +428,14 @@ def test_build_ai_registers_custom_greedy_zweistein_weights():
     assert signature["mobility_weight"] == 3.0
     assert signature["capture_risk_weight"] == 4.0
     assert signature["target_win_risk_weight"] == 5.0
+
+
+@pytest.mark.parametrize(
+    "kind",
+    ["random", "rollout", "rollout_exact_opp1_zdp", "rollout_tactical", "rollout_self_capture_guard"],
+)
+def test_ai_signatures_identify_rules_for_wrapped_and_plain_engines(kind):
+    signature = ai_version_signature(build_ai(kind, seed=1))
+    assert signature["rules_version"] == RULES_VERSION
+    if "base" in signature:
+        assert signature["base"]["rules_version"] == RULES_VERSION

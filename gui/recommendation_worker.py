@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from core.game_state import GameState
 from core.move import Move
-from gui.app import format_move_label
+from gui.formatting import format_move_label
 
 RecommendationSource = Literal["rollout", "greedy_risk", "rules", "none"]
 RecommendationKey = tuple[int, str]

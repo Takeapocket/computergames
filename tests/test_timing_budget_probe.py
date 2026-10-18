@@ -55,6 +55,10 @@ def test_write_reports_writes_json_and_markdown(tmp_path) -> None:
         "command": "python scripts/timing_budget_probe.py --samples 1",
     }
 
+    payload["rules_version"] = timing_budget_probe.collect_samples(
+        samples=0, seed=1, layout="balanced_v1", ai_kind="random", ai_kwargs={},
+    )["rules_version"]
+    assert payload["rules_version"] == timing_budget_probe.RULES_VERSION
     md_path = tmp_path / "probe.md"
     json_path = tmp_path / "probe.json"
     timing_budget_probe.write_reports(payload, md_path, json_path)
@@ -62,6 +66,8 @@ def test_write_reports_writes_json_and_markdown(tmp_path) -> None:
     assert json.loads(json_path.read_text(encoding="utf-8"))["sample_count"] == 1
     markdown = md_path.read_text(encoding="utf-8")
     assert "P6 Timing Budget Probe" in markdown
+    assert timing_budget_probe.RULES_VERSION in markdown
+    assert json.loads(json_path.read_text(encoding="utf-8"))["rules_version"] == timing_budget_probe.RULES_VERSION
     assert "默认 AI、默认布局、release 配置未变" in markdown
 
 

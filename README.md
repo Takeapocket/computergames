@@ -1,6 +1,6 @@
 # 爱恩斯坦棋 / Einstein Chess
 
-用 Python 3.11 编写的爱恩斯坦棋实现，包含离线 Tkinter GUI、规则引擎、AI 对战接口和可复现实验工具。
+用 Python 3.11 编写的爱恩斯坦棋实现，包含离线 PySide6 / Tkinter GUI、规则引擎、AI 对战接口和可复现实验工具。
 
 项目最初用于离线计算机博弈比赛，现在作为长期 AI 棋力研究平台维护。`release/v1.0/` 保存比赛基线的配置、说明和验收材料；主分支继续开发搜索算法、评估函数与自对弈研究工具。
 
@@ -20,6 +20,10 @@
 AI 推荐在后台计算，显示“计算中”时仍可选择和执行合法走法；变更骰子、悔棋或加载棋谱后，旧推荐会作废。整轮自动保存失败时，程序保留单盘恢复文件并暂停进入下一盘，可点击“重试保存”继续。恢复文件互不匹配时不会自动拼接比分和局面。
 
 ## 快速开始
+
+新版 [PySide6 桌面预览版 0.2](docs/DESKTOP_PREVIEW.md) 已接通自定义开局、七盘制、完整计时和自动保存恢复，详见 [本阶段验证报告](reports/desktop_match_20261018.md) 与 [实际窗口截图](docs/ui/desktop-match-prototype.png)。便携包解压后双击 `EinsteinChess.exe`；保留同级 `_internal`，升级时保留自己的 `user-data`。规则、P14 默认参数及旧棋谱兼容策略保持不变，旧 Tk 入口继续保留。
+
+开发环境通过独立 `.venv-desktop` 安装 `requirements-desktop-build-lock.txt`，运行 `scripts/run_desktop.py`；下面的 `.venv` 命令仍启动旧 Tk 界面。独立干净 Windows 机器的验收尚未完成。
 
 项目主要在 Windows 上开发和验证。使用 PowerShell：
 
@@ -73,7 +77,9 @@ python3 -m venv .venv
 | 搜索研究 | ExpectimaxV2、MCTS 和精确残局求解器均可独立评测，目前没有替换 P14，也没有棋力晋升结论。 |
 | 学习研究 | 自动调参工具已经可复现运行。价值网络只有待确认的设计稿，仓库中尚无自对弈生成、PyTorch 训练、checkpoint 或神经评估适配器。 |
 
-当前回归快照来自 2026-08-18：`1071 passed in 74.51s`，`scripts/smoke_test.py` 通过。P14 在本地 Elo 报告中固定为 1500 锚点，这个数字是比较起点，不是外部等级分。
+2026-10-18 审查修正了骰子映射：对应号缺失时，两侧最近的存活编号都可选，不要求等距。当前规则版本为 `einstein-nearest-sides-v2`；历史胜率与 Elo 不能直接沿用。修正规则后的 P14 对历史 Rollout 参数已完成 100 个固定种子、双方换色的 200 局：P14 104 胜（52%），配对 95% 区间 45%–59%，尚不能确认优势。P14 参数与 `balanced_v1` 继续保留，1500 只是本地比较起点。
+
+代码审查见 [审查报告](reports/project_review_20261018.md)，最新实验与验证见 [P14 基线报告](reports/p14_rebaseline_v2_20261018.md)。下一步先做同时间上限对照与单因素消融，再推进搜索比较；赛事要求和未闭环材料见 [赛事合规核查](docs/COMPETITION_COMPLIANCE.md)。
 
 ## 项目结构
 
@@ -81,6 +87,7 @@ python3 -m venv .venv
 core/           棋盘状态、规则、合法步和序列化
 ai/             评估函数、搜索算法和 AI 对战接口
 gui/            Tkinter 桌面界面
+desktop_qt/     PySide6 桌面界面与比赛会话
 record/         棋谱、自动保存和恢复
 scripts/        启动、测试、评测和研究工具
 tests/          pytest 测试
@@ -122,8 +129,10 @@ $env:TORCH_HOME = "E:/torch-cache"
 | `scripts/replay_analyze.py` | 分析 GameRecord 或 MatchRecord，并可对照 P14 推荐 |
 | `scripts/dice_forensics.py` | 骰子分布、卡方统计和条件巧合度审计 |
 | `scripts/tune_eval_weights.py` | 可恢复的 CEM 评估权重搜索 |
+| `scripts/rebaseline_p14.py` | 修正规则下 P14 对历史 Rollout 参数的固定种子换色评测，逐局保存与源码快照 |
+| `scripts/analyze_p14_baseline.py` | 独立核对上述证据，计算配对 bootstrap 区间及逐算法耗时 |
 
-天梯会拒绝复用已有的非空 `games.jsonl`；CEM 调参会校验新目录和 `--resume` 配置。每次实验应保留对局数、随机种子、双方颜色、AI 签名、错误统计、耗时和置信区间。
+天梯会拒绝复用已有的非空 `games.jsonl`；CEM 调参会校验新目录、`--resume` 配置与规则版本。没有规则版本或版本不符的旧调参目录不能继续恢复，须保留原目录并新建实验。每次实验应保留规则版本、对局数、随机种子、双方颜色、AI 签名、错误统计、耗时和置信区间。
 
 本项目维护者当前使用的目录映射见 [E 盘开发交接](docs/E_DRIVE_HANDOFF_20260614.md)。
 
@@ -131,13 +140,13 @@ $env:TORCH_HOME = "E:/torch-cache"
 
 ## 规则摘要
 
-双方在 5×5 棋盘上各有 6 枚编号棋子。每回合的六面骰决定可移动棋子；对应编号已经被吃掉时，改走编号最接近的存活棋子，两侧等距时可以二选一。目标格上的棋子会被吃掉，包括本方棋子。任意棋子到达对角目标格，或一方吃光对方棋子，立即获胜。
+双方在 5×5 棋盘上各有 6 枚编号棋子。每回合的六面骰决定可移动棋子；对应编号已经被吃掉时，可选择较小一侧的最大存活编号或较大一侧的最小存活编号，两侧无须等距。例如 4、5 号缺失，掷出 4 可走 3 或 6。目标格上的棋子会被吃掉，包括本方棋子。任意棋子到达对角目标格，或一方吃光对方棋子，立即获胜。
 
 正式规则没有和棋。研究 harness 的 `max_turns` 平局只用于限制实验长度。完整规则和赛事边界见 [规则记录](docs/RULE_ASSUMPTIONS.md)。
 
 ## 文档
 
-本次代码清理、兼容变化和验证结果见 [全项目鲁棒性改造记录](reports/project_robustness_review_20261004.md)。
+当前审查、兼容变化和验证结果见 [2026-10-18 全项目审查](reports/project_review_20261018.md)；此前改造保留在 [2026-10-04 历史记录](reports/project_robustness_review_20261004.md)。
 
 - [项目简介](docs/PROJECT_BRIEF.md)
 - [研究路线与阶段](PROJECT_PHASES.md)

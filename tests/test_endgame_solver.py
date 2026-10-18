@@ -90,7 +90,7 @@ def test_exact_endgame_eligibility_accepts_piece_or_distance_gate():
     assert not is_exact_endgame_eligible(default_starting_state())
 
 
-def test_exact_endgame_hand_computed_dice_oracle_is_one_half():
+def test_exact_endgame_hand_computed_dice_oracle_is_five_sixths():
     state = _make_state(
         red={1: Position(4, 3), 6: Position(4, 0)},
         blue={1: Position(0, 1)},
@@ -102,13 +102,14 @@ def test_exact_endgame_hand_computed_dice_oracle_is_one_half():
     red_probability = solver.solve_win_probability(state, perspective=Player.RED)
     blue_probability = solver.solve_win_probability(state, perspective=Player.BLUE)
 
-    assert red_probability == 0.5
-    assert blue_probability == 0.5
+    # RED 1 wins immediately for dice 1-5; dice 6 lets BLUE win next.
+    assert red_probability == pytest.approx(5.0 / 6.0)
+    assert blue_probability == pytest.approx(1.0 / 6.0)
     assert red_probability + blue_probability == 1.0
     assert state.serialize() == before
 
 
-def test_exact_endgame_hand_computed_dice_oracle_is_one_third():
+def test_exact_endgame_hand_computed_dice_oracle_is_one_half():
     state = _make_state(
         red={1: Position(4, 3), 4: Position(4, 0)},
         blue={1: Position(0, 1)},
@@ -119,8 +120,9 @@ def test_exact_endgame_hand_computed_dice_oracle_is_one_third():
     red_probability = solver.solve_win_probability(state, perspective=Player.RED)
     blue_probability = solver.solve_win_probability(state, perspective=Player.BLUE)
 
-    assert red_probability == pytest.approx(1.0 / 3.0)
-    assert blue_probability == pytest.approx(2.0 / 3.0)
+    # RED 1 is available for dice 1-3; dice 4-6 force the distant RED 4.
+    assert red_probability == pytest.approx(1.0 / 2.0)
+    assert blue_probability == pytest.approx(1.0 / 2.0)
     assert red_probability + blue_probability == pytest.approx(1.0)
 
 
@@ -195,7 +197,7 @@ def test_exact_endgame_tt_matches_uncached_value_and_reduces_nodes():
     cached_value = cached.solve_win_probability(state, perspective=Player.RED)
     uncached_value = uncached.solve_win_probability(state, perspective=Player.RED)
 
-    assert cached_value == uncached_value == 0.5
+    assert cached_value == uncached_value == pytest.approx(5.0 / 6.0)
     assert cached.last_search_stats.tt_hits > 0
     assert cached.last_search_stats.tt_stores == cached.last_table_size > 0
     assert cached.last_search_stats.nodes < uncached.last_search_stats.nodes
@@ -218,7 +220,7 @@ def test_exact_endgame_repeated_solve_is_deterministic_and_resets_stats():
     first_table_size = solver.last_table_size
     second_value = solver.solve_win_probability(state, perspective=Player.RED)
 
-    assert second_value == first_value == 0.5
+    assert second_value == first_value == pytest.approx(5.0 / 6.0)
     assert solver.last_search_stats == first_stats
     assert solver.last_table_size == first_table_size
 

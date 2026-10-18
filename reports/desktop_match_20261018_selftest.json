@@ -1,0 +1,328 @@
+{
+  "version": "0.2.0-preview",
+  "date": "2026-10-18",
+  "tests": {
+    "original_environment": {
+      "passed": 1472,
+      "skipped": 2,
+      "seconds": 89.5
+    },
+    "desktop_environment": {
+      "passed": 99,
+      "seconds": 5.02
+    }
+  },
+  "archive": {
+    "path": "dist/desktop-0.2.0-20261018-portable/EinsteinChess-preview-windows-x64.zip",
+    "bytes": 37493469,
+    "sha256": "d48faa16b3a40e02bf653494adddbe5ea3345ab9e651ff3a31e7a979b73cdc98",
+    "extracted_manifest_files_verified": 165
+  },
+  "executable_100": {
+    "version": "0.2.0-preview",
+    "frozen": true,
+    "executable": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\EinsteinChess.exe",
+    "qt_version": "6.12.0",
+    "rules_version": "einstein-nearest-sides-v2",
+    "p14_kwargs": {
+      "rollouts_per_move": 64,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 2000.0,
+      "epsilon": 0.05,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 96,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 80.0
+    },
+    "default_params_sha256": "b83eb34ebfcf5c753fb6b16c99e8812ce8714d7c15979bd34b6ed31392508916",
+    "checks": {
+      "legal_recommendation": true,
+      "primary_p14_recommender": true,
+      "no_tk_import": true,
+      "record_roundtrip": true,
+      "undo": true,
+      "complete_match_flow": true
+    },
+    "status": "passed",
+    "actual_ai_signature": {
+      "name": "rollout",
+      "rules_version": "einstein-nearest-sides-v2",
+      "rollouts_per_move": 64,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 2000.0,
+      "epsilon": 0.05,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 96,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 80.0
+    },
+    "recommendation_source": "rollout",
+    "internal_fallback": false,
+    "screenshot": "E:\\computergame\\docs\\ui\\desktop-match-prototype.png",
+    "flow_acceptance": {
+      "checks": {
+        "custom_opening": true,
+        "pause_resume_and_undo_clock": true,
+        "single_game_recovery": true,
+        "existing_record_reader": true,
+        "role_color_first_mover_matrix": true,
+        "four_zero_match": true,
+        "four_three_match": true,
+        "match_recovery_no_duplicate_score": true,
+        "corrupt_recovery_preserved": true,
+        "failed_finalization_retry_once": true,
+        "uncommitted_timeout_recovery_once": true,
+        "uncommitted_terminal_recovery_once": true,
+        "legacy_records_compatible": true
+      },
+      "statistics": {
+        "role_color_cases": 4,
+        "first_mover_checks": 28,
+        "completed_match_games": 11,
+        "match_restarts": 11,
+        "terminal_recovery_moves": 17,
+        "scores": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            3
+          ]
+        ]
+      },
+      "data_dir": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\user-data\\self-test-5f4be6b451ee406db6701f4d0fd8160c\\flow-acceptance-165951781f134710a6cdc6432f019da3"
+    },
+    "data_dir": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\user-data\\self-test-5f4be6b451ee406db6701f4d0fd8160c"
+  },
+  "executable_150": {
+    "version": "0.2.0-preview",
+    "frozen": true,
+    "executable": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\EinsteinChess.exe",
+    "qt_version": "6.12.0",
+    "rules_version": "einstein-nearest-sides-v2",
+    "p14_kwargs": {
+      "rollouts_per_move": 64,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 2000.0,
+      "epsilon": 0.05,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 96,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 80.0
+    },
+    "default_params_sha256": "b83eb34ebfcf5c753fb6b16c99e8812ce8714d7c15979bd34b6ed31392508916",
+    "checks": {
+      "legal_recommendation": true,
+      "primary_p14_recommender": true,
+      "no_tk_import": true,
+      "record_roundtrip": true,
+      "undo": true,
+      "complete_match_flow": true
+    },
+    "status": "passed",
+    "actual_ai_signature": {
+      "name": "rollout",
+      "rules_version": "einstein-nearest-sides-v2",
+      "rollouts_per_move": 64,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 2000.0,
+      "epsilon": 0.05,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 96,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 80.0
+    },
+    "recommendation_source": "rollout",
+    "internal_fallback": false,
+    "screenshot": "E:\\computergame\\tmp\\desktop-phase2-final-exe-15.png",
+    "flow_acceptance": {
+      "checks": {
+        "custom_opening": true,
+        "pause_resume_and_undo_clock": true,
+        "single_game_recovery": true,
+        "existing_record_reader": true,
+        "role_color_first_mover_matrix": true,
+        "four_zero_match": true,
+        "four_three_match": true,
+        "match_recovery_no_duplicate_score": true,
+        "corrupt_recovery_preserved": true,
+        "failed_finalization_retry_once": true,
+        "uncommitted_timeout_recovery_once": true,
+        "uncommitted_terminal_recovery_once": true,
+        "legacy_records_compatible": true
+      },
+      "statistics": {
+        "role_color_cases": 4,
+        "first_mover_checks": 28,
+        "completed_match_games": 11,
+        "match_restarts": 11,
+        "terminal_recovery_moves": 17,
+        "scores": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            3
+          ]
+        ]
+      },
+      "data_dir": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\user-data\\self-test-ca550628c5354d58945e75f20b1ba87e\\flow-acceptance-5332bcec16e64515a942ae3acf10c0db"
+    },
+    "data_dir": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\user-data\\self-test-ca550628c5354d58945e75f20b1ba87e"
+  },
+  "executable_200": {
+    "version": "0.2.0-preview",
+    "frozen": true,
+    "executable": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\EinsteinChess.exe",
+    "qt_version": "6.12.0",
+    "rules_version": "einstein-nearest-sides-v2",
+    "p14_kwargs": {
+      "rollouts_per_move": 64,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 2000.0,
+      "epsilon": 0.05,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 96,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 80.0
+    },
+    "default_params_sha256": "b83eb34ebfcf5c753fb6b16c99e8812ce8714d7c15979bd34b6ed31392508916",
+    "checks": {
+      "legal_recommendation": true,
+      "primary_p14_recommender": true,
+      "no_tk_import": true,
+      "record_roundtrip": true,
+      "undo": true,
+      "complete_match_flow": true
+    },
+    "status": "passed",
+    "actual_ai_signature": {
+      "name": "rollout",
+      "rules_version": "einstein-nearest-sides-v2",
+      "rollouts_per_move": 64,
+      "max_rollout_turns": 80,
+      "max_step_time_ms": 2000.0,
+      "epsilon": 0.05,
+      "close_sample_margin": 0.08,
+      "close_sample_rollouts_per_move": 96,
+      "low_confidence_margin": 0.08,
+      "playout_policy": "greedy_risk",
+      "cutoff_eval": "zweistein",
+      "deadline_safety_ms": 80.0
+    },
+    "recommendation_source": "rollout",
+    "internal_fallback": false,
+    "screenshot": "E:\\computergame\\tmp\\desktop-phase2-final-exe-2.png",
+    "flow_acceptance": {
+      "checks": {
+        "custom_opening": true,
+        "pause_resume_and_undo_clock": true,
+        "single_game_recovery": true,
+        "existing_record_reader": true,
+        "role_color_first_mover_matrix": true,
+        "four_zero_match": true,
+        "four_three_match": true,
+        "match_recovery_no_duplicate_score": true,
+        "corrupt_recovery_preserved": true,
+        "failed_finalization_retry_once": true,
+        "uncommitted_timeout_recovery_once": true,
+        "uncommitted_terminal_recovery_once": true,
+        "legacy_records_compatible": true
+      },
+      "statistics": {
+        "role_color_cases": 4,
+        "first_mover_checks": 28,
+        "completed_match_games": 11,
+        "match_restarts": 11,
+        "terminal_recovery_moves": 17,
+        "scores": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            3
+          ]
+        ]
+      },
+      "data_dir": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\user-data\\self-test-4f85948c5cbd4cc59ebbb94d69f3bbed\\flow-acceptance-152c977c6a7c438da14ef5100e536e8e"
+    },
+    "data_dir": "E:\\computergame\\tmp\\便携 最终版验收 0.2\\EinsteinChess-preview\\user-data\\self-test-4f85948c5cbd4cc59ebbb94d69f3bbed"
+  },
+  "invalid_data_directory": {
+    "status": "failed",
+    "error": "[WinError 183] 当文件已存在时，无法创建该文件。: 'E:\\\\computergame\\\\README.md'",
+    "stage": "data_directory"
+  },
+  "protected_files": {
+    "ai/__init__.py": "f48bf40dab43eae88ec8fcdbf0c90d4ebdd9eb2701ec9fa45f0ccf6c043bdc76",
+    "ai/chance_rerank.py": "80b2d935af030e9d4a56c0de74687f5a8a97f1dd71340f510c9876875cc9ecef",
+    "ai/endgame_solver.py": "931dc78bde8ce5639be60cc72b98de3f934b7942f373fb3d59a5b672aa10be3d",
+    "ai/evaluator.py": "5f4e847b80b1d09d639e3ac02e85104ceff751ece7d676856880336ba20d3801",
+    "ai/expectimax_ai.py": "89ab1dca096846e575617adfdee021fbcf1360bd5d016edcd570eca77218f9f3",
+    "ai/expectimax_v2.py": "4a92bbdb8fb0620820d46c70bc7a3e544c5121581fe31a9c99235e535826b4d7",
+    "ai/greedy_ai.py": "a8371cfc5c9ce0755709e59ddd45439fc7fe8cec60e62fd73229792378442a61",
+    "ai/match.py": "e4fb79803db7965d43d2b00f76701051459361454a50f6607303175f4f92df86",
+    "ai/mcts.py": "625339c52ba06f0a145f68204c47a5203aa951daa7c4e4a58f276a5b66e77d70",
+    "ai/opening_layouts.py": "c6fae238cd68fd8cbec5c3b1916df67c726ac3fd33dbaa9a7d9412fd72f4a73f",
+    "ai/random_ai.py": "16679914960ce19fbec39bef4532c51e853563140dd835398f8803f3539fe306",
+    "ai/release_defaults.py": "b8cc0bcc8b97b998eaff9b5af987902f6e50862a5becdab2cd7555527e07f3cc",
+    "ai/risk.py": "af4b6ec7b3068099090ffdfb1bc1b5dabdf289acfa2eaa8e81220cf90550603f",
+    "ai/rollout_ai.py": "70e6989197445a47455063a8a994d0b88626351221dbadc84f028e2ad04b35e8",
+    "ai/self_capture.py": "fd8d469b3f71dc77a736a9117096e9c47a8b4a7ef0c0d437222d98bd829559e6",
+    "ai/self_capture_guard.py": "a3554fcf9e846aaf89ecdec277cb1f755e3f5d82616f62c4dce115d8763f3fe8",
+    "ai/tactical.py": "0c4ed9e545e564f0d093b5b50f0a4a9bd212d528c3d93e14a63ddbdf1446e927",
+    "ai/zweistein.py": "cfe90eb2a1be991897947cd66af2cf6b16623f71adff95c3bb88c8d799862662",
+    "ai/zweistein_ai.py": "8eef3a3c15186c90fece3e5695c74aac6b807d0f67a4c0b21e301078129c02c0",
+    "ai/zweistein_dp.py": "17931a756b302d6d5d622e6bfe56ab25b644a114af534e875bceda07e8e41601",
+    "core/__init__.py": "68a33f7f7b3aaeed7810592cecfafacdcc1906428e614ed0279952975964d6d5",
+    "core/board.py": "bf7c4fe2b490dc6b1cd9072c3b34afb5e53e6bbaa7c472c9872013f0d287883e",
+    "core/dice.py": "234e503ddb1e62eb97ac036527349ed9ac98c6884f557024749cb52c535d3be4",
+    "core/game_state.py": "5a659e6b05b998ca5308186b06cc8b04374a0a7173e4811dd4a6b7a73e078e7f",
+    "core/move.py": "cfd48445f94c49a0a5a81674057663d0c517dcf4bfa35d6b9d2b6985848c3238",
+    "core/rules.py": "97fb2cbc4d58173c2d483d85cea90d680f9b674d55a760b1f77b1a855149c135",
+    "core/types.py": "0192165db91609d1cba229559a9acd1fa4f3bab179d925ad1df4a676c6d8f98f",
+    "core/validation.py": "c890a37ba4ef678dc295ce9ee6e9925d03527f500fbd6910ab14579cb74c5db3",
+    "record/__init__.py": "0a6edd6bf6f2357d4ca668bfcb039bf7c7fbef0a46417714171ec78cbf21471d",
+    "record/auto_save.py": "baeeb43bbd1cd144965d4e28fe05214c3e24835549b19c9549d25fa43b8efcfe",
+    "record/game_record.py": "734dfa15708176fe0433a158bb11b37ef02ecac3bf51048a603f5eb190c5f4e3",
+    "record/match_record.py": "c5faf48ad9865bcfe156f9819f87f0956fe0ea05aa8b968394fe19ed2ee8c5fb",
+    "record/serializer.py": "79635b7e0086f382b324f49ec36a77ae0392dd6407e83a676475e2f2f3617eef",
+    "release/v1.0/config.json": "e6598780bf02efc3a00f18aee947d7541498bf905ae930d184e6eb5ec7ad58da",
+    "release/v1.0/default_params.json": "b83eb34ebfcf5c753fb6b16c99e8812ce8714d7c15979bd34b6ed31392508916"
+  },
+  "old_tk_main_window_sha256": "1682fa633db87739e3a7c00782ab5f9385a1e86dcd82371b74af2849c9e193ed",
+  "current_source_sha256": {
+    "desktop_qt/__init__.py": "973c9a36b5e1cf78d1d988446039fd309fe65c296ad5f47378eb47b03d6f01f8",
+    "desktop_qt/acceptance.py": "5ae430f27ba76c8be016ccf96151c63f48c32361065dbc65422389c316a49c14",
+    "desktop_qt/app.py": "37a8926a49e9142e05a833284641fdeefd220c5fe6df2da0b7995a1300e9f9a8",
+    "desktop_qt/board.py": "67fa401a97f8e228e344f06a9705d2950f3ff7010f511671283a68eeae394a5d",
+    "desktop_qt/dialogs.py": "d7e86530f112bdb243a9fe48ba6bb044e6f3bec302dc66e8300910b095d51b7e",
+    "desktop_qt/match_session.py": "951ed232754681c4115c9b17eb18ae05e1d7b683de2c9b9391018d90a6a58617",
+    "desktop_qt/paths.py": "e753a5057844a4295d2d516b15cb5a43c202b1ed77dd1b5509ec5eac11a0fe82",
+    "desktop_qt/session.py": "ddf9dcc2c338aafafe72ad17bd279e8c41fb21d3453039d428c8e766947ca793",
+    "desktop_qt/theme.py": "84e834a078fd726bb8d3a4e825337c92362dcdf5f85515110e567fb57a816802",
+    "desktop_qt/version.py": "04eabf0240ce23ef460ce042642fa2c7e3370659b754897f9b40aef4279e3158",
+    "desktop_qt/window.py": "d34d53691953774b0bf0347403e8b57b1728fefafbbb2e813b6423c36f92e2b4",
+    "gui/timing.py": "82735a0cd0edceddf33b9c232f84b13eb313d71fda7c052e8df124c242e34eec",
+    "gui/timer_panel.py": "b4be7c07b9325e38aa8364bb6f6519dec6d7ec425b35622219c8dc6acf985886",
+    "scripts/build_desktop.py": "5b668d1c686b1fb6a6e2cbcc04121d649f67149a8d3d6d4b02abcf9c9aea79b2",
+    "scripts/run_desktop.py": "d80be7d15e910fe36967ff99aad0b570d2f92aac8687356b87ea3ae9b5580d0a",
+    "packaging/desktop_preview.spec": "a77618a1ba0c2136a62d68385b90c283b095798a69cc8c2139efa2c76e38c5ef"
+  }
+}

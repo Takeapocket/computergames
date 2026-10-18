@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from ai.match import ai_version_signature, build_ai, default_starting_state
+from core.rules import RULES_VERSION
 from core.types import Player
 from scripts import bench_ai
 
@@ -160,6 +161,7 @@ def test_bench_ai_strong_rollout_profiles_use_release_default_opponent(kind: str
     assert ai_version_signature(candidate)["name"] == kind
     assert ai_version_signature(opponent) == {
         "name": "rollout",
+        "rules_version": RULES_VERSION,
         **EXPECTED_RELEASE_DEFAULT_ROLLOUT_KWARGS,
     }
 

@@ -113,6 +113,18 @@ def test_zweistein_dp_uses_core_dead_piece_dice_fallback_for_single_survivor() -
     assert zweistein_dp_win_prob(state, Player.RED) == pytest.approx(1.0)
 
 
+@pytest.mark.parametrize("near_id, expected", [(3, 5 / 6), (6, 3 / 6)])
+def test_zweistein_dp_uses_both_nearest_sides_with_unequal_gaps(near_id, expected):
+    # Blue wins on its next turn; RED therefore must arrive in this turn.
+    far_id = 6 if near_id == 3 else 3
+    state = GameState.from_layout(
+        red={near_id: Position(4, 3), far_id: Position(1, 1)},
+        blue={1: Position(0, 1)},
+        current_player=Player.RED,
+    )
+    assert zweistein_dp_win_prob(state, Player.RED) == pytest.approx(expected)
+
+
 def test_zweistein_dp_score_matches_probability_scale() -> None:
     state = default_starting_state()
     prob = zweistein_dp_win_prob(state, Player.RED)

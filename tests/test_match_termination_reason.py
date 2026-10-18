@@ -224,12 +224,14 @@ def test_starting_state_for_unknown_layout_raises_value_error() -> None:
         starting_state_for("not_a_real_layout")
 
 
-def test_ai_version_signature_for_random_only_has_name() -> None:
+def test_ai_version_signature_for_random_has_name_and_rules_version() -> None:
     ai = build_ai("random", seed=1)
 
     sig = ai_version_signature(ai)
 
-    assert sig == {"name": "random"}
+    from core.rules import RULES_VERSION
+
+    assert sig == {"name": "random", "rules_version": RULES_VERSION}
 
 
 def test_ai_version_signature_for_greedy_includes_evaluator_weights() -> None:

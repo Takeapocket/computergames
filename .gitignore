@@ -3,6 +3,10 @@
 .serena/
 .spec-workflow/
 .playwright-mcp/
+.tmp-ui-preview-*.png
+.tmp-qt-ui-probe/
+.tmp-qt-small-probe/
+.tmp-qt-window-*/
 tmp/
 
 # Saved WeChat article assets and source notification copy
@@ -17,10 +21,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+.venv-desktop/
 venv/
 dist/
 build/
 *.log
+user-data/
 
 # Local opening layouts saved from the GUI
 layouts/*.json

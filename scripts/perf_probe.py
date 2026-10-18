@@ -18,6 +18,7 @@ from ai.match import build_ai, play_one_game, starting_state_for
 from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
 from ai.rollout_ai import RolloutAI
 from core.game_state import GameState
+from core.rules import RULES_VERSION
 
 
 def _new_instrumentation_counts() -> dict[str, int]:
@@ -119,6 +120,7 @@ def run_probe(
     wall_seconds = max(time.perf_counter() - start, 1e-9)
     steps = len(step_times)
     return {
+        "rules_version": RULES_VERSION,
         "red": {"kind": red_kind, "kwargs": red_kwargs},
         "blue": {"kind": blue_kind, "kwargs": blue_kwargs},
         "seed": seed,
@@ -165,6 +167,7 @@ def run_rollout_decision_probe(
             total_visits += sum(int(getattr(stats, "visits", 0)) for stats in ai.last_root_stats)
     wall_seconds = max(time.perf_counter() - start, 1e-9)
     return {
+        "rules_version": RULES_VERSION,
         "samples": samples,
         "decisions": decisions,
         "wall_seconds": wall_seconds,

@@ -1,0 +1,45 @@
+{
+  "version": "0.1.0-preview",
+  "frozen": true,
+  "executable": "E:\\computergame\\tmp\\便携 样机验收 v2\\EinsteinChess-preview\\EinsteinChess.exe",
+  "qt_version": "6.12.0",
+  "rules_version": "einstein-nearest-sides-v2",
+  "p14_kwargs": {
+    "rollouts_per_move": 64,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 2000.0,
+    "epsilon": 0.05,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 96,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 80.0
+  },
+  "default_params_sha256": "b83eb34ebfcf5c753fb6b16c99e8812ce8714d7c15979bd34b6ed31392508916",
+  "checks": {
+    "legal_recommendation": true,
+    "primary_p14_recommender": true,
+    "no_tk_import": true,
+    "record_roundtrip": true,
+    "undo": true
+  },
+  "status": "passed",
+  "actual_ai_signature": {
+    "name": "rollout",
+    "rules_version": "einstein-nearest-sides-v2",
+    "rollouts_per_move": 64,
+    "max_rollout_turns": 80,
+    "max_step_time_ms": 2000.0,
+    "epsilon": 0.05,
+    "close_sample_margin": 0.08,
+    "close_sample_rollouts_per_move": 96,
+    "low_confidence_margin": 0.08,
+    "playout_policy": "greedy_risk",
+    "cutoff_eval": "zweistein",
+    "deadline_safety_ms": 80.0
+  },
+  "recommendation_source": "rollout",
+  "internal_fallback": false,
+  "screenshot": "E:\\computergame\\docs\\ui\\desktop-prototype.png"
+}

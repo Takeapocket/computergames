@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from core.rules import RULES_VERSION
+
 SCHEMA_VERSION = 2
 
 
@@ -83,6 +85,7 @@ def build_provenance(
 ) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
+        "rules_version": RULES_VERSION,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "git_revision": git_revision(repo_root),
         "git_dirty": git_dirty(repo_root),

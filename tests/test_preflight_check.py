@@ -196,6 +196,9 @@ def test_main_success_output_includes_ready_for_match(monkeypatch, capsys) -> No
     output = capsys.readouterr().out
     assert "[OK] release defaults locked" in output
     assert "READY FOR MATCH" in output
+    assert "仅通过本地配置、测试与耗时检查" in output
+    assert "docs/COMPETITION_COMPLIANCE.md" in output
+    assert output.index("不代表赛事方") < output.index("READY FOR MATCH")
 
 
 def test_main_failure_output_omits_ready_for_match(monkeypatch, capsys) -> None:

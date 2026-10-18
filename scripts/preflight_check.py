@@ -226,6 +226,11 @@ def main() -> int:
     if code != 0:
         return code
 
+    print(
+        "[INFO] 仅通过本地配置、测试与耗时检查；不代表赛事方已确认规则版本、"
+        "原创性、AI 使用披露或参赛资格。详见 docs/COMPETITION_COMPLIANCE.md。",
+        flush=True,
+    )
     print("READY FOR MATCH", flush=True)
     return 0
 

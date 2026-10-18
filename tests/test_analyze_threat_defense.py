@@ -39,7 +39,8 @@ def test_opponent_winning_dice_after_move_detects_goal_threat() -> None:
 
     dice_set = analyze_threat_defense.opponent_winning_dice_after_move(state, move, 6)
 
-    assert dice_set == [1, 2, 3]
+    # BLUE 1 can reach (0, 0); missing dice 2-5 permit both living neighbors.
+    assert dice_set == [1, 2, 3, 4, 5]
 
 
 def test_opponent_winning_dice_after_move_restores_state() -> None:

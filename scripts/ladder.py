@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 from ai.match import ai_version_signature, build_ai, play_one_game, starting_state_for
 from ai.release_defaults import RELEASE_DEFAULT_ROLLOUT_KWARGS
+from core.rules import RULES_VERSION
 from core.types import Player
 from core.validation import require_finite_number, require_int
 from scripts._release_config import reject_nonfinite_constant, validate_finite_json_numbers
@@ -252,6 +253,7 @@ def _play_ladder_game(
     blue.uncertainty = estimate_rating_uncertainty(blue.games)
     row = {
         "game_id": game_id,
+        "rules_version": RULES_VERSION,
         "seed": game_seed,
         "red": red.player_id,
         "blue": blue.player_id,
@@ -299,6 +301,7 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         f"- Games: {report['games']}",
         f"- Seed: {report['seed']}",
         f"- Layout: {report['layout_id']}",
+        f"- Rules: {report.get('rules_version', 'unversioned historical report')}",
         "",
         "| Player | Kind | Rating | Uncertainty Estimate | Games |",
         "|---|---|---:|---:|---:|",
@@ -360,6 +363,7 @@ def run_ladder_games(
 
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "rules_version": RULES_VERSION,
         "games": games,
         "seed": seed,
         "layout_id": layout_id,
@@ -414,6 +418,7 @@ def run_ladder_round_robin(
 
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "rules_version": RULES_VERSION,
         "games": len(schedule),
         "games_per_pair": games_per_pair,
         "color_balance_note": (

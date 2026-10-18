@@ -2,7 +2,11 @@
 
 迁移完成：2026-06-14
 
-研究状态复核：2026-08-18
+研究状态复核：2026-10-18
+
+最新 PySide6 0.2 已迁移自定义开局、七盘制、完整计时和自动保存恢复，便携包及验证见 `reports/desktop_match_20261018.md`；旧 Tk 保留。桌面依赖位于独立 `.venv-desktop`，原 `.venv` 未升级。便携数据位于 EXE 同级 `user-data`，升级时保留；独立干净 Windows 机器验收仍待完成。第一阶段历史报告为 `reports/desktop_preview_20261018.md`。
+
+本轮接手先读 [2026-10-18 审查报告](../reports/project_review_20261018.md)、[P14 基线报告](../reports/p14_rebaseline_v2_20261018.md) 与 [赛事合规证据](COMPETITION_COMPLIANCE.md)。core 版本为 `einstein-nearest-sides-v2`；当前规则的 P14 对历史参数基线已完成：100 个种子换色 200 局，104 胜（52%），配对 95% 区间 45%–59%，不能确认优势，默认参数未改。原始数据在 `E:\computergame-data\benchmarks\p14_rebaseline_v2_20261018`。下一步同时间上限对照与单因素消融；旧规则胜率、Elo 和调参结果仅为历史记录。
 
 ## 不变结论
 
@@ -46,7 +50,7 @@ Add research scaffolding and review fixes
 
 迁移时还用 `games=0` 的 ladder smoke 确认 `report.json` 可以写入 `E:\computergame-data\ladder\report.json`。该命令属于历史迁移验证，不作为日常接手步骤，因为它会写共享报告路径。
 
-## 当前回归快照
+## 历史回归快照（2026-08-18）
 
 2026-08-18 在当前工作区重新验证：
 
@@ -55,7 +59,7 @@ Add research scaffolding and review fixes
 scripts/smoke_test.py：通过
 ```
 
-当前 `requirements-research.txt` 仍只有 NumPy。PyTorch 尚未加入依赖，默认 GUI、core、release 和默认 AI 构造路径均不依赖它。
+最新验证为 `1408 passed in 85.46s`，以及当前规则的 200 局配对基线，见 `reports/p14_rebaseline_v2_20261018.md`；不将上面的历史测试数解释为当前结果。当前 `requirements-research.txt` 仍只有 NumPy。PyTorch 尚未加入依赖，默认 GUI、core、release 和默认 AI 构造路径均不依赖它。
 
 ## 当前研究状态
 
@@ -76,7 +80,7 @@ scripts/smoke_test.py：通过
 - `star2` frontier probe 与 `star2_recursive` exact-probe 模式
 - 受局面门限约束的精确残局求解器
 
-这些结果验证正确性和接线，不构成相对 P14 的棋力结论。残局求解器尚未组成完整对局混合 AI；Star2 也没有实现 Ballard transformed alpha/beta probe window。
+这些历史结果验证了当时的正确性和接线，不构成当前规则下相对 P14 的棋力结论。残局求解器尚未组成完整对局混合 AI；Star2 也没有实现 Ballard transformed alpha/beta probe window。
 
 ### R-P2B
 
@@ -99,6 +103,7 @@ L2 首版教师固定为 P14 rollout self-play。特征为绝对方向的 `13×5
 3. 若继续 L2，再读取 `docs/superpowers/specs/2026-08-03-rp2b-l2-value-network-design.md`。
 4. 用只读 Git 命令确认当前分支、提交和工作区状态，不要假设交接文档中的历史提交仍是 HEAD。
 5. 设置研究环境变量，再运行验证。
+6. 使用新实验目录并核对 `rules_version`；无版本或旧版本的 CEM state 不得继续恢复，不手动改标签伪装成当前规则。
 
 ```powershell
 cd E:\computergame

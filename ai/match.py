@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal, get_args
 from ai.opening_layouts import PRESETS
 from core.game_state import GameState
 from core.move import Move
-from core.rules import target_corner
+from core.rules import RULES_VERSION, target_corner
 from core.types import Player, Position
 
 if TYPE_CHECKING:
@@ -661,6 +661,7 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     if isinstance(ai, TacticalAI):
         return {
             "name": ai.name,
+            "rules_version": RULES_VERSION,
             "base": ai_version_signature(ai.base),
             "patches": ["direct_win", "block_one_step_win"],
         }
@@ -668,6 +669,7 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     if isinstance(ai, ExactOpponentDiceRerankAI):
         return {
             "name": ai.name,
+            "rules_version": RULES_VERSION,
             "base": ai_version_signature(ai.base),
             "top_k": ai.top_k,
             "exact_mix": ai.exact_mix,
@@ -678,6 +680,7 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
     if isinstance(ai, SelfCaptureGuardAI):
         return {
             "name": ai.name,
+            "rules_version": RULES_VERSION,
             "base": ai_version_signature(ai.base),
             "enemy_capture_margin": ai.enemy_capture_margin,
             "non_self_low_material_margin": ai.non_self_low_material_margin,
@@ -687,7 +690,7 @@ def ai_version_signature(ai: "AIPlayer") -> dict[str, Any]:
             "require_safe_alternative": ai.require_safe_alternative,
         }
 
-    sig: dict[str, Any] = {"name": ai.name}
+    sig: dict[str, Any] = {"name": ai.name, "rules_version": RULES_VERSION}
     for attr in (
         "depth",
         "time_limit_ms",

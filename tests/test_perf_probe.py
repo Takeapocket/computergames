@@ -129,6 +129,7 @@ def test_run_probe_aggregates_match_timing(monkeypatch):
         blue_kwargs={"rollouts_per_move": 1},
     )
 
+    assert metrics["rules_version"] == perf_probe.RULES_VERSION
     assert metrics["games"] == 2
     assert metrics["turns"] == 8
     assert metrics["steps"] == 6
@@ -163,6 +164,7 @@ def test_run_rollout_decision_probe_reports_root_visits(monkeypatch):
 
     metrics = perf_probe.run_rollout_decision_probe(samples=2, seed=2026)
 
+    assert metrics["rules_version"] == perf_probe.RULES_VERSION
     assert metrics["samples"] == 2
     assert metrics["root_visits"] == 14
     assert metrics["root_visits_per_second"] > 0.0

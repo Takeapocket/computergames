@@ -81,16 +81,53 @@ def test_dice_selects_exact_living_piece():
     assert state.legal_piece_ids(Player.RED, 3) == [3]
 
 
-def test_dice_selects_nearest_living_piece_when_exact_piece_dead():
+def test_dice_selects_nearest_living_piece_on_each_side_when_exact_piece_dead():
     state = make_state(red={1: Position(0, 0), 4: Position(1, 1), 6: Position(2, 2)})
 
-    assert state.legal_piece_ids(Player.RED, 3) == [4]
+    assert state.legal_piece_ids(Player.RED, 3) == [1, 4]
 
 
 def test_dice_selects_both_nearest_pieces_when_distance_ties():
     state = make_state(red={2: Position(0, 0), 4: Position(1, 1)})
 
     assert state.legal_piece_ids(Player.RED, 3) == [2, 4]
+
+
+@pytest.mark.parametrize("player", [Player.RED, Player.BLUE])
+def test_dice_matches_official_missing_four_and_five_example(player):
+    state = make_state(
+        red={1: Position(0, 0), 2: Position(0, 1), 3: Position(1, 0), 6: Position(1, 1)},
+        blue={1: Position(4, 4), 2: Position(4, 3), 3: Position(3, 4), 6: Position(3, 3)},
+        current_player=player,
+    )
+
+    # Rule 2 explicitly permits 3 OR 6 after a roll of 4 when 4 and 5 are gone.
+    assert state.legal_piece_ids(player, 4) == [3, 6]
+    assert {move.piece_id for move in state.legal_moves(player, 4)} == {3, 6}
+    farther_move = next(move for move in state.legal_moves(player, 4) if move.piece_id == 6)
+    before = state.serialize()
+    state.apply_move(farther_move, dice=4)
+    state.undo_move()
+    assert state.serialize() == before
+
+
+@pytest.mark.parametrize("alive_mask", range(64))
+def test_dice_mapping_for_every_surviving_piece_set(alive_mask):
+    positions = [Position(0, 0), Position(0, 1), Position(0, 2),
+                 Position(1, 0), Position(1, 1), Position(2, 0)]
+    state = make_state(red={piece_id: positions[piece_id - 1] for piece_id in range(1, 7)})
+    alive_ids = {piece_id for piece_id in range(1, 7) if alive_mask & (1 << (piece_id - 1))}
+    for piece_id, piece in state.pieces[Player.RED].items():
+        piece.alive = piece_id in alive_ids
+
+    for dice in range(1, 7):
+        if dice in alive_ids:
+            expected = [dice]
+        else:
+            below = next((candidate for candidate in range(dice - 1, 0, -1) if candidate in alive_ids), None)
+            above = next((candidate for candidate in range(dice + 1, 7) if candidate in alive_ids), None)
+            expected = [candidate for candidate in (below, above) if candidate is not None]
+        assert state.legal_piece_ids(Player.RED, dice) == expected
 
 
 def test_all_legal_moves_are_limited_by_dice_selected_pieces():

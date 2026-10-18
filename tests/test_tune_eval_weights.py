@@ -12,6 +12,7 @@ import ai.evaluator as evaluator
 import ai.zweistein as zweistein
 import scripts.tune_eval_weights as tuning
 from ai.match import ai_version_signature, build_ai
+from core.rules import RULES_VERSION
 from core.types import Player
 from scripts.tune_eval_weights import (
     CEMDistribution,
@@ -894,6 +895,7 @@ def test_run_tuning_persists_two_generation_synthetic_run(tmp_path):
     ]
     for row in rows:
         assert row["schema_version"] == tuning.SCHEMA_VERSION
+        assert row["rules_version"] == RULES_VERSION
         assert row["config"] == config.to_dict()
         assert row["profile"] == config.profile
         assert row["specs"] == expected_specs
@@ -903,6 +905,7 @@ def test_run_tuning_persists_two_generation_synthetic_run(tmp_path):
         assert row["evaluated_at"]
 
     assert state["schema_version"] == tuning.SCHEMA_VERSION
+    assert state["rules_version"] == report["rules_version"] == RULES_VERSION
     assert state["config"] == config.to_dict()
     assert state["profile"] == config.profile
     assert state["specs"] == expected_specs
@@ -1235,6 +1238,41 @@ def test_resume_rejects_incompatible_state_metadata(
             resume=True,
             evaluator=_synthetic_evaluator([]),
         )
+
+
+@pytest.mark.parametrize("filename", ["state.json", "candidates.jsonl"])
+@pytest.mark.parametrize("version", [None, "legacy-absolute-nearest-v1"])
+def test_resume_rejects_missing_or_different_rules_without_changing_files(
+    tmp_path, filename, version,
+):
+    config = _tuning_config(generations=1, population_size=2, elite_count=1)
+    output_dir = tmp_path / "rules-boundary"
+    tuning.run_tuning(
+        config=config, output_dir=output_dir, evaluator=_synthetic_evaluator([]),
+    )
+    target = output_dir / filename
+    if filename.endswith("jsonl"):
+        payloads = _read_jsonl(target)
+    else:
+        payloads = [json.loads(target.read_text(encoding="utf-8"))]
+    for payload in payloads:
+        if version is None:
+            payload.pop("rules_version", None)
+        else:
+            payload["rules_version"] = version
+    target.write_text(
+        "\n".join(json.dumps(payload) for payload in payloads) + "\n",
+        encoding="utf-8",
+    )
+    before = {path.name: path.read_bytes() for path in output_dir.iterdir()}
+    calls = []
+    with pytest.raises(ValueError, match="rules_version"):
+        tuning.run_tuning(
+            config=config, output_dir=output_dir, resume=True,
+            evaluator=_synthetic_evaluator(calls),
+        )
+    assert calls == []
+    assert {path.name: path.read_bytes() for path in output_dir.iterdir()} == before
 
 
 def test_resume_rejects_candidate_params_mismatch_and_duplicate_id(tmp_path):

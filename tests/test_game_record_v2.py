@@ -36,10 +36,12 @@ def test_append_writes_state_after_without_history_field() -> None:
     assert "pieces" in step_state_after
 
 
-def test_record_has_top_level_metadata_and_result_dicts_default_empty() -> None:
+def test_new_record_metadata_identifies_rules_and_result_starts_empty() -> None:
+    from core import RULES_VERSION
+
     record, _ = _record_with_one_move()
 
-    assert record.metadata == {}
+    assert record.metadata == {"rules_version": RULES_VERSION}
     assert record.result == {}
 
 

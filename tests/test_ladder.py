@@ -205,6 +205,9 @@ def test_run_ladder_games_updates_ratings_and_writes_jsonl(tmp_path, monkeypatch
     )
 
     assert report["games"] == 1
+    assert report["rules_version"] == ladder.RULES_VERSION
+    row = json.loads((tmp_path / "games.jsonl").read_text(encoding="utf-8"))
+    assert row["rules_version"] == ladder.RULES_VERSION
     assert report["players"]["red_ai"]["rating"] == 1516.0
     assert report["players"]["blue_ai"]["rating"] == 1484.0
     assert (tmp_path / "games.jsonl").exists()
@@ -349,6 +352,8 @@ def test_run_ladder_round_robin_updates_all_players_and_writes_reports(tmp_path,
         json.loads(line)
         for line in (tmp_path / "games.jsonl").read_text(encoding="utf-8").splitlines()
     ]
+    assert report["rules_version"] == ladder.RULES_VERSION
+    assert {row["rules_version"] for row in rows} == {ladder.RULES_VERSION}
     assert len({row["game_id"] for row in rows}) == 3
     assert [row["schedule"] for row in rows] == report["schedule"]
     assert rows[0]["players"]["red"]["kind"] == "random"

@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from ai.match import build_ai, starting_state_for
+from core.rules import RULES_VERSION
 from scripts._release_config import load_release_default_ai_config as _load_release_default_ai_config
 
 
@@ -123,6 +124,7 @@ def collect_samples(*, samples: int, seed: int, layout: str, ai_kind: str, ai_kw
     summary = summarize_timings(timings)
     return {
         **summary,
+        "rules_version": RULES_VERSION,
         "sample_count": samples,
         "rollout_timed_out_count": timed_out_count,
         "rollout_used_fallback_count": used_fallback_count,
@@ -154,6 +156,7 @@ def write_reports(payload: dict, output: Path, json_output: Path) -> None:
         [
             f"- ai_kind: `{payload['ai_kind']}`",
             f"- default_layout: `{payload['default_layout']}`",
+            f"- rules_version: `{payload.get('rules_version', 'unversioned historical report')}`",
             f"- sample_count: `{payload['sample_count']}`",
             f"- avg_ms: `{payload['avg_ms']:.2f}`",
             f"- p50_ms: `{payload['p50_ms']:.2f}`",
